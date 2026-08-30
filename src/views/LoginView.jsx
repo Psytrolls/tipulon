@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bus, Lock, Phone, ArrowLeft, ShieldCheck, Wrench } from 'lucide-react';
+import { Bus, Lock, Phone, ArrowLeft } from 'lucide-react';
 
 export default function LoginView() {
   const { login } = useAuth();
@@ -26,12 +26,6 @@ export default function LoginView() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (demoPhone, demoPin) => {
-    setPhone(demoPhone);
-    setPin(demoPin);
-    setError('');
   };
 
   return (
@@ -122,30 +116,7 @@ export default function LoginView() {
           </button>
         </form>
 
-        {/* Fast Demo Accounts */}
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <p className="text-xs font-bold text-slate-400 mb-2.5 text-center">משתמשי הדגמה מהירים לבדיקה:</p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('0501234567', '1234')}
-              className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100/70 text-purple-800 text-xs font-bold flex flex-col items-center gap-1 transition-colors"
-            >
-              <ShieldCheck className="w-4 h-4 text-purple-600" />
-              <span>מנהל מערכת</span>
-              <span className="text-[10px] text-purple-600 font-normal">050-1234567 | 1234</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickLogin('0521234567', '1234')}
-              className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100/70 text-blue-800 text-xs font-bold flex flex-col items-center gap-1 transition-colors"
-            >
-              <Wrench className="w-4 h-4 text-blue-600" />
-              <span>טכנאי שטח</span>
-              <span className="text-[10px] text-blue-600 font-normal">052-1234567 | 1234</span>
-            </button>
-          </div>
-        </div>
+
 
       </div>
 
