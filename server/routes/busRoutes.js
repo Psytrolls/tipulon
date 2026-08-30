@@ -47,44 +47,49 @@ export function evaluateBusStatus(bus) {
   if (bus.next_treatment_date) {
     const nextDate = new Date(bus.next_treatment_date);
     if (nextDate > now) {
+      const diffMs = nextDate.getTime() - now.getTime();
+      const daysLeft = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      const monthsLeft = Math.ceil(daysLeft / 30);
       return {
         status: 'טיפול בתוקף',
         canStartTreatment: false,
-        blockReason: `אין צורך בביצוע טיפול מונע לאוטובוס זה! קיים טיפול בתוקף עד ${nextDate.toLocaleDateString('he-IL')}`,
-        message: 'הטיפול בתוקף'
+        blockReason: `אין צורך בביצוע טיפול מונע לאוטובוס זה! הטיפול בתוקף (6 חודשים) עד ${nextDate.toLocaleDateString('he-IL')} (תקף לעוד ${daysLeft} ימים / כ-${monthsLeft} חודשים).`,
+        message: 'הטיפול בתוקף ל-6 חודשים'
       };
     } else {
       return {
         status: 'טיפול באיחור',
         canStartTreatment: true,
         blockReason: null,
-        message: 'מועד הטיפול הבא עבר - חובה לבצע טיפול מונע'
+        message: 'מועד הטיפול הבא עבר (חלפו 6 חודשים) - חובה לבצע טיפול מונע'
       };
     }
   }
 
-  // If no explicit next date was set by admin:
-  // Check last treatment date (treatments are valid for 30 days)
+  // If no explicit next date was set:
+  // Check last treatment date (treatments are valid for 6 months = 180 days)
   if (bus.last_treatment_date) {
     const lastDate = new Date(bus.last_treatment_date);
     const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+    const VALIDITY_DAYS = 180; // 6 months
 
-    if (bus.status === 'הטיפול הושלם' && diffDays < 30) {
-      const daysLeft = 30 - diffDays;
+    if (bus.status === 'הטיפול הושלם' && diffDays < VALIDITY_DAYS) {
+      const daysLeft = VALIDITY_DAYS - diffDays;
+      const monthsLeft = Math.ceil(daysLeft / 30);
       return {
         status: 'טיפול בתוקף',
         canStartTreatment: false,
-        blockReason: `אין צורך בביצוע טיפול מונע לאוטובוס זה! הטיפול הושלם לפני ${diffDays === 0 ? 'פחות מיום' : diffDays + ' ימים'} (בתאריך ${lastDate.toLocaleDateString('he-IL')}). תקף לעוד ${daysLeft} ימים.`,
-        message: 'הטיפול הושלם לאחרונה ונמצא בתוקף'
+        blockReason: `אין צורך בביצוע טיפול מונע לאוטובוס זה! הטיפול הושלם לפני ${diffDays === 0 ? 'פחות מיום' : diffDays + ' ימים'} (בתאריך ${lastDate.toLocaleDateString('he-IL')}). תוקף הטיפול הוא 6 חודשים (תקף לעוד ${daysLeft} ימים / כ-${monthsLeft} חודשים).`,
+        message: 'הטיפול הושלם לאחרונה ונמצא בתוקף ל-6 חודשים'
       };
     }
 
-    if (diffDays >= 30) {
+    if (diffDays >= VALIDITY_DAYS) {
       return {
         status: 'נדרש טיפול (תקופתי)',
         canStartTreatment: true,
         blockReason: null,
-        message: `חלפו ${diffDays} ימים מהטיפול הקודם - נדרש טיפול מונע תקופתי`
+        message: `חלפו ${diffDays} ימים (מעל 6 חודשים) מהטיפול הקודם - נדרש טיפול מונע תקופתי`
       };
     }
   }

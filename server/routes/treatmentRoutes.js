@@ -177,19 +177,28 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
     }
 
     // Update bus state
+    // Calculate next treatment date (6 months ahead if successfully completed)
+    let nextTreatmentDate = null;
+    if (reportStatus === 'הטיפול הושלם') {
+      const d = new Date();
+      d.setMonth(d.getMonth() + 6);
+      nextTreatmentDate = d.toISOString();
+    }
+
+    // Update bus state
     if (existingBus) {
       const updateBusStmt = db.prepare(`
         UPDATE buses 
-        SET status = ?, operator = ?, last_treatment_date = ?, updated_at = datetime('now')
+        SET status = ?, operator = ?, last_treatment_date = ?, next_treatment_date = ?, updated_at = datetime('now')
         WHERE bus_number = ?
       `);
-      updateBusStmt.run(reportStatus, operator, now, cleanBusNumber);
+      updateBusStmt.run(reportStatus, operator, now, nextTreatmentDate, cleanBusNumber);
     } else {
       const insertBusStmt = db.prepare(`
-        INSERT INTO buses (bus_number, operator, status, last_treatment_date, updated_at)
-        VALUES (?, ?, ?, ?, datetime('now'))
+        INSERT INTO buses (bus_number, operator, status, last_treatment_date, next_treatment_date, updated_at)
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
       `);
-      insertBusStmt.run(cleanBusNumber, operator, reportStatus, now);
+      insertBusStmt.run(cleanBusNumber, operator, reportStatus, now, nextTreatmentDate);
     }
 
     // Audit log
