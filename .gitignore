@@ -7,3 +7,5 @@ test_*.js
 *.xlsx
 uploads/*
 !uploads/.gitkeep
+data/*
+!data/.gitkeep
