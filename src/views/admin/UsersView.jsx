@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X } from 'lucide-react';
+import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UsersView() {
@@ -20,6 +20,7 @@ export default function UsersView() {
   const [pinModalUser, setPinModalUser] = useState(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [showPinText, setShowPinText] = useState(false);
   const [pinError, setPinError] = useState('');
   const [pinSaving, setPinSaving] = useState(false);
 
@@ -417,7 +418,9 @@ export default function UsersView() {
                   <KeyRound className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">שינוי קוד PIN</h3>
+                  <h3 className="text-lg font-black text-slate-900">
+                    {pinModalUser.id === currentUser?.id ? 'שינוי קוד ה-PIN האישי שלך' : 'איפוס / שינוי קוד PIN'}
+                  </h3>
                   <p className="text-xs text-slate-500">עבור {pinModalUser.full_name} ({pinModalUser.phone})</p>
                 </div>
               </div>
@@ -436,17 +439,46 @@ export default function UsersView() {
               </div>
             )}
 
+            {/* Quick Reset Option for Technicians */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-slate-800 block">איפוס מהיר לטכנאי שנשכח ממנו הקוד:</span>
+                <span className="text-[11px] text-slate-500">קביעת קוד ברירת המחדל 1234 בלחיצה אחת</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewPin('1234');
+                  setConfirmPin('1234');
+                }}
+                className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-lg border border-amber-300 flex items-center gap-1.5 transition-colors shrink-0"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>הגדר 1234</span>
+              </button>
+            </div>
+
             <form onSubmit={handleSavePin} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">קוד PIN חדש (4-8 ספרות):</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">קוד PIN חדש (4-8 ספרות):</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowPinText(!showPinText)}
+                    className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                  >
+                    {showPinText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    <span>{showPinText ? 'הסתר' : 'הצג קוד'}</span>
+                  </button>
+                </div>
                 <input
-                  type="password"
+                  type={showPinText ? 'text' : 'password'}
                   inputMode="numeric"
                   maxLength={8}
                   placeholder="הזן קוד PIN חדש..."
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono tracking-wider"
                   required
                   autoFocus
                 />
@@ -455,13 +487,13 @@ export default function UsersView() {
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">אימות קוד PIN חדש:</label>
                 <input
-                  type="password"
+                  type={showPinText ? 'text' : 'password'}
                   inputMode="numeric"
                   maxLength={8}
                   placeholder="הזן שוב לאימות..."
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono tracking-wider"
                   required
                 />
               </div>
@@ -477,9 +509,10 @@ export default function UsersView() {
                 <button
                   type="submit"
                   disabled={pinSaving}
-                  className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all disabled:opacity-50"
+                  className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {pinSaving ? 'מעדכן...' : 'שמור קוד PIN'}
+                  <KeyRound className="w-4 h-4" />
+                  <span>{pinSaving ? 'מעדכן...' : 'שמור ואפס קוד PIN'}</span>
                 </button>
               </div>
             </form>
