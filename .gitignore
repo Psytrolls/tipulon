@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+scratch/
+test_*.js
+*.xlsx
+uploads/*
+!uploads/.gitkeep
