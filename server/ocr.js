@@ -75,23 +75,17 @@ export async function extractBusNumberFromImage(imagePath) {
 
           const plateCrop = jimpImg.clone().crop({ x: cropX, y: cropY, w: cropW, h: cropH });
 
-          // Scale to ideal height for OCR font recognition (~150px)
-          const targetH = 150;
+          // Scale to ideal height for OCR font recognition (~130px)
+          const targetH = 130;
           const scale = targetH / plateCrop.bitmap.height;
           plateCrop.resize({ w: Math.max(200, Math.round(plateCrop.bitmap.width * scale)), h: targetH });
 
-          // Grayscale & high contrast
-          plateCrop.greyscale().contrast(0.7);
+          // Moderate contrast to preserve clean digit loops (like 8 vs 6)
+          plateCrop.greyscale().contrast(0.35);
 
           const bufPlate = await plateCrop.getBuffer('image/png');
 
-          // Recognize plate with PSM 6 and PSM 7
-          await worker.setParameters({ tessedit_pageseg_mode: '6' });
-          const rPlate6 = await worker.recognize(bufPlate);
-          const tPlate6 = rPlate6.data.text || '';
-          combinedText += ' ' + tPlate6;
-          parseCandidatesFromText(tPlate6).forEach(c => candidateSet.add(c));
-
+          // Recognize plate single line (PSM 7)
           await worker.setParameters({ tessedit_pageseg_mode: '7' });
           const rPlate7 = await worker.recognize(bufPlate);
           const tPlate7 = rPlate7.data.text || '';
@@ -102,31 +96,50 @@ export async function extractBusNumberFromImage(imagePath) {
         }
       }
 
-      // Pass 2: Grayscale high contrast pass on whole image (or resized if huge)
-      try {
-        const fullCopy = jimpImg.clone();
-        if (origW > 1400 || origH > 1400) {
-          fullCopy.resize({ w: 1200 });
-        } else if (origW < 400) {
-          fullCopy.resize({ w: origW * 2, h: origH * 2 });
-        }
-        fullCopy.greyscale();
-        fullCopy.contrast(0.65);
+      // Pass 2: Run only if no plate candidate was detected above (saves 3 seconds!)
+      const hasGoodCandidate = [...candidateSet].some(c => c.length >= 6);
+      if (!hasGoodCandidate) {
+        try {
+          const fullCopy = jimpImg.clone();
+          if (origW > 1200 || origH > 1200) {
+            fullCopy.resize({ w: 1000 });
+          }
+          fullCopy.greyscale().contrast(0.5);
 
-        const bufFull = await fullCopy.getBuffer('image/png');
-        await worker.setParameters({ tessedit_pageseg_mode: '11' });
-        const rFull = await worker.recognize(bufFull);
-        const tFull = rFull.data.text || '';
-        combinedText += ' ' + tFull;
-        parseCandidatesFromText(tFull).forEach(c => candidateSet.add(c));
-      } catch (eFull) {
-        console.warn('Full copy OCR error:', eFull.message);
+          const bufFull = await fullCopy.getBuffer('image/png');
+          await worker.setParameters({ tessedit_pageseg_mode: '11' });
+          const rFull = await worker.recognize(bufFull);
+          const tFull = rFull.data.text || '';
+          combinedText += ' ' + tFull;
+          parseCandidatesFromText(tFull).forEach(c => candidateSet.add(c));
+        } catch (eFull) {
+          console.warn('Full copy OCR error:', eFull.message);
+        }
       }
     } else {
       // Direct raw fallback
       const rRaw = await worker.recognize(imagePath);
       combinedText = rRaw.data.text || '';
       parseCandidatesFromText(combinedText).forEach(c => candidateSet.add(c));
+    }
+
+    // Add smart alternates for common camera glare / optical confusions (6 <-> 8, 5 <-> 6)
+    const baseCandidates = [...candidateSet];
+    for (const cand of baseCandidates) {
+      if (cand.length >= 6) {
+        // If it ends with 6, offer 8 as alternative
+        if (cand.endsWith('6')) {
+          candidateSet.add(cand.slice(0, -1) + '8');
+        }
+        // If it ends with 8, offer 6 as alternative
+        if (cand.endsWith('8')) {
+          candidateSet.add(cand.slice(0, -1) + '6');
+        }
+        // If starts with 5 and length 7, offer 6 (common in 6X-XXX-XX plates)
+        if (cand.startsWith('5') && cand.length === 7) {
+          candidateSet.add('6' + cand.slice(1));
+        }
+      }
     }
 
     const cleanCandidates = [...candidateSet];
