@@ -70,10 +70,10 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`=============================================`);
     console.log(`🚌 טיפולון - מערכת טיפול מונע באוטובוסים`);
-    console.log(`🚀 השרת פועל בכתובת: http://localhost:${PORT}`);
+    console.log(`🚀 השרת פועל בכתובת: http://0.0.0.0:${PORT}`);
     console.log(`=============================================`);
   });
 }
