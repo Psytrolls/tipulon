@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "node server/server.js",
     "build": "vite build",
-    "start": "NODE_ENV=production node server/server.js",
+    "start": "node server/server.js",
     "test": "node test_integration.js"
   },
   "dependencies": {
