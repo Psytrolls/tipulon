@@ -146,17 +146,29 @@ function seedInitialData() {
   const insertUser = db.prepare('INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active) VALUES (?, ?, ?, ?, ?, 1)');
 
   // 1. Admin
-  const adminPhone = normalizePhone('0501234567');
-  if (!checkUser.get(adminPhone)) {
-    const { hash, salt } = hashPin('1234');
+  const adminPhone = normalizePhone(process.env.ADMIN_PHONE || '0501234567');
+  const envAdminPin = process.env.ADMIN_PIN;
+  const existingAdmin = checkUser.get(adminPhone);
+
+  if (!existingAdmin) {
+    const { hash, salt } = hashPin(envAdminPin || '1234');
     insertUser.run('מנהל מערכת', adminPhone, hash, salt, 'admin');
+  } else if (envAdminPin) {
+    const { hash, salt } = hashPin(envAdminPin);
+    db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, adminPhone);
   }
 
   // 2. Technician
-  const techPhone = normalizePhone('0521234567');
-  if (!checkUser.get(techPhone)) {
-    const { hash, salt } = hashPin('1234');
+  const techPhone = normalizePhone(process.env.TECH_PHONE || '0521234567');
+  const envTechPin = process.env.TECH_PIN;
+  const existingTech = checkUser.get(techPhone);
+
+  if (!existingTech) {
+    const { hash, salt } = hashPin(envTechPin || '1234');
     insertUser.run('ישראל ישראלי', techPhone, hash, salt, 'technician');
+  } else if (envTechPin) {
+    const { hash, salt } = hashPin(envTechPin);
+    db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, techPhone);
   }
 
   // Seed sample buses
