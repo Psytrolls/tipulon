@@ -17,6 +17,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
 
 export default function NewTreatmentView({ onTreatmentCompleted }) {
   // Wizard Steps: 1 = Bus & Photo, 2 = Device Count, 3 = Fill Devices, 4 = Summary & Decision, 5 = Review, 6 = Success
@@ -72,8 +73,9 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
   // Handle manual bus lookup
   const handleSearchBus = async (numberToSearch = null) => {
     const targetNumber = (numberToSearch || busNumber).replace(/[^0-9]/g, '').trim();
-    if (!targetNumber) {
-      setBusError('נא להזין מספר אוטובוס לבדיקה');
+    const validationErr = validateBusNumber(targetNumber);
+    if (validationErr) {
+      setBusError(validationErr);
       return;
     }
 
@@ -246,14 +248,24 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
     const current = devices[currentDeviceIndex];
     if (!current) return false;
     if (!current.productName) return false;
-    if (!current.serialNumber.trim()) return false;
+    if (validateDeviceSerialNumber(current.serialNumber)) return false;
     if (!current.status) return false;
     return true;
   };
 
   const handleNextDevice = () => {
-    if (!isCurrentDeviceValid()) {
-      alert('חובה לבחור סוג מוצר ולהזין מספר סידורי');
+    const current = devices[currentDeviceIndex];
+    if (!current?.productName) {
+      alert('חובה לבחור סוג מוצר');
+      return;
+    }
+    const serialErr = validateDeviceSerialNumber(current?.serialNumber);
+    if (serialErr) {
+      alert(serialErr);
+      return;
+    }
+    if (!current?.status) {
+      alert('חובה לבחור מצב מכשיר (תקין / לא תקין)');
       return;
     }
 
@@ -274,6 +286,20 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
   // Submit report to server
   const handleSubmitReport = async () => {
+    const busErr = validateBusNumber(busNumber);
+    if (busErr) {
+      setSubmitError(busErr);
+      return;
+    }
+
+    for (let i = 0; i < devices.length; i++) {
+      const serialErr = validateDeviceSerialNumber(devices[i]?.serialNumber);
+      if (serialErr) {
+        setSubmitError(`מכשיר #${i + 1}: ${serialErr}`);
+        return;
+      }
+    }
+
     if (!summary.trim()) {
       setSubmitError('סיכום הטיפול והערות הטכנאי הוא שדה חובה');
       return;
@@ -528,15 +554,21 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
           {/* Manual Input */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold text-slate-700">מספר אוטובוס (לוחית או מספר צי)</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-black text-slate-700">מספר אוטובוס (לוחית רישוי)</label>
+              <span className="text-[11px] font-bold text-slate-400">7 עד 8 ספרות</span>
+            </div>
             <div className="flex gap-2">
               <input
                 type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={8}
                 value={busNumber}
                 onChange={(e) => setBusNumber(e.target.value.replace(/[^0-9]/g, ''))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchBus()}
-                placeholder="לדוגמה: 1234567 או 4215"
-                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-lg font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left"
+                placeholder="לדוגמה: 6922258 או 12345678"
+                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left tracking-wider"
                 dir="ltr"
               />
               <button
@@ -548,7 +580,13 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                 {searchingBus ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'בדוק'}
               </button>
             </div>
-            {busError && <p className="text-xs font-semibold text-rose-600">{busError}</p>}
+            <span className="text-[11px] text-slate-400 block font-medium">חובה 7 או 8 ספרות (לא ניתן להזין רצף של ספרות זהות או בדיקת דמה)</span>
+            {busError && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 animate-shake">
+                <span>⚠️</span>
+                <span>{busError}</span>
+              </div>
+            )}
           </div>
 
           {/* Bus Check Result Banner */}
@@ -730,17 +768,24 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
             </div>
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                מספר סידורי / מזהה מכשיר <span className="text-rose-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-bold text-slate-700">
+                  מספר מכשיר <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-xs font-bold text-slate-400">3 עד 4 ספרות</span>
+              </div>
               <input
                 type="text"
-                placeholder="הזן מספר סידורי או ברקוד"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                placeholder="לדוגמה: 123 או 1234"
                 value={devices[currentDeviceIndex]?.serialNumber || ''}
-                onChange={(e) => handleUpdateDevice('serialNumber', e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-semibold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left"
+                onChange={(e) => handleUpdateDevice('serialNumber', e.target.value.replace(/[^0-9]/g, ''))}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left tracking-wider text-base"
                 dir="ltr"
               />
+              <span className="text-[11px] text-slate-400 mt-1 block">חובה 3 עד 4 ספרות (אסור להזין רק אפסים כגון 000)</span>
             </div>
 
             <div>

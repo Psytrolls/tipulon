@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { extractBusNumberFromImage } from '../ocr.js';
+import { validateBusNumber } from '../validators.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -111,8 +112,9 @@ export function evaluateBusStatus(bus) {
 router.get('/search/:busNumber', requireAuth, (req, res) => {
   try {
     const busNumber = req.params.busNumber.replace(/[^0-9]/g, '').trim();
-    if (!busNumber) {
-      return res.status(400).json({ error: 'נא להזין מספר אוטובוס' });
+    const validationError = validateBusNumber(busNumber);
+    if (validationError) {
+      return res.status(400).json({ error: validationError });
     }
 
     const busStmt = db.prepare(`

@@ -7,6 +7,7 @@ import ExcelJS from 'exceljs';
 import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { evaluateBusStatus } from './busRoutes.js';
+import { validateBusNumber, validateDeviceSerialNumber } from '../validators.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -78,7 +79,11 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
       return res.status(400).json({ error: 'מספר אוטובוס הוא שדה חובה' });
     }
 
-    const cleanBusNumber = String(busNumber).trim();
+    const cleanBusNumber = String(busNumber).replace(/[^0-9]/g, '').trim();
+    const busValidationError = validateBusNumber(cleanBusNumber);
+    if (busValidationError) {
+      return res.status(400).json({ error: busValidationError });
+    }
 
     // Check business rule: does this bus have an active future treatment?
     const busCheckStmt = db.prepare('SELECT bus_number, status, next_treatment_date FROM buses WHERE bus_number = ?');
@@ -110,8 +115,9 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
       if (!dev.productName && !dev.productId) {
         return res.status(400).json({ error: `מכשיר #${i + 1}: חובה לבחור סוג מוצר` });
       }
-      if (!dev.serialNumber || !String(dev.serialNumber).trim()) {
-        return res.status(400).json({ error: `מכשיר #${i + 1}: חובה להזין מספר סידורי או מזהה מכשיר` });
+      const serialError = validateDeviceSerialNumber(dev.serialNumber);
+      if (serialError) {
+        return res.status(400).json({ error: `מכשיר #${i + 1}: ${serialError}` });
       }
       if (!dev.status || (dev.status !== 'תקין' && dev.status !== 'לא תקין')) {
         return res.status(400).json({ error: `מכשיר #${i + 1}: חובה לבחור מצב (תקין / לא תקין)` });
