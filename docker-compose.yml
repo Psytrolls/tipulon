@@ -11,3 +11,11 @@ services:
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: tipulon_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://tipulon:3000
+    depends_on:
+      - tipulon
