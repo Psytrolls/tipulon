@@ -63,11 +63,11 @@ export async function extractBusNumberFromImage(imagePath) {
         }
       });
 
-      // Pass 1: If yellow plate detected, crop directly to plate with small padding
-      if (yellowCount > 40 && maxX > minX && maxY > minY) {
+      // Pass 1: If yellow plate detected, crop directly to plate with generous padding
+      if (yellowCount > 30 && maxX > minX && maxY > minY) {
         try {
-          const padX = Math.round((maxX - minX) * 0.06);
-          const padY = Math.round((maxY - minY) * 0.08);
+          const padX = Math.round((maxX - minX) * 0.15);
+          const padY = Math.round((maxY - minY) * 0.45); // Generous vertical padding to never clip numbers
           const cropX = Math.max(0, minX - padX);
           const cropY = Math.max(0, minY - padY);
           const cropW = Math.min(origW - cropX, (maxX - minX) + 2 * padX);
@@ -75,36 +75,28 @@ export async function extractBusNumberFromImage(imagePath) {
 
           const plateCrop = jimpImg.clone().crop({ x: cropX, y: cropY, w: cropW, h: cropH });
 
-          // Scale to ideal height for OCR font recognition (~160px)
-          const targetH = 160;
+          // Scale to ideal height for OCR font recognition (~150px)
+          const targetH = 150;
           const scale = targetH / plateCrop.bitmap.height;
           plateCrop.resize({ w: Math.max(200, Math.round(plateCrop.bitmap.width * scale)), h: targetH });
 
-          // Binarize (yellow/bright background -> pure white 255, dark digits -> pure black 0)
-          plateCrop.scan((x, y, idx) => {
-            const r = plateCrop.bitmap.data[idx];
-            const g = plateCrop.bitmap.data[idx + 1];
-            const b = plateCrop.bitmap.data[idx + 2];
-            const brightness = 0.299 * r + 0.587 * g + 0.114 * b;
-            if ((r > b + 25 && g > b + 15) || brightness > 105) {
-              plateCrop.bitmap.data[idx] = 255;
-              plateCrop.bitmap.data[idx + 1] = 255;
-              plateCrop.bitmap.data[idx + 2] = 255;
-            } else {
-              plateCrop.bitmap.data[idx] = 0;
-              plateCrop.bitmap.data[idx + 1] = 0;
-              plateCrop.bitmap.data[idx + 2] = 0;
-            }
-          });
+          // Grayscale & high contrast
+          plateCrop.greyscale().contrast(0.7);
 
           const bufPlate = await plateCrop.getBuffer('image/png');
 
-          // Recognize single line of plate (PSM 7)
+          // Recognize plate with PSM 6 and PSM 7
+          await worker.setParameters({ tessedit_pageseg_mode: '6' });
+          const rPlate6 = await worker.recognize(bufPlate);
+          const tPlate6 = rPlate6.data.text || '';
+          combinedText += ' ' + tPlate6;
+          parseCandidatesFromText(tPlate6).forEach(c => candidateSet.add(c));
+
           await worker.setParameters({ tessedit_pageseg_mode: '7' });
-          const rPlate = await worker.recognize(bufPlate);
-          const tPlate = rPlate.data.text || '';
-          combinedText += ' ' + tPlate;
-          parseCandidatesFromText(tPlate).forEach(c => candidateSet.add(c));
+          const rPlate7 = await worker.recognize(bufPlate);
+          const tPlate7 = rPlate7.data.text || '';
+          combinedText += ' ' + tPlate7;
+          parseCandidatesFromText(tPlate7).forEach(c => candidateSet.add(c));
         } catch (ePlate) {
           console.warn('Plate crop OCR error:', ePlate.message);
         }
