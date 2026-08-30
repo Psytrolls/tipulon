@@ -136,4 +136,83 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
   }
 });
 
+// PATCH /api/users/:id/pin - Change user PIN (Admin can change any user's PIN)
+router.patch('/:id/pin', requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newPin } = req.body;
+
+    const cleanPin = String(newPin || '').trim();
+    if (cleanPin.length < 4 || cleanPin.length > 8 || !/^\d+$/.test(cleanPin)) {
+      return res.status(400).json({ error: 'קוד PIN חייב להכיל בין 4 ל-8 ספרות' });
+    }
+
+    const checkStmt = db.prepare('SELECT id, full_name, phone FROM users WHERE id = ?');
+    const targetUser = checkStmt.get(id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    const { hash, salt } = hashPin(cleanPin);
+    const updateStmt = db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE id = ?');
+    updateStmt.run(hash, salt, id);
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'שינוי קוד PIN',
+      'משתמש',
+      id,
+      `עודכן קוד PIN עבור: ${targetUser.full_name} (${targetUser.phone})`
+    );
+
+    res.json({ success: true, message: 'קוד ה-PIN עודכן בהצלחה' });
+  } catch (err) {
+    console.error('Update PIN error:', err);
+    res.status(500).json({ error: 'שגיאה בעדכון קוד PIN' });
+  }
+});
+
+// PATCH /api/users/:id/details - Update full name or phone number
+router.patch('/:id/details', requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, phone } = req.body;
+
+    const cleanName = String(fullName || '').trim();
+    if (!cleanName) {
+      return res.status(400).json({ error: 'שם מלא הוא שדה חובה' });
+    }
+
+    const cleanPhone = normalizePhone(phone);
+    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+      return res.status(400).json({ error: 'מספר טלפון חייב להכיל בין 9 ל-15 ספרות' });
+    }
+
+    // Check if phone already taken by someone else
+    const phoneCheckStmt = db.prepare('SELECT id FROM users WHERE phone = ? AND id != ?');
+    const existing = phoneCheckStmt.get(cleanPhone, id);
+    if (existing) {
+      return res.status(400).json({ error: 'מספר טלפון זה כבר קיים במערכת' });
+    }
+
+    const updateStmt = db.prepare('UPDATE users SET full_name = ?, phone = ? WHERE id = ?');
+    updateStmt.run(cleanName, cleanPhone, id);
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'עדכון פרטי משתמש',
+      'משתמש',
+      id,
+      `פרטי משתמש עודכנו ל: ${cleanName}, טלפון: ${cleanPhone}`
+    );
+
+    res.json({ success: true, id: Number(id), full_name: cleanName, phone: cleanPhone });
+  } catch (err) {
+    console.error('Update user details error:', err);
+    res.status(500).json({ error: 'שגיאה בעדכון פרטי משתמש' });
+  }
+});
+
 export default router;

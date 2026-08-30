@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User } from 'lucide-react';
+import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UsersView() {
@@ -15,6 +15,20 @@ export default function UsersView() {
   const [addError, setAddError] = useState('');
   const [addSuccess, setAddSuccess] = useState('');
   const [adding, setAdding] = useState(false);
+
+  // Change PIN modal state
+  const [pinModalUser, setPinModalUser] = useState(null);
+  const [newPin, setNewPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [pinSaving, setPinSaving] = useState(false);
+
+  // Edit details modal state
+  const [editModalUser, setEditModalUser] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editError, setEditError] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const loadUsers = async () => {
     try {
@@ -98,6 +112,82 @@ export default function UsersView() {
       }
     } catch (err) {
       console.error('Toggle user error:', err);
+    }
+  };
+
+  const handleOpenPinModal = (u) => {
+    setPinModalUser(u);
+    setNewPin('');
+    setConfirmPin('');
+    setPinError('');
+  };
+
+  const handleSavePin = async (e) => {
+    e.preventDefault();
+    setPinError('');
+
+    if (newPin.length < 4 || newPin.length > 8 || !/^\d+$/.test(newPin)) {
+      setPinError('קוד PIN חייב להכיל בין 4 ל-8 ספרות בלבד');
+      return;
+    }
+    if (newPin !== confirmPin) {
+      setPinError('קודי ה-PIN אינם תואמים');
+      return;
+    }
+
+    setPinSaving(true);
+    try {
+      const res = await fetch(`/api/users/${pinModalUser.id}/pin`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPin })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'שגיאה בעדכון קוד PIN');
+      }
+      alert(`קוד ה-PIN עבור ${pinModalUser.full_name} עודכן בהצלחה!`);
+      setPinModalUser(null);
+    } catch (err) {
+      setPinError(err.message);
+    } finally {
+      setPinSaving(false);
+    }
+  };
+
+  const handleOpenEditModal = (u) => {
+    setEditModalUser(u);
+    setEditName(u.full_name);
+    setEditPhone(u.phone);
+    setEditError('');
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    setEditError('');
+
+    if (!editName.trim() || !editPhone.trim()) {
+      setEditError('שם מלא ומספר טלפון הם שדות חובה');
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/users/${editModalUser.id}/details`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName: editName.trim(), phone: editPhone.trim() })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'שגיאה בעדכון פרטי משתמש');
+      }
+      setEditModalUser(null);
+      loadUsers();
+    } catch (err) {
+      setEditError(err.message);
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -274,18 +364,39 @@ export default function UsersView() {
                         {new Date(u.created_at).toLocaleDateString('he-IL')}
                       </td>
                       <td className="p-3.5 text-center">
-                        {!isSelf && (
+                        <div className="flex items-center justify-center gap-1.5">
                           <button
-                            onClick={() => handleToggleUser(u.id)}
-                            className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors ${
-                              u.is_active 
-                                ? 'text-rose-600 hover:bg-rose-50' 
-                                : 'text-emerald-600 hover:bg-emerald-50'
-                            }`}
+                            type="button"
+                            onClick={() => handleOpenPinModal(u)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                            title="שנה קוד PIN למשתמש"
                           >
-                            {u.is_active ? 'השבת' : 'הפעל'}
+                            <KeyRound className="w-4 h-4" />
                           </button>
-                        )}
+
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEditModal(u)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                            title="ערוך שם ומספר טלפון"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+
+                          {!isSelf && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleUser(u.id)}
+                              className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors ${
+                                u.is_active 
+                                  ? 'text-rose-600 hover:bg-rose-50' 
+                                  : 'text-emerald-600 hover:bg-emerald-50'
+                              }`}
+                            >
+                              {u.is_active ? 'השבת' : 'הפעל'}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -295,6 +406,163 @@ export default function UsersView() {
           </div>
         )}
       </div>
+
+      {/* Change PIN Modal */}
+      {pinModalUser && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+                  <KeyRound className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">שינוי קוד PIN</h3>
+                  <p className="text-xs text-slate-500">עבור {pinModalUser.full_name} ({pinModalUser.phone})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPinModalUser(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {pinError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
+                ⚠️ {pinError}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePin} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">קוד PIN חדש (4-8 ספרות):</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="הזן קוד PIN חדש..."
+                  value={newPin}
+                  onChange={(e) => setNewPin(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">אימות קוד PIN חדש:</label>
+                <input
+                  type="password"
+                  inputMode="numeric"
+                  maxLength={8}
+                  placeholder="הזן שוב לאימות..."
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPinModalUser(null)}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  type="submit"
+                  disabled={pinSaving}
+                  className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all disabled:opacity-50"
+                >
+                  {pinSaving ? 'מעדכן...' : 'שמור קוד PIN'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Details Modal */}
+      {editModalUser && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                  <Edit2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">עריכת פרטי משתמש</h3>
+                  <p className="text-xs text-slate-500">שינוי שם מלא ומספר טלפון לכניסה</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditModalUser(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {editError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
+                ⚠️ {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">שם מלא:</label>
+                <input
+                  type="text"
+                  placeholder="לדוגמה: מנהל מערכת ראשי"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">מספר טלפון להתחברות:</label>
+                <input
+                  type="tel"
+                  placeholder="050-1234567"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono"
+                  dir="ltr"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModalUser(null)}
+                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                >
+                  ביטול
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  className="flex-1 py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md shadow-blue-600/20 transition-all disabled:opacity-50"
+                >
+                  {editSaving ? 'שומר...' : 'שמור שינויים'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
