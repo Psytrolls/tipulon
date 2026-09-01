@@ -58,7 +58,11 @@ export default function InstallPwaBanner() {
   if (!deferredPrompt && !isIOS) return null;
 
   return (
-    <aside aria-label="התקנת אפליקציה" className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 text-white p-3 sm:p-4 shadow-xl border-b border-emerald-600/50 sticky top-0 z-50">
+    <aside 
+      aria-label="התקנת אפליקציה" 
+      className="bg-gradient-to-r from-emerald-700 via-emerald-800 to-slate-900 text-white p-3 sm:p-4 shadow-xl border-b border-emerald-600/50 sticky top-0 z-50 transition-all"
+      style={{ paddingTop: 'max(env(safe-area-inset-top, 0px), 12px)' }}
+    >
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 text-xs sm:text-sm">
         
         <div className="flex items-center gap-3">
