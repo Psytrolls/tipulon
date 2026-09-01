@@ -228,11 +228,11 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
 // GET /api/treatments - List reports with filters
 router.get('/', requireAuth, (req, res) => {
   try {
-    const { busNumber, result, status, operator } = req.query;
+    const { busNumber, result, status, operator, ediStatus } = req.query;
 
     let query = `
       SELECT r.id, r.bus_number, r.operator, r.technician_id, r.technician_name, r.photo_path,
-             r.summary, r.result, r.status, r.created_at, b.next_treatment_date
+             r.summary, r.result, r.status, r.is_edi_closed, r.edi_closed_at, r.created_at, b.next_treatment_date
       FROM reports r
       LEFT JOIN buses b ON r.bus_number = b.bus_number
       WHERE 1=1
@@ -254,6 +254,11 @@ router.get('/', requireAuth, (req, res) => {
     if (status) {
       query += ' AND r.status = ?';
       params.push(status);
+    }
+    if (ediStatus === 'closed') {
+      query += ' AND r.is_edi_closed = 1';
+    } else if (ediStatus === 'open') {
+      query += ' AND (r.is_edi_closed = 0 OR r.is_edi_closed IS NULL)';
     }
 
     query += ' ORDER BY r.created_at DESC LIMIT 150';
@@ -303,6 +308,46 @@ router.get('/:id', requireAuth, (req, res) => {
   }
 });
 
+// PATCH /api/treatments/:id/edi - Toggle or set EDI closed status (Admin only)
+router.patch('/:id/edi', requireAdmin, (req, res) => {
+  try {
+    const reportId = Number(req.params.id);
+    const { isEdiClosed } = req.body;
+    const closed = isEdiClosed ? 1 : 0;
+    const now = closed ? new Date().toISOString() : null;
+
+    const stmt = db.prepare(`
+      UPDATE reports
+      SET is_edi_closed = ?, edi_closed_at = ?
+      WHERE id = ?
+    `);
+    const result = stmt.run(closed, now, reportId);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'דוח לא נמצא' });
+    }
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      closed ? 'סגירה באדי' : 'ביטול סגירה באדי',
+      'דוח טיפול',
+      reportId,
+      `דוח #${reportId} עודכן ל-${closed ? 'סגור באדי' : 'פתוח באדי'}`
+    );
+
+    res.json({
+      success: true,
+      reportId,
+      isEdiClosed: closed === 1,
+      ediClosedAt: now
+    });
+  } catch (err) {
+    console.error('Update EDI status error:', err);
+    res.status(500).json({ error: 'שגיאה בעדכון סטטוס אדי' });
+  }
+});
+
 // GET /api/treatments/export/excel - Professional Styled RTL Excel (.xlsx) export with AutoFilter
 router.get('/export/excel', requireAdmin, async (req, res) => {
   try {
@@ -310,7 +355,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
 
     let query = `
       SELECT r.id, r.operator, r.bus_number, r.created_at, r.technician_name, r.summary, r.result, r.status,
-             b.next_treatment_date
+             r.is_edi_closed, r.edi_closed_at, b.next_treatment_date
       FROM reports r
       LEFT JOIN buses b ON r.bus_number = b.bus_number
       WHERE 1=1
@@ -363,6 +408,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       { header: 'סיכום הטכנאי', key: 'summary', width: 38 },
       { header: 'תוצאת הטיפול', key: 'result', width: 25 },
       { header: 'סטטוס', key: 'status', width: 18 },
+      { header: 'סגור באדי', key: 'is_edi_closed', width: 16 },
       { header: 'תאריך טיפול הבא', key: 'next_date', width: 16 }
     ];
 
@@ -410,6 +456,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
         summary: r.summary,
         result: r.result,
         status: r.status,
+        is_edi_closed: r.is_edi_closed ? 'כן (סגור)' : 'לא (פתוח)',
         next_date: nextDateFormatted
       });
 
@@ -432,7 +479,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
         };
         cell.alignment = {
           vertical: 'middle',
-          horizontal: (colNumber === 1 || colNumber === 4 || colNumber === 8 || colNumber === 9 || colNumber === 10) ? 'center' : 'right',
+          horizontal: (colNumber === 1 || colNumber === 4 || colNumber === 8 || colNumber === 9 || colNumber === 10 || colNumber === 11) ? 'center' : 'right',
           wrapText: true
         };
         cell.border = {
@@ -450,6 +497,17 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
             cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFBE123C' } };
           }
         }
+
+        // Color EDI status (Column 10)
+        if (colNumber === 10) {
+          if (r.is_edi_closed) {
+            cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
+          } else {
+            cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF9A3412' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF7ED' } };
+          }
+        }
       });
     });
 
@@ -457,7 +515,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
     if (reports.length > 0) {
       worksheet.autoFilter = {
         from: { row: 1, column: 1 },
-        to: { row: reports.length + 1, column: 10 }
+        to: { row: reports.length + 1, column: 11 }
       };
     }
 
