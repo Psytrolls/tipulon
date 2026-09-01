@@ -398,9 +398,8 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       views: [{ rightToLeft: true }] // RTL IN EXCEL!
     });
 
-    // Define Columns
+    // Define Columns (Removed redundant report ID column)
     worksheet.columns = [
-      { header: 'מזהה דוח', key: 'id', width: 12 },
       { header: 'מפעיל / חברה', key: 'operator', width: 16 },
       { header: 'מספר אוטובוס', key: 'bus_number', width: 16 },
       { header: 'תאריך טיפול', key: 'created_at', width: 16 },
@@ -448,7 +447,6 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       const nextDateFormatted = r.next_treatment_date ? new Date(r.next_treatment_date).toLocaleDateString('he-IL') : 'לא נקבע';
 
       const row = worksheet.addRow({
-        id: `#${r.id}`,
         operator: r.operator || 'דן באר שבע',
         bus_number: r.bus_number,
         created_at: formattedDate,
@@ -476,11 +474,11 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
         cell.font = {
           name: 'Segoe UI',
           size: 10,
-          bold: colNumber === 3 || colNumber === 1 // Bus number & ID bold
+          bold: colNumber === 2 // Bus number bold
         };
         cell.alignment = {
           vertical: 'middle',
-          horizontal: (colNumber === 1 || colNumber === 4 || colNumber === 8 || colNumber === 9 || colNumber === 10 || colNumber === 11) ? 'center' : 'right',
+          horizontal: (colNumber === 2 || colNumber === 3 || colNumber === 7 || colNumber === 8 || colNumber === 9 || colNumber === 10) ? 'center' : 'right',
           wrapText: true
         };
         cell.border = {
@@ -490,8 +488,8 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
           right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
         };
 
-        // Color status / result text
-        if (colNumber === 9) { // Status
+        // Color status text (Column 8)
+        if (colNumber === 8) {
           if (r.status === 'הטיפול הושלם') {
             cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF15803D' } };
           } else {
@@ -499,8 +497,8 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
           }
         }
 
-        // Color EDI status (Column 10)
-        if (colNumber === 10) {
+        // Color EDI status (Column 9)
+        if (colNumber === 9) {
           if (r.is_edi_closed) {
             cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDCFCE7' } };
@@ -516,7 +514,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
     if (reports.length > 0) {
       worksheet.autoFilter = {
         from: { row: 1, column: 1 },
-        to: { row: reports.length + 1, column: 11 }
+        to: { row: reports.length + 1, column: 10 }
       };
     }
 

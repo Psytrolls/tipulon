@@ -373,7 +373,6 @@ export default function ReportsView({ initialReportId = null }) {
             <table className="w-full text-right text-xs">
               <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                 <tr>
-                  <th className="p-3.5">מזהה דוח</th>
                   <th className="p-3.5">מפעיל</th>
                   <th className="p-3.5">מספר אוטובוס</th>
                   <th className="p-3.5">טכנאי מבצע</th>
@@ -387,7 +386,6 @@ export default function ReportsView({ initialReportId = null }) {
               <tbody className="divide-y divide-slate-100">
                 {reports.map((report) => (
                   <tr key={report.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3.5 font-mono font-bold text-slate-700">#{report.id}</td>
                     <td className="p-3.5 font-bold text-slate-700">
                       <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
                         report.operator === 'דן בדרום' ? 'bg-blue-50 text-blue-800' : 'bg-emerald-50 text-emerald-800'
@@ -466,7 +464,7 @@ export default function ReportsView({ initialReportId = null }) {
               <div>
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">פרטי דוח טיפול מונע</span>
                 <h2 className="text-xl font-black text-slate-900">
-                  דוח #{selectedReport.id} - אוטובוס {selectedReport.bus_number}
+                  טיפול מונע - אוטובוס {selectedReport.bus_number}
                 </h2>
               </div>
               <button

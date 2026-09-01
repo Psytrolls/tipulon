@@ -320,7 +320,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
               <table className="w-full text-right text-xs">
                 <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
                   <tr>
-                    <th className="p-3">דוח #</th>
+                    <th className="p-3">מפעיל</th>
                     <th className="p-3">מספר אוטובוס</th>
                     <th className="p-3">טכנאי</th>
                     <th className="p-3">תוצאה</th>
@@ -330,7 +330,13 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
                 <tbody className="divide-y divide-slate-100">
                   {data.recentReports.map(report => (
                     <tr key={report.id} className="hover:bg-slate-50">
-                      <td className="p-3 font-mono font-bold text-slate-700">#{report.id}</td>
+                      <td className="p-3 font-bold text-slate-700">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                          report.operator === 'דן בדרום' ? 'bg-blue-50 text-blue-800' : 'bg-emerald-50 text-emerald-800'
+                        }`}>
+                          {report.operator || 'דן באר שבע'}
+                        </span>
+                      </td>
                       <td className="p-3 font-bold text-slate-900">{report.bus_number}</td>
                       <td className="p-3 text-slate-600">{report.technician_name}</td>
                       <td className="p-3">
