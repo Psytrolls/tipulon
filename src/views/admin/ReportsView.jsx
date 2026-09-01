@@ -11,7 +11,9 @@ import {
   User, 
   CheckCircle2, 
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { useAuth } from '../../context/AuthContext';
@@ -192,6 +194,99 @@ export default function ReportsView({ initialReportId = null }) {
             <span>ייצוא ל-Excel מעוצב (RTL)</span>
           </button>
         )}
+      </div>
+
+      {/* Live KPI Counters: Total, Dan BaDarom, Dan Beer Sheva, EDI Closed, EDI Open */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        
+        {/* Total Completed */}
+        <div 
+          onClick={() => { setSearchBus(''); setFilterOperator(''); setFilterResult(''); setFilterEdi(''); }}
+          title="לחץ לאיפוס סינון והצגת כל הדוחות"
+          className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-slate-400 transition-all group"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-500">סה"כ הושלמו</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="text-2xl font-black text-slate-900 mt-1">
+            {reports.filter(r => r.status === 'הטיפול הושלם').length}
+          </div>
+          <span className="text-[10px] text-slate-400 block mt-0.5">כל האוטובוסים שטופלו</span>
+        </div>
+
+        {/* Dan BaDarom */}
+        <div 
+          onClick={() => setFilterOperator(prev => prev === 'דן בדרום' ? '' : 'דן בדרום')}
+          title="לחץ לסינון דוחות דן בדרום בלבד"
+          className={`p-3.5 rounded-2xl border shadow-sm cursor-pointer transition-all ${
+            filterOperator === 'דן בדרום' ? 'bg-blue-100 border-blue-400 ring-2 ring-blue-400' : 'bg-blue-50/70 border-blue-200 hover:border-blue-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-blue-900">דן בדרום</span>
+            <span className="text-[10px] px-1.5 py-0.2 bg-blue-200 text-blue-800 rounded font-bold">סנן</span>
+          </div>
+          <div className="text-2xl font-black text-blue-800 mt-1">
+            {reports.filter(r => r.operator === 'דן בדרום' && r.status === 'הטיפול הושלם').length}
+          </div>
+          <span className="text-[10px] text-blue-600/80 block mt-0.5">טיפולים שהושלמו</span>
+        </div>
+
+        {/* Dan Beer Sheva */}
+        <div 
+          onClick={() => setFilterOperator(prev => prev === 'דן באר שבע' ? '' : 'דן באר שבע')}
+          title="לחץ לסינון דוחות דן באר שבע בלבד"
+          className={`p-3.5 rounded-2xl border shadow-sm cursor-pointer transition-all ${
+            filterOperator === 'דן באר שבע' ? 'bg-emerald-100 border-emerald-400 ring-2 ring-emerald-400' : 'bg-emerald-50/70 border-emerald-200 hover:border-emerald-300'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-emerald-900">דן באר שבע</span>
+            <span className="text-[10px] px-1.5 py-0.2 bg-emerald-200 text-emerald-800 rounded font-bold">סנן</span>
+          </div>
+          <div className="text-2xl font-black text-emerald-800 mt-1">
+            {reports.filter(r => r.operator === 'דן באר שבע' && r.status === 'הטיפול הושלם').length}
+          </div>
+          <span className="text-[10px] text-emerald-600/80 block mt-0.5">טיפולים שהושלמו</span>
+        </div>
+
+        {/* Closed in EDI */}
+        <div 
+          onClick={() => setFilterEdi(prev => prev === 'closed' ? '' : 'closed')}
+          title="לחץ לסינון דוחות שסגורים באדי בלבד"
+          className={`p-3.5 rounded-2xl border shadow-sm cursor-pointer transition-all ${
+            filterEdi === 'closed' ? 'bg-emerald-200 border-emerald-500 ring-2 ring-emerald-500' : 'bg-emerald-100/70 border-emerald-300 hover:border-emerald-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-emerald-900">סגור באדי</span>
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+          </div>
+          <div className="text-2xl font-black text-emerald-800 mt-1">
+            {reports.filter(r => r.is_edi_closed === 1).length}
+          </div>
+          <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">✓ סגורים ומעודכנים</span>
+        </div>
+
+        {/* Open in EDI */}
+        <div 
+          onClick={() => setFilterEdi(prev => prev === 'open' ? '' : 'open')}
+          title="לחץ לסינון דוחות שטרם נסגרו באדי"
+          className={`p-3.5 rounded-2xl border shadow-sm cursor-pointer transition-all col-span-2 sm:col-span-1 ${
+            filterEdi === 'open' ? 'bg-amber-200 border-amber-500 ring-2 ring-amber-500' : 'bg-amber-50/90 border-amber-300 hover:border-amber-400'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-amber-900">פתוח באדי</span>
+            <Clock className="w-3.5 h-3.5 text-amber-700" />
+          </div>
+          <div className="text-2xl font-black text-amber-700 mt-1">
+            {reports.filter(r => !r.is_edi_closed).length}
+          </div>
+          <span className="text-[10px] text-amber-800 font-bold block mt-0.5">⏳ ממתינים לסגירה</span>
+        </div>
+
       </div>
 
       {/* Filter Bar */}

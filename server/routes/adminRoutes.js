@@ -15,7 +15,47 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const treatmentsToday = todayStmt.get().count;
 
-    // 2. Treatment needed
+    // 2. Total completed treatments
+    const totalCompletedStmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM reports 
+      WHERE status = 'הטיפול הושלם'
+    `);
+    const totalCompleted = totalCompletedStmt.get().count;
+
+    // 3. Completed for Dan BaDarom
+    const danBaDaromStmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM reports 
+      WHERE operator = 'דן בדרום' AND status = 'הטיפול הושלם'
+    `);
+    const completedDanBaDarom = danBaDaromStmt.get().count;
+
+    // 4. Completed for Dan Beer Sheva
+    const danBeerShevaStmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM reports 
+      WHERE operator = 'דן באר שבע' AND status = 'הטיפול הושלם'
+    `);
+    const completedDanBeerSheva = danBeerShevaStmt.get().count;
+
+    // 5. Total Closed in EDI
+    const ediClosedStmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM reports 
+      WHERE is_edi_closed = 1
+    `);
+    const ediClosed = ediClosedStmt.get().count;
+
+    // 6. Total Open in EDI (not yet closed)
+    const ediOpenStmt = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM reports 
+      WHERE is_edi_closed = 0 OR is_edi_closed IS NULL
+    `);
+    const ediOpen = ediOpenStmt.get().count;
+
+    // 7. Treatment needed
     const neededStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM buses 
@@ -23,7 +63,7 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const treatmentNeeded = neededStmt.get().count;
 
-    // 3. Follow-up queue
+    // 8. Follow-up queue
     const followUpStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM buses 
@@ -31,7 +71,7 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const followUpQueue = followUpStmt.get().count;
 
-    // 4. Overdue
+    // 9. Overdue
     const overdueStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM buses 
@@ -42,9 +82,9 @@ router.get('/dashboard', requireAdmin, (req, res) => {
 
     // Recent 5 reports
     const recentReportsStmt = db.prepare(`
-      SELECT id, bus_number, technician_name, result, status, created_at
+      SELECT id, bus_number, operator, technician_name, result, status, is_edi_closed, created_at
       FROM reports
-      ORDER BY created_at DESC
+      ORDER BY id DESC
       LIMIT 5
     `);
     const recentReports = recentReportsStmt.all();
@@ -52,6 +92,11 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     res.json({
       metrics: {
         treatmentsToday,
+        totalCompleted,
+        completedDanBaDarom,
+        completedDanBeerSheva,
+        ediClosed,
+        ediOpen,
         treatmentNeeded,
         followUpQueue,
         overdue

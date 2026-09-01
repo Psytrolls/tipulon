@@ -169,6 +169,71 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
 
       </div>
 
+      {/* Real-time Counters: Total Completed, Dan BaDarom, Dan Beer Sheva, EDI Closed & Open */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
+            <Bus className="w-4 h-4 text-emerald-600" />
+            <span>סיכום ביצועים לפי מפעיל ומצב סגירה באדי (EDI)</span>
+          </h2>
+          <span className="text-xs text-slate-400 font-medium">סנכרון נתונים שוטף</span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          
+          {/* Total Completed */}
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-sm border border-slate-700">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold text-slate-300">סה"כ בוצעו</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black">{metrics.totalCompleted || 0}</div>
+            <span className="text-[11px] text-slate-400 mt-0.5 block">אוטובוסים שהושלם להם טיפול</span>
+          </div>
+
+          {/* Dan BaDarom */}
+          <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-black text-blue-900">דן בדרום</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-200 text-blue-900 rounded">מפעיל</span>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-blue-800">{metrics.completedDanBaDarom || 0}</div>
+            <span className="text-[11px] text-blue-600/80 font-medium mt-0.5 block">טיפולים שהושלמו</span>
+          </div>
+
+          {/* Dan Beer Sheva */}
+          <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-black text-emerald-900">דן באר שבע</span>
+              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded">מפעיל</span>
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-800">{metrics.completedDanBeerSheva || 0}</div>
+            <span className="text-[11px] text-emerald-600/80 font-medium mt-0.5 block">טיפולים שהושלמו</span>
+          </div>
+
+          {/* Closed in EDI */}
+          <div className="bg-emerald-100/60 border border-emerald-300 rounded-2xl p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-black text-emerald-900">סגור באדי</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-800">{metrics.ediClosed || 0}</div>
+            <span className="text-[11px] text-emerald-700 font-bold mt-0.5 block">✓ סגורים ומעודכנים</span>
+          </div>
+
+          {/* Open in EDI */}
+          <div className="bg-amber-50/80 border border-amber-300 rounded-2xl p-4 shadow-sm col-span-2 sm:col-span-1">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-black text-amber-900">פתוח באדי</span>
+              <Clock className="w-4 h-4 text-amber-700" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-amber-700">{metrics.ediOpen || 0}</div>
+            <span className="text-[11px] text-amber-800 font-medium mt-0.5 block">⏳ ממתינים לסגירה באדי</span>
+          </div>
+
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Quick Action: Schedule Next Treatment Date (Section 7.3) */}
