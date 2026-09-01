@@ -126,24 +126,34 @@ export function initDatabase() {
 }
 
 function seedInitialData() {
-  // Seed Products
+  // Seed Products (The 3 official bus ticketing / validation devices)
   const initialProducts = [
-    'מכשיר תיקוף',
-    'מחשב נהג',
-    'נתב תקשורת',
-    'מודם סלולרי',
-    'מצלמת דרך',
-    'מסך נוסעים'
+    'PCE 415',
+    'VPE 420',
+    'VPE 430'
   ];
 
   const checkProduct = db.prepare('SELECT id FROM products WHERE name = ?');
   const insertProduct = db.prepare('INSERT INTO products (name, is_active) VALUES (?, 1)');
+  const activateProduct = db.prepare('UPDATE products SET is_active = 1 WHERE name = ?');
 
   for (const prod of initialProducts) {
     if (!checkProduct.get(prod)) {
       insertProduct.run(prod);
+    } else {
+      activateProduct.run(prod);
     }
   }
+
+  // Deactivate old generic products if they exist and aren't used in past reports
+  try {
+    db.exec(`
+      UPDATE products 
+      SET is_active = 0 
+      WHERE name IN ('מכשיר תיקוף', 'מחשב נהג', 'נתב תקשורת', 'מודם סלולרי', 'מצלמת דרך', 'מסך נוסעים')
+        AND id NOT IN (SELECT product_id FROM report_devices WHERE product_id IS NOT NULL);
+    `);
+  } catch (e) {}
 
   // Seed Admin & Technician users
   const checkUser = db.prepare('SELECT id FROM users WHERE phone = ?');

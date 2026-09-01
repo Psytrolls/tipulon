@@ -208,12 +208,18 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
   // Move from Step 2 to Step 3 (Initialize devices array)
   const handleInitDevices = () => {
+    // Find PCE 415 and VPE 420 in catalog
+    const pce415 = activeProducts.find(p => p.name.toLowerCase().includes('415')) || activeProducts[0];
+    const vpe420 = activeProducts.find(p => p.name.toLowerCase().includes('420')) || activeProducts[1] || activeProducts[0];
+
     const initialDevices = [];
     for (let i = 0; i < deviceCount; i++) {
+      // First device defaults to PCE 415, all subsequent devices default to VPE 420
+      const defaultProd = (i === 0) ? (pce415 || { name: 'PCE 415', id: null }) : (vpe420 || { name: 'VPE 420', id: null });
       initialDevices.push(
         devices[i] || {
-          productName: activeProducts[0]?.name || '',
-          productId: activeProducts[0]?.id || null,
+          productName: defaultProd?.name || 'VPE 420',
+          productId: defaultProd?.id || null,
           serialNumber: '',
           status: 'תקין',
           notes: ''
@@ -225,16 +231,50 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
     setStep(3);
   };
 
-  // Update specific device in state
+  // Update specific device in state with smart cascade
   const handleUpdateDevice = (field, value) => {
     const updated = [...devices];
     if (field === 'productName') {
-      const found = activeProducts.find(p => p.name === value);
+      const found = activeProducts.find(p => p.name.toLowerCase() === String(value).toLowerCase()) ||
+                    activeProducts.find(p => p.name.toLowerCase().includes(String(value).toLowerCase().replace(/\s+/g, '')));
+      
+      const realProductName = found?.name || value;
+      const realProductId = found?.id || null;
+
       updated[currentDeviceIndex] = {
         ...updated[currentDeviceIndex],
-        productName: value,
-        productId: found?.id || null
+        productName: realProductName,
+        productId: realProductId
       };
+
+      // Smart device cascade:
+      // If PCE 415 is chosen -> all subsequent devices default to VPE 420
+      // If VPE 430 is chosen -> all subsequent devices default to VPE 430
+      // If VPE 420 is chosen -> all subsequent devices default to VPE 420
+      const valLower = String(value).toLowerCase();
+      let cascadeTargetName = null;
+
+      if (valLower.includes('415')) {
+        const target = activeProducts.find(p => p.name.toLowerCase().includes('420'));
+        cascadeTargetName = target ? target.name : 'VPE 420';
+      } else if (valLower.includes('430')) {
+        const target = activeProducts.find(p => p.name.toLowerCase().includes('430'));
+        cascadeTargetName = target ? target.name : 'VPE 430';
+      } else if (valLower.includes('420')) {
+        const target = activeProducts.find(p => p.name.toLowerCase().includes('420'));
+        cascadeTargetName = target ? target.name : 'VPE 420';
+      }
+
+      if (cascadeTargetName) {
+        const cascadeProd = activeProducts.find(p => p.name === cascadeTargetName);
+        for (let i = currentDeviceIndex + 1; i < updated.length; i++) {
+          updated[i] = {
+            ...updated[i],
+            productName: cascadeTargetName,
+            productId: cascadeProd?.id || null
+          };
+        }
+      }
     } else {
       updated[currentDeviceIndex] = {
         ...updated[currentDeviceIndex],
@@ -743,21 +783,46 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1.5">
-                סוג מוצר / מכשיר <span className="text-rose-500">*</span>
-              </label>
-              {loadingProducts ? (
-                <div className="text-sm text-slate-400">טוען קטלוג מוצרים...</div>
-              ) : activeProducts.length === 0 ? (
-                <div className="p-3 bg-amber-50 text-amber-800 rounded-xl text-xs font-medium">
-                  אין מוצרים פעילים במערכת. פנה למנהל המערכת.
-                </div>
-              ) : (
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-sm font-bold text-slate-700">
+                  דגם המכשיר <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  בחירה חכמה
+                </span>
+              </div>
+
+              {/* Quick Select Big Buttons for the 3 Devices */}
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {['PCE 415', 'VPE 420', 'VPE 430'].map((modelName) => {
+                  const currentName = devices[currentDeviceIndex]?.productName || '';
+                  const isSelected = currentName.toLowerCase().includes(modelName.toLowerCase().replace(/\s+/g, '')) ||
+                                     currentName.toLowerCase() === modelName.toLowerCase();
+                  return (
+                    <button
+                      key={modelName}
+                      type="button"
+                      onClick={() => handleUpdateDevice('productName', modelName)}
+                      className={`py-3 px-2 rounded-xl font-black text-sm border-2 transition-all text-center shadow-sm active:scale-95 ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-emerald-600/30'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300'
+                      }`}
+                    >
+                      {modelName}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Also dropdown if there are other products in catalog */}
+              {activeProducts.some(p => !['PCE 415', 'VPE 420', 'VPE 430'].some(m => p.name.toLowerCase().includes(m.toLowerCase().replace(/\s+/g, '')))) && (
                 <select
                   value={devices[currentDeviceIndex]?.productName || ''}
                   onChange={(e) => handleUpdateDevice('productName', e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-slate-700 font-medium text-xs focus:bg-white focus:outline-none"
                 >
+                  <option value="">דגמים נוספים...</option>
                   {activeProducts.map(prod => (
                     <option key={prod.id} value={prod.name}>
                       {prod.name}
@@ -1077,7 +1142,7 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 inline-block text-right text-xs space-y-2">
             <div><strong>סטטוס אוטובוס מעודכן:</strong> <StatusBadge status={submittedReport.status} /></div>
-            <div><strong>תאריך ושעה:</strong> {new Date(submittedReport.createdAt).toLocaleString('he-IL')}</div>
+            <div><strong>תאריך ביצוע:</strong> {new Date(submittedReport.createdAt).toLocaleDateString('he-IL')}</div>
           </div>
 
           <div>

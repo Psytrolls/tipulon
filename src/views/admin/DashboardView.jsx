@@ -272,7 +272,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
                         <StatusBadge status={report.status} />
                       </td>
                       <td className="p-3 text-slate-500 font-medium">
-                        {new Date(report.created_at).toLocaleString('he-IL')}
+                        {new Date(report.created_at).toLocaleDateString('he-IL')}
                       </td>
                     </tr>
                   ))}

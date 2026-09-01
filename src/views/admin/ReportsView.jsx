@@ -282,7 +282,7 @@ export default function ReportsView({ initialReportId = null }) {
                   <th className="p-3.5">מפעיל</th>
                   <th className="p-3.5">מספר אוטובוס</th>
                   <th className="p-3.5">טכנאי מבצע</th>
-                  <th className="p-3.5">תאריך ושעה</th>
+                  <th className="p-3.5">תאריך טיפול</th>
                   <th className="p-3.5">תוצאת טיפול</th>
                   <th className="p-3.5 text-center">סגור באדי</th>
                   <th className="p-3.5">מועד טיפול הבא</th>
@@ -303,7 +303,7 @@ export default function ReportsView({ initialReportId = null }) {
                     <td className="p-3.5 font-black text-slate-900">{report.bus_number}</td>
                     <td className="p-3.5 text-slate-700">{report.technician_name}</td>
                     <td className="p-3.5 text-slate-500 font-medium">
-                      {new Date(report.created_at).toLocaleString('he-IL')}
+                      {new Date(report.created_at).toLocaleDateString('he-IL')}
                     </td>
                     <td className="p-3.5">
                       <StatusBadge status={report.status} />

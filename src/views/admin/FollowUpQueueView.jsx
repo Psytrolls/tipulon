@@ -101,7 +101,7 @@ export default function FollowUpQueueView({ onViewReport }) {
 
                 <div className="text-xs text-slate-600 space-y-1 bg-rose-50/50 p-3 rounded-xl border border-rose-100">
                   <div><strong>טכנאי מדווח:</strong> {item.technician_name}</div>
-                  <div><strong>מועד דוח:</strong> {new Date(item.treatment_date).toLocaleString('he-IL')}</div>
+                  <div><strong>תאריך דוח:</strong> {new Date(item.treatment_date).toLocaleDateString('he-IL')}</div>
                   <div className="pt-1">
                     <strong className="block text-rose-800">סיכום התקלה / הטיפול:</strong>
                     <p className="text-slate-800 line-clamp-3 mt-0.5">{item.summary}</p>

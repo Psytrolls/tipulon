@@ -137,7 +137,8 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
 
     const reportStatus = result === 'נדרש המשך טיפול של הלקוח' ? 'הועבר להמשך טיפול' : 'הטיפול הושלם';
     const photoPath = req.file ? `/uploads/${req.file.filename}` : null;
-    const now = new Date().toISOString();
+    // Treatment date: strictly date without time ('YYYY-MM-DD')
+    const now = new Date().toISOString().slice(0, 10);
 
     // Begin saving report
     const insertReportStmt = db.prepare(`
@@ -402,7 +403,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       { header: 'מזהה דוח', key: 'id', width: 12 },
       { header: 'מפעיל / חברה', key: 'operator', width: 16 },
       { header: 'מספר אוטובוס', key: 'bus_number', width: 16 },
-      { header: 'תאריך ושעה', key: 'created_at', width: 20 },
+      { header: 'תאריך טיפול', key: 'created_at', width: 16 },
       { header: 'שם הטכנאי', key: 'technician_name', width: 18 },
       { header: 'רשימת המכשירים ומצבם', key: 'devices', width: 42 },
       { header: 'סיכום הטכנאי', key: 'summary', width: 38 },
@@ -443,7 +444,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
     // Add Data Rows
     reports.forEach((r, index) => {
       const devListStr = (devicesByReport[r.id] || []).join('\n');
-      const formattedDate = new Date(r.created_at).toLocaleString('he-IL');
+      const formattedDate = new Date(r.created_at).toLocaleDateString('he-IL');
       const nextDateFormatted = r.next_treatment_date ? new Date(r.next_treatment_date).toLocaleDateString('he-IL') : 'לא נקבע';
 
       const row = worksheet.addRow({
