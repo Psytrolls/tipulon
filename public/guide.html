@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מדריך למשתמש ומצגת הדרכה – אפליקציית טיפולון</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Assistant', sans-serif;
+    }
+    h1, h2, h3, .font-heading {
+      font-family: 'Rubik', sans-serif;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      .page-break {
+        page-break-before: always;
+        break-before: page;
+      }
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .slide-card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        margin-bottom: 2rem !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 min-h-screen">
+
+  <!-- Top Sticky Navigation Bar (Controls) -->
+  <header class="no-print sticky top-0 z-50 bg-slate-900 text-white border-b border-slate-800 shadow-lg px-4 py-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center font-black text-xl shadow-md shadow-emerald-900/50">
+          🚌
+        </div>
+        <div>
+          <h1 class="font-black text-lg text-emerald-400">טיפולון – מדריך הפעלה צעד-אחר-צעד לטכנאי</h1>
+          <p class="text-xs text-slate-400">הדרכה מפורטת, פשוטה וברורה לביצוע טיפול מונע בשטח</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button onclick="window.print()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 active:scale-95">
+          🖨️ <span>הדפס או שמור כ-PDF</span>
+        </button>
+        <button onclick="toggleViewMode()" id="viewModeBtn" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
+          🖥️ <span>מצב מצגת מלאה</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Presentation Slides Container -->
+  <main class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8" id="slidesContainer">
+
+    <!-- SLIDE 1: Cover / Introduction -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 overflow-hidden relative">
+      <div class="absolute top-0 right-0 left-0 h-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
+      
+      <div class="text-center space-y-4 max-w-2xl mx-auto pt-4">
+        <span class="inline-block py-1.5 px-4 bg-emerald-100 text-emerald-800 font-black text-xs rounded-full uppercase tracking-wider">
+          שקף 1 מתוך 8 • פתיחה ומבוא
+        </span>
+        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 leading-tight">
+          מדריך ביצוע טיפול מונע באוטובוסים
+        </h2>
+        <p class="text-slate-600 text-base sm:text-lg">
+          המערכת הדיגיטלית החדשה שמחליפה את דפי הנייר ומאפשרת לתעד טיפול מלא ב-<strong>פחות מ-2 דקות</strong> ישירות מהטלפון הנייד!
+        </p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-right">
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div class="text-2xl mb-1">⏱️</div>
+            <h3 class="font-black text-slate-800 text-sm">מהיר בטירוף</h3>
+            <p class="text-xs text-slate-500 mt-1">בחירה חכמה של דגמי המכשירים בקליק אחד בלבד ללא הקלדות מיותרות.</p>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div class="text-2xl mb-1">🛡️</div>
+            <h3 class="font-black text-slate-800 text-sm">הגנה מטעויות</h3>
+            <p class="text-xs text-slate-500 mt-1">המערכת בודקת אוטומטית תוקף 6 חודשים ומונעת טעויות ברישום.</p>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div class="text-2xl mb-1">📱</div>
+            <h3 class="font-black text-slate-800 text-sm">אפליקציה בכיס</h3>
+            <p class="text-xs text-slate-500 mt-1">פועלת ישירות ממסך הבית של הטלפון כמו אפליקציה אמיתית.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: PWA Installation -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 2 • הכנה מוקדמת</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">איך שמים את האפליקציה במסך הבית?</h2>
+        </div>
+        <div class="text-3xl">📱</div>
+      </div>
+
+      <p class="text-slate-700 font-medium text-sm sm:text-base leading-relaxed">
+        אין צורך להיכנס לחנות האפליקציות! פותחים פעם אחת את הקישור בדפדפן ומוסיפים למסך הבית:
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- iPhone Box -->
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center gap-2 font-black text-slate-900 text-base">
+            <span class="text-xl">🍏</span>
+            <span>באייפון (iPhone - Safari):</span>
+          </div>
+          <ol class="space-y-2.5 text-xs sm:text-sm text-slate-700 list-decimal list-inside font-semibold">
+            <li>נכנסים לקישור ב-<strong>Safari</strong>: <span class="text-emerald-700 font-mono underline">bus.magavnegev.co.il</span></li>
+            <li>לוחצים בתחתית המסך על כפתור <strong>השיתוף</strong> (ריבוע עם חץ למעלה ⎋).</li>
+            <li>גוללים טיפה למטה ולוחצים על <strong>«הוסף למסך הבית»</strong> (סמל ⊞).</li>
+            <li>לוחצים למעלה על <strong>«הוסף»</strong> (Add).</li>
+          </ol>
+          <div class="bg-emerald-50 text-emerald-800 p-2.5 rounded-xl text-xs font-bold border border-emerald-200">
+            ✅ זהו! יש לכם אייקון ירוק של «טיפולון» במסך הראשי של הטלפון.
+          </div>
+        </div>
+
+        <!-- Android Box -->
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-5 space-y-3">
+          <div class="flex items-center gap-2 font-black text-slate-900 text-base">
+            <span class="text-xl">🤖</span>
+            <span>באנדרואיד (Android - Chrome):</span>
+          </div>
+          <ol class="space-y-2.5 text-xs sm:text-sm text-slate-700 list-decimal list-inside font-semibold">
+            <li>נכנסים בדפדפן <strong>Chrome</strong> לכתובת האתר.</li>
+            <li>מיד תקפוץ לכם למעלה הודעה: <strong>«התקנת אפליקציית טיפולון»</strong>.</li>
+            <li>לוחצים על הכפתור הלבן <strong>«התקן עכשיו»</strong>.</li>
+            <li>(או לוחצים על 3 נקודות ⋮ למעלה ➔ «התקן אפליקציה»).</li>
+          </ol>
+          <div class="bg-emerald-50 text-emerald-800 p-2.5 rounded-xl text-xs font-bold border border-emerald-200">
+            ✅ האפליקציה מותקנת ופועלת במסך מלא בדיוק כמו ווטסאפ!
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: Login Screen -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 3 • כניסה למערכת</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">איך מתחברים לאפליקציה?</h2>
+        </div>
+        <div class="text-3xl">🔐</div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+        <div class="space-y-4">
+          <div class="bg-amber-50 border-r-4 border-amber-500 p-4 rounded-xl text-amber-900 text-sm">
+            <strong>שימו לב:</strong> לכל טכנאי יש מספר טלפון וקוד PIN אישי של 4 ספרות שנקבע מראש על ידי מנהל המערכת.
+          </div>
+
+          <div class="space-y-3">
+            <div class="flex items-start gap-3">
+              <span class="w-7 h-7 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-sm shrink-0">1</span>
+              <p class="text-sm font-semibold text-slate-800">
+                <strong>הזנת מספר טלפון:</strong> מקלידים את מספר הנייד שלכם (לדוגמה: <code>0521234567</code>).
+              </p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-7 h-7 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-sm shrink-0">2</span>
+              <p class="text-sm font-semibold text-slate-800">
+                <strong>הזנת קוד PIN:</strong> מקלידים את 4 הספרות הסודיות שלכם (לדוגמה: <code>1234</code>).
+              </p>
+            </div>
+            <div class="flex items-start gap-3">
+              <span class="w-7 h-7 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-sm shrink-0">3</span>
+              <p class="text-sm font-semibold text-slate-800">
+                לוחצים על הכפתור הירוק הגדול <strong>«התחבר למערכת»</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Visual UI Mockup of Login -->
+        <div class="bg-slate-900 p-6 rounded-3xl text-white shadow-2xl border border-slate-800 max-w-sm mx-auto w-full">
+          <div class="text-center mb-5">
+            <div class="w-12 h-12 bg-emerald-500 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-2">🚌</div>
+            <div class="font-black text-xl text-emerald-400">טיפולון</div>
+            <div class="text-xs text-slate-400">כניסה למערכת</div>
+          </div>
+          <div class="space-y-3 text-right">
+            <div>
+              <span class="text-xs text-slate-400 block mb-1">מספר טלפון</span>
+              <div class="bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-mono text-emerald-300">050-1234567</div>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block mb-1">קוד PIN סודי</span>
+              <div class="bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-mono tracking-widest text-emerald-300">••••</div>
+            </div>
+            <div class="pt-2">
+              <div class="w-full bg-emerald-600 text-center py-2.5 rounded-xl font-black text-sm text-white shadow-lg">
+                התחבר למערכת ←
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: Step 1 - Bus Selection & 6 Months Rule -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 4 • שלב 1 בתהליך</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">בחירת מפעיל ובדיקת מספר אוטובוס</h2>
+        </div>
+        <div class="text-3xl">🚍</div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4 text-sm font-medium text-slate-800 leading-relaxed">
+          <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
+            <strong class="text-emerald-900 block mb-1">א. בוחרים את המפעיל בלחיצה אחת:</strong>
+            <div class="grid grid-cols-2 gap-2 mt-2">
+              <div class="border-2 border-emerald-600 bg-white p-3 rounded-xl text-center font-black text-xs text-emerald-900 shadow-sm">
+                דן באר שבע<br><span class="text-[10px] text-slate-500 font-normal">מינימום 3 מכשירים</span>
+              </div>
+              <div class="border border-slate-200 bg-white p-3 rounded-xl text-center font-black text-xs text-slate-700">
+                דן בדרום<br><span class="text-[10px] text-slate-500 font-normal">מכשיר 1 בלבד</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            <strong class="text-slate-900 block">ב. מקלידים את מספר האוטובוס:</strong>
+            <p class="text-xs text-slate-600">
+              מקלידים מספר רישוי (<strong>7 או 8 ספרות בדיוק</strong>, לדוגמה: <code>17780403</code>).
+            </p>
+            <div class="bg-rose-50 text-rose-800 p-2.5 rounded-xl text-xs font-bold border border-rose-200">
+              ⛔ הגנת טיפשים: המערכת תחסום מספרים שגויים כמו <code>1111111</code>, <code>1234567</code> או פחות מ-7 ספרות!
+            </div>
+          </div>
+
+          <div class="p-3 bg-blue-50 rounded-2xl border border-blue-200">
+            <strong class="text-blue-900 block mb-1">ג. לוחצים על כפתור «בדוק זכאות»:</strong>
+            <ul class="text-xs space-y-1.5 text-blue-950 list-disc list-inside">
+              <li><strong>אם עברו 6 חודשים (או שהאוטובוס חדש):</strong> יוצג אישור ירוק: «האוטובוס זכאי לביצוע טיפול מונע».</li>
+              <li><strong>אם הטיפול עדיין בתוקף:</strong> המערכת תחסום ותודיע: «הטיפול בתוקף ל-6 חודשים (תקף לעוד X ימים)». אין צורך לטפל!</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- UI Mockup Step 1 -->
+        <div class="bg-slate-50 p-6 rounded-3xl border-2 border-slate-200 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+            <span class="text-xs font-bold text-slate-500">שלב 1 מתוך 5</span>
+            <span class="text-xs font-black text-emerald-600">זיהוי אוטובוס</span>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1">מספר אוטובוס</label>
+            <div class="flex gap-2">
+              <input type="text" value="17780403" disabled class="bg-white border-2 border-emerald-500 rounded-xl p-2.5 font-black text-base text-slate-900 flex-1 text-center font-mono">
+              <button class="bg-emerald-600 text-white font-bold px-4 rounded-xl text-xs">בדוק</button>
+            </div>
+          </div>
+
+          <div class="bg-emerald-100 border border-emerald-300 p-3 rounded-xl text-emerald-900 text-xs font-black text-center flex items-center justify-center gap-2">
+            <span>✅</span>
+            <span>האוטובוס זכאי לטיפול מונע!</span>
+          </div>
+
+          <button class="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-2">
+            <span>המשך לבחירת מכשירים</span>
+            <span>←</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: Step 2 - Number of devices -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 5 • שלב 2 בתהליך</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">כמה מכשירים יש באוטובוס?</h2>
+        </div>
+        <div class="text-3xl">🔢</div>
+      </div>
+
+      <div class="max-w-2xl mx-auto text-center space-y-6">
+        <p class="text-slate-700 text-base leading-relaxed">
+          מגדירים את כמות המכשירים שנמצאים בפועל באוטובוס הזה בלחיצה על כפתורי ה-<strong>פלוס (+)</strong> וה-<strong>מינוס (-)</strong>:
+        </p>
+
+        <div class="bg-slate-50 border-2 border-slate-200 rounded-3xl p-6 inline-block">
+          <div class="flex items-center justify-center gap-6">
+            <button class="w-14 h-14 rounded-2xl bg-white border-2 border-slate-300 text-slate-700 font-black text-2xl shadow-sm hover:bg-slate-100">-</button>
+            <div class="text-center">
+              <span class="text-5xl font-black text-emerald-600 block">4</span>
+              <span class="text-xs font-bold text-slate-500">מכשירים באוטובוס</span>
+            </div>
+            <button class="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-black text-2xl shadow-md hover:bg-emerald-700">+</button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-right">
+          <div class="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 text-xs text-blue-900">
+            <strong>בדן בדרום:</strong> יש בדרך כלל מכשיר 1 בלבד (מינימום 1).
+          </div>
+          <div class="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900">
+            <strong>בדן באר שבע:</strong> יש מינימום 3 מכשירים (מחשב נהג + 2 או 3 מכשירי נוסעים).
+          </div>
+        </div>
+
+        <button class="w-full max-w-sm py-3.5 bg-emerald-600 text-white rounded-xl font-black text-base shadow-lg shadow-emerald-600/20">
+          התחל בדיקת מכשירים צעד-אחר-צעד ←
+        </button>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: Step 3 - Smart Device Selection (HIGHLIGHT!) -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-emerald-500 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-emerald-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 6 • הכי חשוב! שלב 3</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">צ'ק-ליסט מכשירים ובחירה חכמה ⚡</h2>
+        </div>
+        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-black flex items-center justify-center text-lg">
+          ⭐
+        </div>
+      </div>
+
+      <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-5 rounded-2xl shadow-md">
+        <h3 class="font-black text-lg mb-1">איך עובדת הבחירה החכמה? (חוסך 90% מהזמן!)</h3>
+        <p class="text-xs sm:text-sm text-emerald-100 leading-relaxed">
+          במקום ללחוץ שוב ושוב על הדגם בכל מכשיר — המערכת מנחשת ומגדירה את הכל אוטומטית לפי הבחירה שלכם:
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+        <div class="space-y-4 text-sm text-slate-800 font-medium">
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+            <strong class="text-slate-900 text-base block">כלל הזהב של המערכת:</strong>
+            <ul class="space-y-2 text-xs sm:text-sm">
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-600 font-bold">1.</span>
+                <span><strong>אם מכשיר 1 הוא PCE 415:</strong> כל המכשירים הבאים באוטובוס נפתחים אוטומטית על <strong>VPE 420</strong>!</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="text-emerald-600 font-bold">2.</span>
+                <span><strong>אם מכשיר 1 הוא VPE 430:</strong> כל שאר המכשירים באוטובוס ייבחרו אוטומטית כ-<strong>VPE 430</strong>!</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+            <strong>מה נשאר לטכנאי לעשות בכל מכשיר?</strong>
+            <p>1. רק להקליד <strong>3 או 4 ספרות</strong> של המספר הסידורי (למשל: <code>415</code> או <code>1234</code>).</p>
+            <p>2. לבדוק שמסומן <strong>«תקין»</strong> (ירוק).</p>
+            <p>3. ללחוץ <strong>«למכשיר הבא ←»</strong>!</p>
+          </div>
+        </div>
+
+        <!-- UI Mockup of 3 Big Buttons -->
+        <div class="bg-slate-50 p-5 rounded-3xl border-2 border-slate-200 space-y-4">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-black text-slate-500">מכשיר 1 מתוך 4</span>
+            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">בחירה חכמה</span>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1.5">בחר דגם מכשיר:</label>
+            <!-- 3 Buttons -->
+            <div class="grid grid-cols-3 gap-2">
+              <div class="py-2.5 bg-emerald-600 text-white font-black text-xs text-center rounded-xl shadow-md border-2 border-emerald-600">
+                PCE 415
+              </div>
+              <div class="py-2.5 bg-white text-slate-700 font-bold text-xs text-center rounded-xl border border-slate-300">
+                VPE 420
+              </div>
+              <div class="py-2.5 bg-white text-slate-700 font-bold text-xs text-center rounded-xl border border-slate-300">
+                VPE 430
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1">מספר מכשיר (3 עד 4 ספרות)</label>
+            <input type="text" value="415" disabled class="w-full bg-white border border-slate-300 rounded-xl p-2.5 font-mono font-black text-base text-center">
+          </div>
+
+          <div>
+            <label class="text-xs font-bold text-slate-700 block mb-1">סטטוס מכשיר:</label>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="bg-emerald-600 text-white text-center py-2 rounded-xl text-xs font-black">✓ תקין</div>
+              <div class="bg-white text-slate-600 text-center py-2 rounded-xl text-xs font-bold border border-slate-200">לא תקין</div>
+            </div>
+          </div>
+
+          <button class="w-full py-2.5 bg-slate-900 text-white rounded-xl font-black text-xs">
+            שמור ועבור למכשיר 2 מתוך 4 ←
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: Step 4 & 5 - Summary & Submit -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 7 • שלבים 4 ו-5</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">סיכום הטיפול ושליחת הדוח</h2>
+        </div>
+        <div class="text-3xl">✅</div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+        <div class="space-y-4 text-sm text-slate-700">
+          <div class="flex items-start gap-3">
+            <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">1</span>
+            <div>
+              <strong class="text-slate-900 block">תוצאת הטיפול:</strong>
+              <p class="text-xs text-slate-500 mt-0.5">
+                ברוב המקרים בוחרים <strong>«הכול תקין באוטובוס»</strong>. אם נשאר רכיב תקול שמחייב טיפול מוסך, בוחרים «נדרש המשך טיפול של הלקוח».
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">2</span>
+            <div>
+              <strong class="text-slate-900 block">סיכום מילולי:</strong>
+              <p class="text-xs text-slate-500 mt-0.5">
+                משפט קצר על מה שנעשה, למשל: <em>«בוצע טיפול מונע תקופתי, כל המכשירים נבדקו ותקינים»</em>.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-start gap-3">
+            <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">3</span>
+            <div>
+              <strong class="text-slate-900 block">חתימה ושליחה סופית:</strong>
+              <p class="text-xs text-slate-500 mt-0.5">
+                עוברים על מסך הסיכום, בודקים שהמספרים נכונים ולוחצים על <strong>«אשר ושלח דוח טיפול»</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Box -->
+        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-3xl p-6 text-center space-y-3">
+          <div class="w-16 h-16 bg-emerald-600 text-white rounded-full mx-auto flex items-center justify-center text-3xl shadow-lg shadow-emerald-600/30">
+            ✓
+          </div>
+          <h3 class="text-xl font-black text-emerald-900">דוח הטיפול נשמר בהצלחה!</h3>
+          <p class="text-xs text-emerald-700">
+            הדוח עלה ישירות לענן, האוטובוס עודכן כמשוריין ל-6 חודשים קדימה והנתונים מופיעים מיד באקסל של המנהל!
+          </p>
+          <button class="py-2.5 px-6 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-md">
+            פתח טיפול לאוטובוס הבא ➔
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: Top 5 Golden Rules for Field Technicians -->
+    <section class="slide-card bg-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-800 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-400 uppercase">שקף 8 • סיכום וכללי ברזל</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-white">5 כללי ברזל לעבודה חלקה בשטח 🛡️</h2>
+        </div>
+        <div class="text-3xl">⭐</div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
+          <div class="font-black text-emerald-400 text-base">1. הקפדה על מספר אוטובוס מדויק</div>
+          <p class="text-slate-300">תמיד לבדוק את לוחית הרישוי על גבי האוטובוס. המספר חייב להיות בן 7 או 8 ספרות.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
+          <div class="font-black text-emerald-400 text-base">2. תוקף 6 חודשים</div>
+          <p class="text-slate-300">אם האפליקציה אומרת שהאוטובוס לא זכאי כי יש לו טיפול תקף — <strong>לא לגעת בו!</strong> הוא כבר טופל לאחרונה.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
+          <div class="font-black text-emerald-400 text-base">3. מכשירים: שימוש בכפתורי הבחירה</div>
+          <p class="text-slate-300">לא לשבור את הראש: לחיצה אחת על <code>PCE 415</code> מסדרת לכם את כל שאר המכשירים כ-<code>VPE 420</code> אוטומטית.</p>
+        </div>
+
+        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
+          <div class="font-black text-emerald-400 text-base">4. מספר מכשיר: 3 עד 4 ספרות בלבד</div>
+          <p class="text-slate-300">מכניסים רק את המספר הסידורי שעל המדבקה (למשל <code>001</code> או <code>430</code>). לא להזין אפסים מיותרים.</p>
+        </div>
+      </div>
+
+      <div class="bg-emerald-950/60 border border-emerald-500/40 p-4 rounded-2xl text-center space-y-1">
+        <div class="font-black text-emerald-400 text-sm">💡 יש בעיה או שאלה?</div>
+        <p class="text-xs text-slate-300">פונים מיד למנהל המערכת שיכול לעדכן סיסמאות, לערוך נתונים או לפתוח הרשאות בזמן אמת.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Floating Footer / Slide Controller (Visible only in web mode) -->
+  <footer class="no-print fixed bottom-4 right-4 left-4 z-40 max-w-xl mx-auto bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between">
+    <div class="text-xs font-bold text-slate-300">
+      טיפולון © 2026 • הדרכת טכנאים
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="scrollToSlide('prev')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold">
+        ➔ הקודם
+      </button>
+      <button onclick="scrollToSlide('next')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold">
+        הבא ⬅
+      </button>
+    </div>
+  </footer>
+
+  <script>
+    let currentSlideIdx = 0;
+    const slides = document.querySelectorAll('.slide-card');
+
+    function scrollToSlide(direction) {
+      if (direction === 'next') {
+        currentSlideIdx = Math.min(currentSlideIdx + 1, slides.length - 1);
+      } else {
+        currentSlideIdx = Math.max(currentSlideIdx - 1, 0);
+      }
+      slides[currentSlideIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Keyboard Arrow navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+        scrollToSlide('next');
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+        scrollToSlide('prev');
+      }
+    });
+
+    function toggleViewMode() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        document.getElementById('viewModeBtn').innerHTML = '✕ <span>צא ממסך מלא</span>';
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+        document.getElementById('viewModeBtn').innerHTML = '🖥️ <span>מצב מצגת מלאה</span>';
+      }
+    }
+  </script>
+</body>
+</html>
