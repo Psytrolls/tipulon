@@ -1,5 +1,6 @@
 /**
  * Script to import completed Dan BaDarom buses with EDI closed status
+ * Includes automatic deduplication
  */
 import { db, initDatabase } from './db.js';
 
@@ -25,10 +26,40 @@ const busList = [
   '1165039', '9283301'
 ];
 
-// Unique set of bus numbers
+// Deduplicate input array (98 rows in input, 92 unique buses)
 const uniqueBuses = [...new Set(busList)];
 
-console.log(`Starting import of ${uniqueBuses.length} Dan BaDarom buses...`);
+console.log(`Processing ${uniqueBuses.length} unique Dan BaDarom buses...`);
+
+// 1. First, automatically clean up any duplicate reports if the script was run twice
+db.exec('BEGIN TRANSACTION;');
+
+try {
+  // Delete duplicate report devices
+  db.exec(`
+    DELETE FROM report_devices 
+    WHERE report_id IN (
+      SELECT id FROM reports 
+      WHERE id NOT IN (
+        SELECT MAX(id) FROM reports GROUP BY bus_number
+      )
+    );
+  `);
+
+  // Delete duplicate reports
+  db.exec(`
+    DELETE FROM reports 
+    WHERE id NOT IN (
+      SELECT MAX(id) FROM reports GROUP BY bus_number
+    );
+  `);
+
+  db.exec('COMMIT;');
+  console.log('🧹 Cleaned up any duplicate reports.');
+} catch (e) {
+  db.exec('ROLLBACK;');
+  console.error('Deduplication cleanup error:', e);
+}
 
 // Find admin or first user to attribute reports to
 const defaultUser = db.prepare('SELECT id, full_name FROM users ORDER BY id ASC LIMIT 1').get() || {
@@ -37,7 +68,6 @@ const defaultUser = db.prepare('SELECT id, full_name FROM users ORDER BY id ASC 
 };
 
 const treatmentDate = '2026-09-01';
-// Next treatment in exactly 6 months
 const nextDate = '2027-03-01';
 
 const checkBusStmt = db.prepare('SELECT bus_number FROM buses WHERE bus_number = ?');
@@ -51,6 +81,12 @@ const insertBusStmt = db.prepare(`
   VALUES (?, 'דן בדרום', 'הטיפול הושלם', ?, ?, datetime('now'))
 `);
 
+const checkReportStmt = db.prepare('SELECT id FROM reports WHERE bus_number = ?');
+const updateReportStmt = db.prepare(`
+  UPDATE reports
+  SET operator = 'דן בדרום', status = 'הטיפול הושלם', is_edi_closed = 1, edi_closed_at = ?, created_at = ?
+  WHERE id = ?
+`);
 const insertReportStmt = db.prepare(`
   INSERT INTO reports (bus_number, operator, technician_id, technician_name, photo_path, summary, result, status, is_edi_closed, edi_closed_at, created_at)
   VALUES (?, 'דן בדרום', ?, ?, NULL, 'טיפול מונע תקופתי הושלם ונסגר באדי', 'הכול תקין באוטובוס', 'הטיפול הושלם', 1, ?, ?)
@@ -61,40 +97,50 @@ const insertDeviceStmt = db.prepare(`
   VALUES (?, 'PCE 415', '415', 'תקין', 'נבדק ותקין')
 `);
 
-let insertedBuses = 0;
-let insertedReports = 0;
-
 db.exec('BEGIN TRANSACTION;');
 
 try {
   for (const busNum of uniqueBuses) {
-    const existing = checkBusStmt.get(busNum);
-    if (existing) {
+    // 1. Bus table
+    const existingBus = checkBusStmt.get(busNum);
+    if (existingBus) {
       updateBusStmt.run(treatmentDate, nextDate, busNum);
     } else {
       insertBusStmt.run(busNum, treatmentDate, nextDate);
-      insertedBuses++;
     }
 
-    // Insert completed report with EDI closed
-    const reportRes = insertReportStmt.run(
-      busNum,
-      defaultUser.id,
-      defaultUser.full_name,
-      treatmentDate,
-      treatmentDate
-    );
-    const reportId = Number(reportRes.lastInsertRowid);
-    insertDeviceStmt.run(reportId);
-    insertedReports++;
+    // 2. Report table (Strictly 1 report per bus, never duplicate!)
+    const existingReport = checkReportStmt.get(busNum);
+    if (existingReport) {
+      updateReportStmt.run(treatmentDate, treatmentDate, existingReport.id);
+    } else {
+      const reportRes = insertReportStmt.run(
+        busNum,
+        defaultUser.id,
+        defaultUser.full_name,
+        treatmentDate,
+        treatmentDate
+      );
+      const reportId = Number(reportRes.lastInsertRowid);
+      insertDeviceStmt.run(reportId);
+    }
   }
 
   db.exec('COMMIT;');
-  console.log(`✅ Success! ${uniqueBuses.length} Dan BaDarom buses imported and updated.`);
-  console.log(`- Total buses updated/inserted: ${uniqueBuses.length}`);
-  console.log(`- Total reports created: ${insertedReports}`);
-  console.log(`- All marked as: סגור באדי (Closed in EDI)`);
-  console.log(`- Treatment Date: ${treatmentDate}, Next Date: ${nextDate} (6 months validity)`);
+
+  const totalReportsCount = db.prepare('SELECT COUNT(*) as c FROM reports').get().c;
+  const totalBusesCount = db.prepare('SELECT COUNT(*) as c FROM buses').get().c;
+  const danBaDaromReports = db.prepare("SELECT COUNT(*) as c FROM reports WHERE operator = 'דן בדרום'").get().c;
+  const ediClosedCount = db.prepare('SELECT COUNT(*) as c FROM reports WHERE is_edi_closed = 1').get().c;
+
+  console.log(`\n==============================================`);
+  console.log(`✅ DATABASE SYNCHRONIZED SUCCESSFULLY!`);
+  console.log(`- Total unique Dan BaDarom buses: ${uniqueBuses.length}`);
+  console.log(`- Dan BaDarom reports in database: ${danBaDaromReports}`);
+  console.log(`- Total closed in EDI: ${ediClosedCount}`);
+  console.log(`- Total reports across all buses: ${totalReportsCount}`);
+  console.log(`- Total buses in fleet: ${totalBusesCount}`);
+  console.log(`==============================================\n`);
 } catch (err) {
   db.exec('ROLLBACK;');
   console.error('Import failed, transaction rolled back:', err);
