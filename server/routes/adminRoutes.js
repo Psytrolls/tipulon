@@ -176,4 +176,77 @@ router.get('/audit-logs', requireAdmin, (req, res) => {
   }
 });
 
+// ==========================================
+// Database Backup Endpoints
+// ==========================================
+import { createBackup, listBackups, getLatestBackupPath } from '../backupService.js';
+import path from 'node:path';
+import fs from 'node:fs';
+
+// GET /api/admin/backups - List backups
+router.get('/backups', requireAdmin, (req, res) => {
+  try {
+    const backups = listBackups();
+    res.json(backups);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה בטעינת רשימת הגיבויים' });
+  }
+});
+
+// POST /api/admin/backups/create - Create backup now
+router.post('/backups/create', requireAdmin, async (req, res) => {
+  try {
+    const result = await createBackup({ reason: 'יזום על ידי מנהל' });
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'יצירת גיבוי ידני',
+      'מסד נתונים',
+      result.filename,
+      `נוצר קובץ גיבוי בגודל ${result.sizeFormatted}`
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('Manual backup error:', err);
+    res.status(500).json({ error: 'שגיאה ביצירת גיבוי' });
+  }
+});
+
+// GET /api/admin/backups/download-latest - Download latest backup file
+router.get('/backups/download-latest', requireAdmin, (req, res) => {
+  try {
+    const latestPath = getLatestBackupPath();
+    if (!latestPath || !fs.existsSync(latestPath)) {
+      return res.status(404).json({ error: 'לא נמצא קובץ גיבוי להורדה' });
+    }
+    const filename = path.basename(latestPath);
+    res.download(latestPath, filename);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה בהורדת קובץ הגיבוי' });
+  }
+});
+
+// GET /api/admin/backups/download/:filename - Download specific backup file
+router.get('/backups/download/:filename', requireAdmin, (req, res) => {
+  try {
+    const { filename } = req.params;
+    const safeFilename = path.basename(filename);
+    const latestPath = getLatestBackupPath();
+    const backupsDir = latestPath ? path.dirname(latestPath) : null;
+    
+    if (!backupsDir) {
+      return res.status(404).json({ error: 'תיקיית גיבויים ריקה' });
+    }
+
+    const targetFile = path.join(backupsDir, safeFilename);
+    if (!fs.existsSync(targetFile)) {
+      return res.status(404).json({ error: 'קובץ הגיבוי המבוקש לא קיים' });
+    }
+
+    res.download(targetFile, safeFilename);
+  } catch (err) {
+    res.status(500).json({ error: 'שגיאה בהורדת קובץ הגיבוי' });
+  }
+});
+
 export default router;

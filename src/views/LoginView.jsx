@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Bus, Lock, Phone, ArrowLeft, CheckCircle2, Sparkles } from 'lucide-react';
+import InstallPwaBanner from '../components/InstallPwaBanner';
 
 export default function LoginView() {
   const { setAuthUser } = useAuth();
@@ -47,6 +48,9 @@ export default function LoginView() {
 
   return (
     <div className="relative min-h-screen flex flex-col justify-center items-center px-4 py-8 bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 overflow-hidden">
+      <div className="fixed top-0 left-0 right-0 z-50">
+        <InstallPwaBanner />
+      </div>
       
       {/* Decorative Animated Background Glows */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none animate-pulse duration-1000"></div>

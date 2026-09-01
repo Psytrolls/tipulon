@@ -9,6 +9,7 @@ import ProductsView from './views/admin/ProductsView';
 import UsersView from './views/admin/UsersView';
 import ReportsView from './views/admin/ReportsView';
 import AuditLogsView from './views/admin/AuditLogsView';
+import InstallPwaBanner from './components/InstallPwaBanner';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -55,6 +56,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
+      <InstallPwaBanner />
       <Navbar currentView={viewToRender} setCurrentView={(v) => { setActiveReportId(null); setCurrentView(v); }} />
 
       <main className="flex-1 pb-12">

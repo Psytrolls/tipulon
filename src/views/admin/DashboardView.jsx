@@ -9,7 +9,11 @@ import {
   Search, 
   CalendarDays,
   ShieldCheck,
-  RefreshCw
+  RefreshCw,
+  Download,
+  Database,
+  HardDrive,
+  X
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 
@@ -23,6 +27,53 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
   const [scheduling, setScheduling] = useState(false);
   const [scheduleSuccess, setScheduleSuccess] = useState('');
   const [scheduleError, setScheduleError] = useState('');
+
+  // Backup modal state
+  const [showBackupModal, setShowBackupModal] = useState(false);
+  const [backups, setBackups] = useState([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [creatingBackup, setCreatingBackup] = useState(false);
+  const [backupMessage, setBackupMessage] = useState('');
+
+  const loadBackups = async () => {
+    try {
+      setLoadingBackups(true);
+      const res = await fetch('/api/admin/backups');
+      if (res.ok) {
+        const json = await res.json();
+        setBackups(json);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showBackupModal) {
+      loadBackups();
+    }
+  }, [showBackupModal]);
+
+  const handleCreateBackup = async () => {
+    try {
+      setCreatingBackup(true);
+      setBackupMessage('');
+      const res = await fetch('/api/admin/backups/create', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setBackupMessage(`✅ גיבוי נוצר בהצלחה: ${data.filename} (${data.sizeFormatted})`);
+        loadBackups();
+      } else {
+        setBackupMessage(`⚠️ שגיאה: ${data.error}`);
+      }
+    } catch (e) {
+      setBackupMessage('⚠️ שגיאה ביצירת הגיבוי');
+    } finally {
+      setCreatingBackup(false);
+    }
+  };
 
   const loadDashboard = async () => {
     try {
@@ -104,13 +155,25 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">לוח בקרה ניהולי</h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">תמונת מצב בזמן אמת של צי האוטובוסים והטיפולים המונעים</p>
         </div>
-        <button
-          onClick={loadDashboard}
-          className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1.5 text-xs font-bold"
-        >
-          <RefreshCw className="w-4 h-4" />
-          <span className="hidden sm:inline">רענן נתונים</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowBackupModal(true)}
+            className="py-2 px-3.5 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 transition-all flex items-center gap-2 text-xs font-black shadow-sm active:scale-95"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span>גיבוי מסד נתונים</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={loadDashboard}
+            className="p-2 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors flex items-center gap-1.5 text-xs font-bold"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span className="hidden sm:inline">רענן נתונים</span>
+          </button>
+        </div>
       </div>
 
       {/* 4 KPI Cards (Matching spec Section 7.1) */}
@@ -354,6 +417,123 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
         </div>
 
       </div>
+
+      {/* Database Backup Modal */}
+      {showBackupModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 space-y-6">
+            
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-200">
+                  <Database className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">גיבוי ואבטחת מסד נתונים</h2>
+                  <p className="text-xs text-slate-500">ניהול קבצי גיבוי ושחזור (SQLite Compressed GZIP)</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowBackupModal(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Notification / status banner */}
+            <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2 text-xs text-emerald-900">
+              <div className="flex items-center gap-2 font-black text-emerald-800">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                <span>מערכת גיבוי אוטומטית פעילה</span>
+              </div>
+              <p className="text-emerald-700 leading-relaxed">
+                השרת מייצר באופן אוטומטי גיבוי דחוס מדי לילה ב-<strong>02:00</strong> ושומר את 30 הגיבויים האחרונים בתיקיית <code>data/backups/</code>.
+              </p>
+            </div>
+
+            {backupMessage && (
+              <div className="p-3 bg-slate-100 border border-slate-300 rounded-xl text-xs font-bold text-slate-800">
+                {backupMessage}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a
+                href="/api/admin/backups/download-latest"
+                download
+                className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>הורד גיבוי עדכני למחשב (.db.gz)</span>
+              </a>
+
+              <button
+                type="button"
+                onClick={handleCreateBackup}
+                disabled={creatingBackup}
+                className="py-3 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                <HardDrive className="w-4 h-4 text-slate-400" />
+                <span>{creatingBackup ? 'יוצר גיבוי...' : 'בצע גיבוי חדש כעת'}</span>
+              </button>
+            </div>
+
+            {/* Backups List */}
+            <div className="space-y-3 pt-2 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700">היסטוריית גיבויים קיימים בשרת:</span>
+                <button
+                  type="button"
+                  onClick={loadBackups}
+                  className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  <span>רענן רשימה</span>
+                </button>
+              </div>
+
+              {loadingBackups ? (
+                <div className="text-center py-6 text-xs text-slate-400">טוען קבצי גיבוי...</div>
+              ) : backups.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">טרם נוצרו קבצי גיבוי בשרת</div>
+              ) : (
+                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-200">
+                  {backups.map((b) => (
+                    <div key={b.filename} className="p-3 flex items-center justify-between hover:bg-slate-50 text-xs">
+                      <div className="space-y-0.5">
+                        <div className="font-mono font-bold text-slate-800">{b.filename}</div>
+                        <div className="text-[11px] text-slate-400">
+                          גודל: {b.sizeFormatted} | נוצר: {new Date(b.createdAt).toLocaleString('he-IL')}
+                        </div>
+                      </div>
+                      <a
+                        href={`/api/admin/backups/download/${encodeURIComponent(b.filename)}`}
+                        download
+                        title="הורד קובץ גיבוי זה"
+                        className="p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Cloud Sync Hint for TrueNAS / Google Drive */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 space-y-1">
+              <span className="font-bold text-slate-800 block">💡 סנכרון ישיר ל-Google Drive / OneDrive דרך TrueNAS:</span>
+              <p>
+                בממשק TrueNAS תחת <em>Data Protection ➔ Cloud Sync Tasks</em> ניתן לחבר את התיקייה <code>/root/tipulon/data/backups</code> ישירות ל-Google Drive האישי שלך לסנכרון אוטומטי מלא ללא צורך בהגדרות נוספות!
+              </p>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );
