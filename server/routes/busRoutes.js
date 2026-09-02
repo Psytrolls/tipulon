@@ -183,6 +183,8 @@ router.post('/sync-fleet', requireAdmin, async (req, res) => {
     console.error('Fleet sync error:', err);
     res.status(500).json({ error: 'שגיאה בסנכרון צי מול משרד התחבורה' });
   }
+});
+
 // GET /api/buses - Full fleet list & KPI summary for Admin
 router.get('/', requireAuth, (req, res) => {
   try {
