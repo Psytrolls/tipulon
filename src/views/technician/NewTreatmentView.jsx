@@ -23,7 +23,7 @@ import {
 import StatusBadge from '../../components/StatusBadge';
 import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
 
-export default function NewTreatmentView({ onTreatmentCompleted }) {
+export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap, initialBusNumber }) {
   // Wizard Steps: 1 = Bus & Photo, 2 = Device Count, 3 = Fill Devices, 4 = Summary & Decision, 5 = Review, 6 = Success
   const [step, setStep] = useState(1);
 
@@ -103,6 +103,14 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
       setAutocompleteSuggestions([]);
     }
   }, [busNumber, operator]);
+
+  // If preselected from depot map
+  useEffect(() => {
+    if (initialBusNumber) {
+      setBusNumber(initialBusNumber);
+      handleSearchBus(initialBusNumber);
+    }
+  }, [initialBusNumber]);
 
   // Handle manual or autocompleted bus lookup
   const handleSearchBus = async (numberToSearch = null) => {
@@ -536,9 +544,30 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                 <span>שלב 1: זיהוי האוטובוס ובדיקת משימה</span>
               </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              בחר מפעיל, צלם את לוחית הרישוי או הקלד מספר לבדיקה מיידית
+              הזן מספר אוטובוס מלא או קצר לבדיקת תוקף טיפול מונע וסידור עבודה
             </p>
           </div>
+
+          {/* Quick Depot Map Banner */}
+          {onOpenDepotMap && (
+            <button
+              type="button"
+              onClick={onOpenDepotMap}
+              className="w-full p-4 bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-800 hover:opacity-95 active:scale-[0.99] text-white rounded-2xl shadow-md shadow-emerald-700/20 flex items-center justify-between gap-3 transition-all text-right group"
+            >
+              <div className="flex items-center gap-3">
+                <span className="p-2.5 bg-white/20 rounded-xl text-xl flex-shrink-0 group-hover:scale-110 transition-transform">🗺️</span>
+                <div>
+                  <span className="font-black text-sm block">מחפש איפה יש אוטובוסים לטיפול?</span>
+                  <span className="text-[11px] text-emerald-100 font-medium">פתח מפת חניונים עם כמויות ומיקום תחנות בזמן אמת</span>
+                </div>
+              </div>
+              <span className="p-1.5 bg-white/20 rounded-lg text-xs font-black flex items-center gap-1">
+                <span>פתח</span>
+                <span>➔</span>
+              </span>
+            </button>
+          )}
 
           {/* Operator Selection */}
           <div className="space-y-1.5">

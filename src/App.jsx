@@ -10,12 +10,14 @@ import UsersView from './views/admin/UsersView';
 import ReportsView from './views/admin/ReportsView';
 import AuditLogsView from './views/admin/AuditLogsView';
 import FleetView from './views/admin/FleetView';
+import DepotMapView from './views/technician/DepotMapView';
 import InstallPwaBanner from './components/InstallPwaBanner';
 
 export default function App() {
   const { user, loading } = useAuth();
   const [currentView, setCurrentView] = useState('new-treatment');
   const [activeReportId, setActiveReportId] = useState(null);
+  const [preselectedBusNumber, setPreselectedBusNumber] = useState('');
 
   // Set default view on user change
   useEffect(() => {
@@ -62,9 +64,22 @@ export default function App() {
 
       <main className="flex-1 pb-12">
         {viewToRender === 'new-treatment' && (
-          <NewTreatmentView onTreatmentCompleted={() => {
-            // Stay on new treatment scan screen
-          }} />
+          <NewTreatmentView 
+            initialBusNumber={preselectedBusNumber}
+            onOpenDepotMap={() => setCurrentView('depot-map')}
+            onTreatmentCompleted={() => {
+              setPreselectedBusNumber('');
+            }} 
+          />
+        )}
+
+        {viewToRender === 'depot-map' && (
+          <DepotMapView 
+            onSelectBusForTreatment={(busNum) => {
+              setPreselectedBusNumber(busNum);
+              setCurrentView('new-treatment');
+            }} 
+          />
         )}
 
         {viewToRender === 'dashboard' && isAdmin && (

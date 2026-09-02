@@ -11,7 +11,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  AlertTriangle
+  AlertTriangle,
+  MapPin
 } from 'lucide-react';
 
 export default function Navbar({ currentView, setCurrentView }) {
@@ -24,12 +25,14 @@ export default function Navbar({ currentView, setCurrentView }) {
 
   const techLinks = [
     { id: 'new-treatment', label: 'טיפול חדש', icon: ClipboardCheck },
+    { id: 'depot-map', label: 'מפת חניונים 🗺️', icon: MapPin },
     { id: 'reports', label: 'היסטוריית טיפולים', icon: FileText },
   ];
 
   const adminLinks = [
     { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
     { id: 'fleet', label: 'צי אוטובוסים', icon: Bus },
+    { id: 'depot-map', label: 'מפת חניונים 🗺️', icon: MapPin },
     { id: 'follow-up', label: 'תור המשך טיפול', icon: AlertTriangle },
     { id: 'reports', label: 'דוחות והיסטוריה', icon: FileText },
     { id: 'products', label: 'ניהול מוצרים', icon: Package },

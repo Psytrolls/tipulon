@@ -9,6 +9,7 @@ import { extractBusNumberFromImage } from '../ocr.js';
 import { validateBusNumber } from '../validators.js';
 import { getBusLiveDispatch } from '../services/dispatchService.js';
 import { syncFleetFromGov } from '../services/fleetSyncService.js';
+import { getLiveDepotsSnapshot } from '../services/depotService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -182,6 +183,17 @@ router.post('/sync-fleet', requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('Fleet sync error:', err);
     res.status(500).json({ error: 'שגיאה בסנכרון צי מול משרד התחבורה' });
+  }
+});
+
+// GET /api/buses/depots-live - Real-time depots snapshot with buses ready for treatment
+router.get('/depots-live', requireAuth, async (req, res) => {
+  try {
+    const snapshot = await getLiveDepotsSnapshot();
+    res.json(snapshot);
+  } catch (err) {
+    console.error('Depots live error:', err);
+    res.status(500).json({ error: 'שגיאה בשליפת מפת חניונים חיה' });
   }
 });
 
