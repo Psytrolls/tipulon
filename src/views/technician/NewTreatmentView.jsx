@@ -44,6 +44,7 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const cameraInputRef = useRef(null);
+  const [showLiveMap, setShowLiveMap] = useState(false);
 
   // Products from DB
   const [activeProducts, setActiveProducts] = useState([]);
@@ -786,10 +787,18 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                     </div>
                   )}
 
-                  {/* Location & Navigation Link */}
-                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-slate-500 font-bold">מיקום / תחנת יעד:</span>
+                  {/* Location, GPS Telemetry & Interactive Map */}
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between flex-wrap gap-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-slate-800">
+                          {busInfo.liveDispatch.hasGps ? '📡 מיקום GPS לוויני בזמן אמת:' : 'מיקום / תחנת יעד:'}
+                        </span>
+                        {busInfo.liveDispatch.hasGps && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                        )}
+                      </div>
+                      
                       <div className="flex items-center gap-1.5">
                         {busInfo.liveDispatch.mapsUrl && (
                           <a
@@ -816,24 +825,77 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                       </div>
                     </div>
 
+                    {/* GPS Telemetry Pills (Speed, Heading, Coordinates) */}
+                    {busInfo.liveDispatch.hasGps && (
+                      <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300">
+                          {busInfo.liveDispatch.speed > 0 
+                            ? `⚡ מהירות: ${busInfo.liveDispatch.speed} קמ"ש` 
+                            : '🅿️ עומד במקום (0 קמ"ש)'}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800">
+                          📍 {busInfo.liveDispatch.lat?.toFixed(4)}, {busInfo.liveDispatch.lon?.toFixed(4)}
+                        </span>
+                        {busInfo.liveDispatch.heading !== null && (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
+                            🧭 כיוון: {busInfo.liveDispatch.heading}°
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Destination / Station Link */}
                     <a
                       href={busInfo.liveDispatch.mapsUrl || '#'}
                       target="_blank"
                       rel="noreferrer"
-                      className="group flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 transition-colors"
+                      className="group flex items-center justify-between p-2.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 transition-colors shadow-xs"
                       title="לחץ לפתיחה ישירה במפה"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-base">📍</span>
+                        <span className="text-lg">📍</span>
                         <span className="font-black text-slate-900 text-xs group-hover:text-emerald-700">
                           {busInfo.liveDispatch.targetStation || busInfo.liveDispatch.location || busInfo.cluster || 'חניון מרכזי'}
                         </span>
                       </div>
                       <span className="text-[11px] text-emerald-600 font-bold group-hover:underline flex items-center gap-0.5">
-                        <span>פתח מפה</span>
+                        <span>נווט במפה</span>
                         <span>←</span>
                       </span>
                     </a>
+
+                    {/* Interactive Map Toggle & Embed */}
+                    {busInfo.liveDispatch.embedMapUrl && (
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setShowLiveMap(!showLiveMap)}
+                          className="w-full py-1.5 px-3 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <span>🗺️</span>
+                          <span>{showLiveMap ? 'הסתר מפת לוויין' : 'הצג מיקום חי על גבי מפה'}</span>
+                        </button>
+
+                        {showLiveMap && (
+                          <div className="mt-2 rounded-xl overflow-hidden border border-slate-300 shadow-sm animate-fadeIn">
+                            <iframe
+                              title="Live Bus GPS Map"
+                              width="100%"
+                              height="210"
+                              frameBorder="0"
+                              scrolling="no"
+                              marginHeight="0"
+                              marginWidth="0"
+                              src={busInfo.liveDispatch.embedMapUrl}
+                              className="w-full h-52 border-0"
+                            />
+                            <div className="p-1.5 bg-slate-100 text-center text-[10px] text-slate-500 font-medium">
+                              נקודת ה-GPS עודכנה ישירות ממחשב הרכב (Dan Telemetry System)
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {busInfo.liveDispatch.lineDescription && (

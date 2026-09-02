@@ -1,7 +1,7 @@
 import { db } from '../db.js';
 
 const cache = new Map();
-const CACHE_TTL_MS = 30 * 1000; // 30 seconds cache
+const CACHE_TTL_MS = 15 * 1000; // 15 seconds cache for live GPS
 
 const toMins = (timeStr) => {
   if (!timeStr || !timeStr.includes(':')) return 0;
@@ -10,9 +10,46 @@ const toMins = (timeStr) => {
 };
 
 /**
+ * Fetches real-time GPS telemetry from sym_pos.php
+ */
+async function fetchGpsCoordinates(opId, cleanBusNumber) {
+  try {
+    const url = `https://ops.dandarom.co.il/src/symcotech/sym_pos.php?operatorId=${opId}&car_number=${encodeURIComponent(cleanBusNumber)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0 && data[0].Lat && data[0].Lon) {
+        const item = data[0];
+        const lat = parseFloat(item.Lat);
+        const lon = parseFloat(item.Lon);
+        if (!isNaN(lat) && !isNaN(lon) && lat !== 0 && lon !== 0) {
+          return {
+            hasGps: true,
+            lat,
+            lon,
+            speed: parseInt(item.Speed || 0),
+            heading: parseInt(item.Heading || 0),
+            mileage: parseInt(item.Mileage || 0),
+            gpsTime: item.SpmTime || null,
+            mapsUrl: `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`,
+            wazeUrl: `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`,
+            embedMapUrl: `https://www.openstreetmap.org/export/embed.html?bbox=${(lon - 0.006).toFixed(6)},${(lat - 0.004).toFixed(6)},${(lon + 0.006).toFixed(6)},${(lat + 0.004).toFixed(6)}&layer=mapnik&marker=${lat.toFixed(6)},${lon.toFixed(6)}`
+          };
+        }
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+
+/**
  * Calculates smart layover window, time sufficiency, and destination for navigation
  */
-function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName) {
+function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName, gpsInfo = null) {
   const now = new Date();
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
@@ -31,7 +68,6 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName) {
   const taskIndex = tasks.findIndex(t => t === currentTask);
   const isLastTask = taskIndex === tasks.length - 1 || desc.includes('גמר משמרת');
   const isTripActive = String(currentTask.line_status) === '3';
-  const isTripCompleted = String(currentTask.line_status) === '4';
 
   let isShiftFinished = false;
   let isTimeSufficient = false;
@@ -90,7 +126,6 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName) {
         }
       } else {
         // Bus currently parked at station / depot
-        // Calculate remaining minutes from NOW to next departure
         const remainingNow = Math.max(0, toMins(nextDeparture) - nowMinutes);
         if (remainingNow >= 15) {
           timeBadgeType = 'SUCCESS';
@@ -105,18 +140,22 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName) {
     }
   }
 
-  // Navigation Links for Google Maps and Waze
-  const cityHint = operatorName.includes('באר שבע') ? 'באר שבע' : 'אשקלון נתיבות';
-  const cleanStation = targetStation.replace(/^(קו|מסוף|תחנה|שד\.|רחוב)\s*/i, '').trim();
-  const navQuery = `${targetStation} ${cityHint}`;
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}`;
-  const wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(navQuery)}&navigate=yes`;
+  // Navigation Links
+  let mapsUrl = gpsInfo?.mapsUrl;
+  let wazeUrl = gpsInfo?.wazeUrl;
+
+  if (!mapsUrl) {
+    const cityHint = operatorName.includes('באר שבע') ? 'באר שבע' : 'אשקלון נתיבות';
+    const navQuery = `${targetStation} ${cityHint}`;
+    mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(navQuery)}`;
+    wazeUrl = `https://waze.com/ul?q=${encodeURIComponent(navQuery)}&navigate=yes`;
+  }
 
   return {
     targetStation,
-    cleanStation,
     mapsUrl,
     wazeUrl,
+    embedMapUrl: gpsInfo?.embedMapUrl || null,
     isShiftFinished,
     isTimeSufficient,
     timeVerdictText,
@@ -127,7 +166,7 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName) {
 }
 
 /**
- * Fetches real-time dispatch and location for a given bus number
+ * Fetches real-time dispatch and GPS location for a given bus number
  */
 export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
   if (!busNumber) return null;
@@ -163,19 +202,59 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
 
   for (const opId of operatorIds) {
     try {
-      const url = `https://ops.dandarom.co.il/src/symcotech/ws_work.php?operatorId=${opId}&car_number=${encodeURIComponent(cleanBusNumber)}`;
+      // 1. Fetch live GPS coordinates from sym_pos.php in parallel
+      const gpsPromise = fetchGpsCoordinates(opId, cleanBusNumber);
+
+      // 2. Fetch live dispatch work schedule
+      const workUrl = `https://ops.dandarom.co.il/src/symcotech/ws_work.php?operatorId=${opId}&car_number=${encodeURIComponent(cleanBusNumber)}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-      const res = await fetch(url, { signal: controller.signal });
+      const [workRes, gpsInfo] = await Promise.all([
+        fetch(workUrl, { signal: controller.signal }).catch(() => null),
+        gpsPromise
+      ]);
       clearTimeout(timeoutId);
 
-      if (!res.ok) continue;
-
-      const data = await res.json();
-      if (!Array.isArray(data) || data.length === 0) continue;
-
       const opName = opId === 32 ? 'דן באר שבע' : 'דן בדרום';
+
+      let data = [];
+      if (workRes && workRes.ok) {
+        data = await workRes.json().catch(() => []);
+      }
+
+      if (!Array.isArray(data) || data.length === 0) {
+        // If no work tasks but we have live GPS from sym_pos.php:
+        if (gpsInfo && gpsInfo.hasGps) {
+          const result = {
+            hasLiveDispatch: true,
+            hasGps: true,
+            operator: opName,
+            operatorId: opId,
+            location: opName.includes('באר שבע') ? 'באר שבע' : 'אשקלון / דרום',
+            targetStation: opName.includes('באר שבע') ? 'חניון באר שבע' : 'חניון דן בדרום',
+            lineDescription: gpsInfo.speed > 0 ? `בנסיעה (${gpsInfo.speed} קמ"ש)` : 'עומד במקום בחניון',
+            statusLabel: gpsInfo.speed > 0 ? 'בנסיעה פעילה' : 'פנוי בחניון',
+            isParked: gpsInfo.speed === 0,
+            timeRange: '',
+            lat: gpsInfo.lat,
+            lon: gpsInfo.lon,
+            speed: gpsInfo.speed,
+            heading: gpsInfo.heading,
+            mileage: gpsInfo.mileage,
+            gpsTime: gpsInfo.gpsTime,
+            mapsUrl: gpsInfo.mapsUrl,
+            wazeUrl: gpsInfo.wazeUrl,
+            embedMapUrl: gpsInfo.embedMapUrl,
+            isTimeSufficient: gpsInfo.speed === 0,
+            timeBadgeType: gpsInfo.speed === 0 ? 'SUCCESS' : 'WARNING',
+            timeVerdictText: gpsInfo.speed === 0 ? '🟢 עומד במקום (מהירות 0 קמ"ש) – פנוי לטיפול!' : `🟡 בנסיעה כעת במהירות ${gpsInfo.speed} קמ"ש`
+          };
+          cache.set(cacheKey, { timestamp: now, data: result });
+          return result;
+        }
+        continue;
+      }
 
       // Find active or latest task
       let selectedTask = data.find(t => String(t.line_status) === '3');
@@ -217,11 +296,17 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
         }
       }
 
+      // If GPS says speed is 0 and task completed -> definitely parked
+      if (gpsInfo && gpsInfo.speed === 0 && statusNum === '4') {
+        isParked = true;
+      }
+
       // Compute smart layover time and maps navigation
-      const timingAnalysis = analyzeTimeWindowAndNavigation(data, selectedTask, opName);
+      const timingAnalysis = analyzeTimeWindowAndNavigation(data, selectedTask, opName, gpsInfo);
 
       const result = {
         hasLiveDispatch: true,
+        hasGps: Boolean(gpsInfo?.hasGps),
         operator: opName,
         operatorId: opId,
         shortNumber: selectedTask.car_Short_number ? String(selectedTask.car_Short_number) : null,
@@ -234,10 +319,18 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
         statusLabel,
         isParked,
         totalTasksToday: data.length,
-        // Smart Timing & Map Navigation
-        targetStation: timingAnalysis.targetStation,
+        // Live GPS Telemetry
+        lat: gpsInfo?.lat || null,
+        lon: gpsInfo?.lon || null,
+        speed: gpsInfo?.speed ?? null,
+        heading: gpsInfo?.heading ?? null,
+        mileage: gpsInfo?.mileage ?? null,
+        gpsTime: gpsInfo?.gpsTime || null,
         mapsUrl: timingAnalysis.mapsUrl,
         wazeUrl: timingAnalysis.wazeUrl,
+        embedMapUrl: timingAnalysis.embedMapUrl,
+        // Smart Timing
+        targetStation: timingAnalysis.targetStation,
         isTimeSufficient: timingAnalysis.isTimeSufficient,
         timeVerdictText: timingAnalysis.timeVerdictText,
         timeBadgeType: timingAnalysis.timeBadgeType,
@@ -270,6 +363,7 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
 
   const fallback = {
     hasLiveDispatch: false,
+    hasGps: false,
     location: fallbackLoc,
     targetStation: fallbackLoc,
     mapsUrl,
