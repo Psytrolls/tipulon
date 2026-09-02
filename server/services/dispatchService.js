@@ -115,26 +115,26 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName, gpsInf
     if (!isShiftFinished) {
       if (isTripActive) {
         // Bus currently driving
-        if (availableMinutes >= 15) {
+        if (availableMinutes >= 20) {
           timeBadgeType = 'WARNING';
           isTimeSufficient = true;
           timeVerdictText = `🟡 בנסיעה כעת (מסיים ב-${currentTask.order_end_time}) – לאחר מכן יש ${availableMinutes} דק׳ פנויות עד ${nextDeparture}`;
         } else {
           timeBadgeType = 'DANGER';
           isTimeSufficient = false;
-          timeVerdictText = `⛔ בנסיעה כעת (מסיים ב-${currentTask.order_end_time}) – הפסקה קצרה של ${availableMinutes} דק׳ בלבד (יוצא שוב ב-${nextDeparture}). לא מספיק לטיפול!`;
+          timeVerdictText = `⛔ בנסיעה כעת (מסיים ב-${currentTask.order_end_time}) – הפסקה קצרה של ${availableMinutes} דק׳ בלבד (יוצא שוב ב-${nextDeparture}). לא מספיק לטיפול (נדרש מינימום 20 דק׳)!`;
         }
       } else {
         // Bus currently parked at station / depot
         const remainingNow = Math.max(0, toMins(nextDeparture) - nowMinutes);
-        if (remainingNow >= 15) {
+        if (remainingNow >= 20) {
           timeBadgeType = 'SUCCESS';
           isTimeSufficient = true;
           timeVerdictText = `🟢 פנוי לטיפול מונע! נותרו ${remainingNow} דקות פנויות (יוצא ב-${nextDeparture})`;
         } else {
           timeBadgeType = 'DANGER';
           isTimeSufficient = false;
-          timeVerdictText = `⛔ הפסקה קצרה (${remainingNow} דק׳ נותרו) – יוצא ב-${nextDeparture}. אין מספיק זמן (מינימום 15–30 דק׳)!`;
+          timeVerdictText = `⛔ הפסקה קצרה (${remainingNow} דק׳ נותרו) – יוצא ב-${nextDeparture}. אין מספיק זמן (מינימום 20 דק׳ לטיפול מונע)!`;
         }
       }
     }

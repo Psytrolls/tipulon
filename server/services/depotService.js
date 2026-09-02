@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import { getBusLiveDispatch } from './dispatchService.js';
 
 export const HUBS = [
   { 
@@ -170,7 +171,7 @@ export async function getLiveDepotsSnapshot() {
   }
 
   // 3. Match buses to hubs ONLY BY EXACT GPS PROXIMITY (~700m radius)
-  const hubsResult = HUBS.map((hub) => {
+  const hubsResult = await Promise.all(HUBS.map(async (hub) => {
     // Proximity matching: within ~0.007 degrees (~700 meters)
     const busesAtHub = busLocations.filter(b => 
       Math.abs(b.lat - hub.lat) < 0.007 && Math.abs(b.lon - hub.lon) < 0.007
@@ -178,9 +179,45 @@ export async function getLiveDepotsSnapshot() {
 
     const parkedBuses = busesAtHub.filter(b => b.isParked);
 
-    const busesForTreatment = parkedBuses.filter(b => 
+    // Buses needing treatment based on 6-month rule
+    const candidateBuses = parkedBuses.filter(b => 
       !b.next_treatment_date || new Date(b.next_treatment_date) <= new Date()
     );
+
+    // Filter candidate buses: MUST HAVE NO ACTIVE SCHEDULE OR FINISHED SHIFT OR BREAK >= 20 MINUTES
+    const verifiedCandidates = await Promise.all(
+      candidateBuses.slice(0, 25).map(async (b) => {
+        try {
+          const disp = await getBusLiveDispatch(b.bus_number, b.operator);
+          const hasNoSchedule = !disp || !disp.schedule || disp.schedule.length === 0;
+          const isShiftDone = Boolean(disp?.isShiftFinished);
+          const availMins = disp?.availableMinutes ?? 0;
+
+          // Condition: No sidur OR shift finished OR break >= 20 minutes
+          if (hasNoSchedule || isShiftDone || availMins >= 20) {
+            let statusHint = 'חופשי (ללא משימות כעת)';
+            if (isShiftDone) statusHint = '🏁 סיים משמרת להיום (חופשי ללילה)';
+            else if (availMins >= 20) statusHint = `🟢 הפסקה פנויה (${availMins} דק׳ עד ${disp?.nextDeparture || ''})`;
+            else if (hasNoSchedule) statusHint = 'ללא סידור עבודה היום';
+
+            return {
+              bus_number: b.bus_number,
+              operator: b.operator,
+              last_treatment_date: b.last_treatment_date,
+              next_treatment_date: b.next_treatment_date,
+              statusHint,
+              availableMinutes: availMins,
+              nextDeparture: disp?.nextDeparture || null
+            };
+          }
+          return null; // Excluded because break is < 20 minutes or currently driving
+        } catch (e) {
+          return null;
+        }
+      })
+    );
+
+    const eligibleBusesForTreatment = verifiedCandidates.filter(Boolean);
 
     return {
       id: hub.id,
@@ -191,13 +228,8 @@ export async function getLiveDepotsSnapshot() {
       lat: hub.lat,
       lon: hub.lon,
       totalParkedCount: parkedBuses.length,
-      availableForTreatmentCount: busesForTreatment.length,
-      busesForTreatment: busesForTreatment.map(b => ({
-        bus_number: b.bus_number,
-        operator: b.operator,
-        last_treatment_date: b.last_treatment_date,
-        next_treatment_date: b.next_treatment_date
-      })),
+      availableForTreatmentCount: eligibleBusesForTreatment.length,
+      busesForTreatment: eligibleBusesForTreatment,
       allBuses: parkedBuses.map(b => ({
         bus_number: b.bus_number,
         operator: b.operator,
@@ -206,7 +238,7 @@ export async function getLiveDepotsSnapshot() {
       wazeUrl: `https://waze.com/ul?ll=${hub.lat},${hub.lon}&navigate=yes`,
       mapsUrl: `https://www.google.com/maps/search/?api=1&query=${hub.lat},${hub.lon}`
     };
-  });
+  }));
 
   cachedSnapshot = {
     hubs: hubsResult,
