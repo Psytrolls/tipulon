@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import { getStationNameFromCoords } from './depotService.js';
 
 const cache = new Map();
 const CACHE_TTL_MS = 15 * 1000; // 15 seconds cache for live GPS
@@ -74,6 +75,14 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName, gpsInf
   } else if (desc.includes(':')) {
     const parts = desc.split(':');
     targetStation = parts[parts.length - 1].trim();
+  }
+
+  // If bus is parked (speed 0) and has GPS coordinates, resolve exact station/depot name
+  if (gpsInfo && gpsInfo.speed === 0 && gpsInfo.lat && gpsInfo.lon) {
+    const resolved = getStationNameFromCoords(gpsInfo.lat, gpsInfo.lon);
+    if (resolved) {
+      targetStation = resolved.stationName;
+    }
   }
 
   const taskIndex = tasks.findIndex(t => t === currentTask);
@@ -243,17 +252,21 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
       if (!Array.isArray(data) || data.length === 0) {
         // If no work tasks but we have live GPS from sym_pos.php:
         if (gpsInfo && gpsInfo.hasGps) {
-          const result = {
-            hasLiveDispatch: true,
-            hasGps: true,
-            operator: opName,
-            operatorId: opId,
-            location: opName.includes('באר שבע') ? 'באר שבע' : 'אשקלון / דרום',
-            targetStation: opName.includes('באר שבע') ? 'חניון באר שבע' : 'חניון דן בדרום',
-            lineDescription: gpsInfo.speed > 0 ? `בנסיעה (${gpsInfo.speed} קמ"ש)` : 'עומד במקום בחניון',
-            statusLabel: gpsInfo.speed > 0 ? 'בנסיעה פעילה' : 'פנוי בחניון',
-            isParked: gpsInfo.speed === 0,
-            timeRange: '',
+            const resolved = getStationNameFromCoords(gpsInfo.lat, gpsInfo.lon);
+            const station = resolved ? resolved.stationName : (opName.includes('באר שבע') ? 'חניון באר שבע' : 'חניון דן בדרום');
+            const city = resolved ? resolved.cityName : (opName.includes('באר שבע') ? 'באר שבע' : 'אשקלון / דרום');
+
+            const result = {
+              hasLiveDispatch: true,
+              hasGps: true,
+              operator: opName,
+              operatorId: opId,
+              location: city,
+              targetStation: station,
+              lineDescription: gpsInfo.speed > 0 ? `בנסיעה (${gpsInfo.speed} קמ"ש)` : `עומד במקום (${station})`,
+              statusLabel: gpsInfo.speed > 0 ? 'בנסיעה פעילה' : 'פנוי בחניון',
+              isParked: gpsInfo.speed === 0,
+              timeRange: '',
             lat: gpsInfo.lat,
             lon: gpsInfo.lon,
             speed: gpsInfo.speed,

@@ -40,8 +40,8 @@ export const HUBS = [
   },
   { 
     id: 'remez_ashkelon', 
-    name: 'מסוף רמז', 
-    shortName: 'מסוף רמז',
+    name: 'תחנה מרכזית אשקלון (מסוף רמז)', 
+    shortName: 'תחנה מרכזית אשקלון',
     city: 'אשקלון', 
     operator: 'דן בדרום', 
     lat: 31.66422, 
@@ -247,4 +247,60 @@ export async function getLiveDepotsSnapshot() {
   lastSnapshotTime = now;
 
   return cachedSnapshot;
+}
+
+/**
+ * Resolves exact station name and city from GPS coordinates
+ */
+export function getStationNameFromCoords(lat, lon) {
+  if (!lat || !lon) return null;
+  let closestHub = null;
+  let minDistance = Infinity;
+
+  for (const hub of HUBS) {
+    const dLat = hub.lat - lat;
+    const dLon = hub.lon - lon;
+    const dist = Math.sqrt(dLat * dLat + dLon * dLon);
+    if (dist < minDistance) {
+      minDistance = dist;
+      closestHub = hub;
+    }
+  }
+
+  // 0.015 degrees is roughly ~1.5 km
+  if (closestHub && minDistance <= 0.015) {
+    return {
+      stationName: closestHub.name,
+      cityName: closestHub.city,
+      hubId: closestHub.id
+    };
+  }
+
+  // General city boundary detection if outside known depots
+  if (lat >= 31.63 && lat <= 31.70 && lon >= 34.53 && lon <= 34.63) {
+    return { stationName: 'אשקלון', cityName: 'אשקלון', hubId: null };
+  }
+  if (lat >= 31.20 && lat <= 31.28 && lon >= 34.73 && lon <= 34.84) {
+    return { stationName: 'באר שבע', cityName: 'באר שבע', hubId: null };
+  }
+  if (lat >= 31.76 && lat <= 31.86 && lon >= 34.60 && lon <= 34.70) {
+    return { stationName: 'אשדוד', cityName: 'אשדוד', hubId: null };
+  }
+  if (lat >= 31.70 && lat <= 31.76 && lon >= 34.71 && lon <= 34.78) {
+    return { stationName: 'קרית מלאכי', cityName: 'קרית מלאכי', hubId: null };
+  }
+  if (lat >= 31.29 && lat <= 31.35 && lon >= 34.58 && lon <= 34.66) {
+    return { stationName: 'נתיבות', cityName: 'נתיבות', hubId: null };
+  }
+  if (lat >= 31.39 && lat <= 31.45 && lon >= 34.55 && lon <= 34.62) {
+    return { stationName: 'שדרות', cityName: 'שדרות', hubId: null };
+  }
+  if (lat >= 31.50 && lat <= 31.55 && lon >= 34.57 && lon <= 34.64) {
+    return { stationName: 'אופקים', cityName: 'אופקים', hubId: null };
+  }
+  if (lat >= 31.56 && lat <= 31.63 && lon >= 34.74 && lon <= 34.82) {
+    return { stationName: 'קרית גת', cityName: 'קרית גת', hubId: null };
+  }
+
+  return null;
 }
