@@ -227,7 +227,7 @@ router.get('/', requireAuth, (req, res) => {
       { id: 'eldan_ashkelon', name: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244 },
       { id: 'merkazit_ashkelon', name: 'תחנה מרכזית אשקלון', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66800, lon: 34.57200 },
       { id: 'remez_ashkelon', name: 'מסוף רמז', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66440, lon: 34.56660 },
-      { id: 'ashdod_depot', name: 'חניון אשדוד', city: 'אשדוד', operator: 'דן בדרום', lat: 31.82640, lon: 34.66194 },
+      { id: 'ashdod_depot', name: 'חניון עד הלום (אשדוד)', city: 'אשדוד', operator: 'דן בדרום', lat: 31.78000, lon: 34.66520 },
       { id: 'malakhi_depot', name: 'קרית מלאכי', city: 'קרית מלאכי', operator: 'דן בדרום', lat: 31.73023, lon: 34.75344 },
       { id: 'netivot_depot', name: 'חניון נתיבות', city: 'נתיבות', operator: 'דן בדרום', lat: 31.31684, lon: 34.62841 },
       { id: 'sderot_depot', name: 'חניון שדרות', city: 'שדרות', operator: 'דן בדרום', lat: 31.41128, lon: 34.58334 },

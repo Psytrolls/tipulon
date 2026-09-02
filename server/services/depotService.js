@@ -58,12 +58,12 @@ export const HUBS = [
   },
   { 
     id: 'ashdod_depot', 
-    name: 'חניון ומסוף אשדוד', 
-    shortName: 'חניון אשדוד',
+    name: 'חניון ומסוף עד הלום (אשדוד)', 
+    shortName: 'עד הלום אשדוד',
     city: 'אשדוד', 
     operator: 'דן בדרום', 
-    lat: 31.82640, 
-    lon: 34.66194
+    lat: 31.78000, 
+    lon: 34.66520
   },
   { 
     id: 'malakhi_depot', 
@@ -135,17 +135,12 @@ export async function getLiveDepotsSnapshot() {
   const busMap = new Map();
   allBuses.forEach(b => busMap.set(b.bus_number, b));
 
-  // 2. Fetch live GPS telemetry from Dan's ops server
-  // Sample across both operators
-  const daromBuses = allBuses.filter(b => b.operator === 'דן בדרום').slice(0, 180);
-  const br7Buses = allBuses.filter(b => b.operator === 'דן באר שבע').slice(0, 120);
-  const sampleBuses = [...daromBuses, ...br7Buses];
-
+  // 2. Fetch live GPS telemetry from Dan's ops server for the full fleet
   const busLocations = [];
 
-  // Batch query GPS in chunks of 20
-  for (let i = 0; i < sampleBuses.length; i += 20) {
-    const chunk = sampleBuses.slice(i, i + 20);
+  // Batch query GPS across entire fleet in chunks of 50
+  for (let i = 0; i < allBuses.length; i += 50) {
+    const chunk = allBuses.slice(i, i + 50);
     await Promise.all(chunk.map(async (b) => {
       const opId = b.operator === 'דן בדרום' ? 31 : 32;
       try {
