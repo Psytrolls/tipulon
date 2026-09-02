@@ -199,6 +199,26 @@ router.get('/', requireAuth, (req, res) => {
     const pendingCount = totalCount - validCount;
     const progressPercent = totalCount > 0 ? Math.round((validCount / totalCount) * 100) : 0;
 
+    // Per-operator separate breakdown
+    const br7Valid = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ? AND next_treatment_date > ?').get('דן באר שבע', nowIso).count;
+    const br7Pending = br7Count - br7Valid;
+    const br7Progress = br7Count > 0 ? Math.round((br7Valid / br7Count) * 100) : 0;
+
+    const daromValid = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ? AND next_treatment_date > ?').get('דן בדרום', nowIso).count;
+    const daromPending = daromCount - daromValid;
+    const daromProgress = daromCount > 0 ? Math.round((daromValid / daromCount) * 100) : 0;
+
+    const hubs = [
+      { id: 'habonim_br7', name: 'חניון הבונים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22166, lon: 34.80662 },
+      { id: 'merkazit_br7', name: 'תחנה מרכזית', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24128, lon: 34.79799 },
+      { id: 'eldan_ashkelon', name: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244 },
+      { id: 'netivot_depot', name: 'חניון נתיבות', city: 'נתיבות', operator: 'דן בדרום', lat: 31.31684, lon: 34.62841 },
+      { id: 'sderot_depot', name: 'חניון שדרות', city: 'שדרות', operator: 'דן בדרום', lat: 31.41128, lon: 34.58334 },
+      { id: 'ofakim_depot', name: 'חניון אופקים', city: 'אופקים', operator: 'דן בדרום', lat: 31.52392, lon: 34.60257 },
+      { id: 'remez_ashkelon', name: 'מסוף רמז', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66422, lon: 34.56642 },
+      { id: 'kiryat_gat', name: 'חניון קרית גת', city: 'קרית גת', operator: 'דן בדרום', lat: 31.58918, lon: 34.78071 }
+    ];
+
     // Filtered Query
     let whereClauses = [];
     let params = [];
@@ -218,8 +238,8 @@ router.get('/', requireAuth, (req, res) => {
 
     if (search && search.trim()) {
       const q = search.trim();
-      whereClauses.push('(b.bus_number LIKE ? OR b.short_number LIKE ?)');
-      params.push(`%${q}%`, `%${q}%`);
+      whereClauses.push('(b.bus_number LIKE ? OR b.short_number LIKE ? OR b.last_known_location LIKE ? OR b.cluster LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
 
     const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
@@ -249,11 +269,22 @@ router.get('/', requireAuth, (req, res) => {
     res.json({
       summary: {
         total: totalCount,
-        danBeerSheva: br7Count,
-        danBaDarom: daromCount,
         treatedValid: validCount,
         pendingTreatment: pendingCount,
-        progressPercent
+        progressPercent,
+        danBeerSheva: {
+          total: br7Count,
+          treatedValid: br7Valid,
+          pendingTreatment: br7Pending,
+          progressPercent: br7Progress
+        },
+        danBaDarom: {
+          total: daromCount,
+          treatedValid: daromValid,
+          pendingTreatment: daromPending,
+          progressPercent: daromProgress
+        },
+        hubs
       },
       pagination: {
         page: pageNum,
