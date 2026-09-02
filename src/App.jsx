@@ -9,6 +9,7 @@ import ProductsView from './views/admin/ProductsView';
 import UsersView from './views/admin/UsersView';
 import ReportsView from './views/admin/ReportsView';
 import AuditLogsView from './views/admin/AuditLogsView';
+import FleetView from './views/admin/FleetView';
 import InstallPwaBanner from './components/InstallPwaBanner';
 
 export default function App() {
@@ -44,7 +45,7 @@ export default function App() {
 
   // Guard admin views
   let viewToRender = currentView;
-  const adminOnlyViews = ['dashboard', 'follow-up', 'products', 'users', 'audit-logs'];
+  const adminOnlyViews = ['dashboard', 'fleet', 'follow-up', 'products', 'users', 'audit-logs'];
   if (!isAdmin && adminOnlyViews.includes(currentView)) {
     viewToRender = 'new-treatment';
   }
@@ -71,6 +72,10 @@ export default function App() {
             onNavigateToReports={() => setCurrentView('reports')}
             onNavigateToFollowUp={() => setCurrentView('follow-up')}
           />
+        )}
+
+        {viewToRender === 'fleet' && isAdmin && (
+          <FleetView onSelectBusReports={(busNum) => setCurrentView('reports')} />
         )}
 
         {viewToRender === 'follow-up' && isAdmin && (

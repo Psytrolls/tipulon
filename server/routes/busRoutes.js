@@ -183,6 +183,88 @@ router.post('/sync-fleet', requireAdmin, async (req, res) => {
     console.error('Fleet sync error:', err);
     res.status(500).json({ error: 'שגיאה בסנכרון צי מול משרד התחבורה' });
   }
+// GET /api/buses - Full fleet list & KPI summary for Admin
+router.get('/', requireAuth, (req, res) => {
+  try {
+    const { operator, status, search, page = 1, limit = 50 } = req.query;
+    const nowIso = new Date().toISOString();
+
+    // Fleet Summary Stats
+    const totalCount = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
+    const br7Count = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ?').get('דן באר שבע').count;
+    const daromCount = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ?').get('דן בדרום').count;
+    const validCount = db.prepare('SELECT COUNT(*) as count FROM buses WHERE next_treatment_date > ?').get(nowIso).count;
+    const pendingCount = totalCount - validCount;
+    const progressPercent = totalCount > 0 ? Math.round((validCount / totalCount) * 100) : 0;
+
+    // Filtered Query
+    let whereClauses = [];
+    let params = [];
+
+    if (operator) {
+      whereClauses.push('b.operator = ?');
+      params.push(operator);
+    }
+
+    if (status === 'valid') {
+      whereClauses.push('b.next_treatment_date > ?');
+      params.push(nowIso);
+    } else if (status === 'pending') {
+      whereClauses.push('(b.next_treatment_date IS NULL OR b.next_treatment_date <= ?)');
+      params.push(nowIso);
+    }
+
+    if (search && search.trim()) {
+      const q = search.trim();
+      whereClauses.push('(b.bus_number LIKE ? OR b.short_number LIKE ?)');
+      params.push(`%${q}%`, `%${q}%`);
+    }
+
+    const whereSql = whereClauses.length > 0 ? 'WHERE ' + whereClauses.join(' AND ') : '';
+
+    const countSql = `SELECT COUNT(*) as count FROM buses b ${whereSql}`;
+    const filteredTotal = db.prepare(countSql).get(...params).count;
+
+    const pageNum = Math.max(1, parseInt(page) || 1);
+    const limitNum = Math.min(200, Math.max(10, parseInt(limit) || 50));
+    const offset = (pageNum - 1) * limitNum;
+
+    const querySql = `
+      SELECT b.bus_number, b.operator, b.short_number, b.cluster, b.bus_type, b.production_year,
+             b.status, b.last_treatment_date, b.next_treatment_date, b.last_known_location,
+             (SELECT r.technician_name FROM reports r WHERE r.bus_number = b.bus_number ORDER BY r.created_at DESC LIMIT 1) as last_technician_name,
+             (SELECT COUNT(*) FROM reports r WHERE r.bus_number = b.bus_number) as reports_count
+      FROM buses b
+      ${whereSql}
+      ORDER BY 
+        CASE WHEN b.next_treatment_date > ? THEN 1 ELSE 0 END ASC,
+        b.bus_number ASC
+      LIMIT ? OFFSET ?
+    `;
+
+    const buses = db.prepare(querySql).all(nowIso, ...params, limitNum, offset);
+
+    res.json({
+      summary: {
+        total: totalCount,
+        danBeerSheva: br7Count,
+        danBaDarom: daromCount,
+        treatedValid: validCount,
+        pendingTreatment: pendingCount,
+        progressPercent
+      },
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: filteredTotal,
+        totalPages: Math.ceil(filteredTotal / limitNum)
+      },
+      buses
+    });
+  } catch (err) {
+    console.error('Fleet list error:', err);
+    res.status(500).json({ error: 'שגיאה בטעינת צי האוטובוסים' });
+  }
 });
 
 // GET /api/buses/search/:busNumber

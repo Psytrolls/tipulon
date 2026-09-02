@@ -29,6 +29,7 @@ export default function Navbar({ currentView, setCurrentView }) {
 
   const adminLinks = [
     { id: 'dashboard', label: 'לוח בקרה', icon: LayoutDashboard },
+    { id: 'fleet', label: 'צי אוטובוסים', icon: Bus },
     { id: 'follow-up', label: 'תור המשך טיפול', icon: AlertTriangle },
     { id: 'reports', label: 'דוחות והיסטוריה', icon: FileText },
     { id: 'products', label: 'ניהול מוצרים', icon: Package },
