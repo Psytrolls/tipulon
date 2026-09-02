@@ -276,7 +276,7 @@ router.get('/', requireAuth, (req, res) => {
       LIMIT ? OFFSET ?
     `;
 
-    const buses = db.prepare(querySql).all(nowIso, ...params, limitNum, offset);
+    const buses = db.prepare(querySql).all(...params, nowIso, limitNum, offset);
 
     res.json({
       summary: {

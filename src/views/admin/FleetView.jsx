@@ -35,6 +35,7 @@ export default function FleetView({ onSelectBusReports }) {
   const [search, setSearch] = useState('');
   const [operator, setOperator] = useState(''); // '' = all, 'דן באר שבע', 'דן בדרום'
   const [status, setStatus] = useState(''); // '' = all, 'valid', 'pending'
+  const [selectedHubId, setSelectedHubId] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filteredCount, setFilteredCount] = useState(0);
@@ -72,7 +73,7 @@ export default function FleetView({ onSelectBusReports }) {
 
   useEffect(() => {
     loadFleetData();
-  }, [page, operator, status]);
+  }, [page, operator, status, search]);
 
   const handleSearchSubmit = (e) => {
     e?.preventDefault();
@@ -264,10 +265,10 @@ export default function FleetView({ onSelectBusReports }) {
               <MapPin className="w-3.5 h-3.5 text-rose-500" />
               <span>מתחמי חניה וחניונים פעילים (לחץ לסינון מהיר לפי חניון):</span>
             </span>
-            {search && (
+            {(search || selectedHubId) && (
               <button
                 type="button"
-                onClick={() => { setSearch(''); setPage(1); }}
+                onClick={() => { setSelectedHubId(''); setSearch(''); setOperator(''); setPage(1); }}
                 className="text-[10px] text-rose-600 hover:underline font-bold"
               >
                 נקה סינון חניון ✕
@@ -276,15 +277,18 @@ export default function FleetView({ onSelectBusReports }) {
           </div>
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
             {summary.hubs.map((h) => {
-              const isSelected = search === h.city || search === h.name;
+              const isSelected = selectedHubId === h.id;
               return (
                 <button
                   key={h.id}
                   type="button"
                   onClick={() => {
                     if (isSelected) {
+                      setSelectedHubId('');
                       setSearch('');
+                      setOperator('');
                     } else {
+                      setSelectedHubId(h.id);
                       setSearch(h.city);
                       setOperator(h.operator);
                     }
