@@ -750,8 +750,8 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
               {/* Live Dispatch & Location Card from Ops System */}
               {busInfo.liveDispatch && (
-                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-sm space-y-2.5">
-                  <div className="flex items-center justify-between">
+                <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-1.5">
                       <MapPin className="w-4 h-4 text-emerald-600" />
                       <span className="text-xs font-black text-slate-800">מיקום וסידור עבודה חי:</span>
@@ -765,21 +765,81 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                      <span className="text-[10px] text-slate-400 block">סניף / חניון פעילות:</span>
-                      <span className="font-black text-slate-800">{busInfo.liveDispatch.location || busInfo.cluster || 'חניון מרכזי'}</span>
+                  {/* Smart Layover & Time Window Verdict */}
+                  {busInfo.liveDispatch.timeVerdictText && (
+                    <div className={`p-3 rounded-xl border text-xs font-black flex items-start gap-2 ${
+                      busInfo.liveDispatch.timeBadgeType === 'DANGER'
+                        ? 'bg-rose-50 border-rose-300 text-rose-800'
+                        : busInfo.liveDispatch.timeBadgeType === 'WARNING'
+                        ? 'bg-amber-50 border-amber-300 text-amber-800'
+                        : 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    }`}>
+                      <Clock className="w-4 h-4 shrink-0 mt-0.5" />
+                      <div className="leading-snug">
+                        <div>{busInfo.liveDispatch.timeVerdictText}</div>
+                        {busInfo.liveDispatch.timeBadgeType === 'DANGER' && (
+                          <div className="text-[11px] font-semibold text-rose-600 mt-0.5">
+                            טיפול מונע דורש 15–30 דקות לפחות. מומלץ להמתין למשמרת הבאה או לבחור אוטובוס אחר!
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                      <span className="text-[10px] text-slate-400 block">סטטוס משימה:</span>
-                      <span className="font-black text-slate-800">{busInfo.liveDispatch.statusLabel}</span>
+                  )}
+
+                  {/* Location & Navigation Link */}
+                  <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-slate-500 font-bold">מיקום / תחנת יעד:</span>
+                      <div className="flex items-center gap-1.5">
+                        {busInfo.liveDispatch.mapsUrl && (
+                          <a
+                            href={busInfo.liveDispatch.mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-white border border-slate-300 hover:bg-slate-100 text-slate-800 text-[10px] font-black flex items-center gap-1 shadow-xs transition-all active:scale-95"
+                          >
+                            <MapPin className="w-3 h-3 text-rose-500" />
+                            <span>Google Maps</span>
+                          </a>
+                        )}
+                        {busInfo.liveDispatch.wazeUrl && (
+                          <a
+                            href={busInfo.liveDispatch.wazeUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-[10px] font-black flex items-center gap-1 shadow-xs transition-all active:scale-95"
+                          >
+                            <Navigation className="w-3 h-3 text-blue-600" />
+                            <span>Waze</span>
+                          </a>
+                        )}
+                      </div>
                     </div>
+
+                    <a
+                      href={busInfo.liveDispatch.mapsUrl || '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 hover:border-emerald-500 transition-colors"
+                      title="לחץ לפתיחה ישירה במפה"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">📍</span>
+                        <span className="font-black text-slate-900 text-xs group-hover:text-emerald-700">
+                          {busInfo.liveDispatch.targetStation || busInfo.liveDispatch.location || busInfo.cluster || 'חניון מרכזי'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-emerald-600 font-bold group-hover:underline flex items-center gap-0.5">
+                        <span>פתח מפה</span>
+                        <span>←</span>
+                      </span>
+                    </a>
                   </div>
 
                   {busInfo.liveDispatch.lineDescription && (
-                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+                    <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
                       <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
-                        <span>משימה אחרונה:</span>
+                        <span>פירוט משימה:</span>
                         {busInfo.liveDispatch.timeRange && (
                           <span className="font-mono text-slate-700 font-bold">{busInfo.liveDispatch.timeRange}</span>
                         )}
