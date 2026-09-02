@@ -271,11 +271,6 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-black text-slate-900 text-sm font-mono">{b.bus_number}</span>
-                          {b.short_number && b.short_number !== b.bus_number && (
-                            <span className="text-xs font-bold text-slate-500 bg-white px-1.5 py-0.5 rounded border border-slate-200">
-                              קצר: {b.short_number}
-                            </span>
-                          )}
                         </div>
                         <div className="text-[11px] text-slate-500 font-medium mt-0.5">
                           {b.last_treatment_date ? `טיפול קודם: ${new Date(b.last_treatment_date).toLocaleDateString('he-IL')}` : 'טרם בוצע טיפול ראשון'}

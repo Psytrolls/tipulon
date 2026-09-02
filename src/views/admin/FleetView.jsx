@@ -395,7 +395,7 @@ export default function FleetView({ onSelectBusReports }) {
           <div className="relative flex-1 w-full">
             <input
               type="text"
-              placeholder="חיפוש לפי מספר אוטובוס, מספר קצר, חניון או עיר..."
+              placeholder="חיפוש לפי מספר רישוי אוטובוס, חניון או עיר..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -424,7 +424,7 @@ export default function FleetView({ onSelectBusReports }) {
 
           <button
             type="button"
-            onClick={() => { setSearch(''); setOperator(''); setStatus(''); setPage(1); }}
+            onClick={() => { setSearch(''); setOperator(''); setStatus(''); setSelectedHubId(''); setPage(1); }}
             className="w-full sm:w-auto p-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -450,7 +450,6 @@ export default function FleetView({ onSelectBusReports }) {
                 <tr>
                   <th className="p-3.5">מפעיל</th>
                   <th className="p-3.5">מספר רישוי</th>
-                  <th className="p-3.5">מספר קצר</th>
                   <th className="p-3.5">דגם ושנת ייצור</th>
                   <th className="p-3.5">סטטוס טיפול מונע</th>
                   <th className="p-3.5">טיפול אחרון</th>
@@ -472,9 +471,6 @@ export default function FleetView({ onSelectBusReports }) {
                         </span>
                       </td>
                       <td className="p-3.5 font-black text-slate-900 font-mono text-sm">{b.bus_number}</td>
-                      <td className="p-3.5 font-bold text-slate-700 font-mono">
-                        {b.short_number && b.short_number !== b.bus_number ? b.short_number : '-'}
-                      </td>
                       <td className="p-3.5 text-slate-600 font-medium">
                         {b.bus_type || 'אוטובוס עירוני'} {b.production_year ? `(${b.production_year})` : ''}
                       </td>
