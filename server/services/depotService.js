@@ -39,13 +39,22 @@ export const HUBS = [
     lon: 34.60244
   },
   { 
-    id: 'remez_ashkelon', 
-    name: 'תחנה מרכזית אשקלון (מסוף רמז)', 
-    shortName: 'תחנה מרכזית אשקלון',
+    id: 'merkazit_ashkelon', 
+    name: 'תחנה מרכזית אשקלון', 
+    shortName: 'תחנה מרכזית',
     city: 'אשקלון', 
     operator: 'דן בדרום', 
-    lat: 31.66422, 
-    lon: 34.56642
+    lat: 31.66800, 
+    lon: 34.57200
+  },
+  { 
+    id: 'remez_ashkelon', 
+    name: 'מסוף רמז', 
+    shortName: 'מסוף רמז',
+    city: 'אשקלון', 
+    operator: 'דן בדרום', 
+    lat: 31.66440, 
+    lon: 34.56660
   },
   { 
     id: 'ashdod_depot', 
@@ -170,12 +179,24 @@ export async function getLiveDepotsSnapshot() {
     }));
   }
 
-  // 3. Match buses to hubs ONLY BY EXACT GPS PROXIMITY (~700m radius)
+  // 3. Match buses to hubs: Each parked bus is matched to its SINGLE CLOSEST hub (within max 800m)
   const hubsResult = await Promise.all(HUBS.map(async (hub) => {
-    // Proximity matching: within ~0.007 degrees (~700 meters)
-    const busesAtHub = busLocations.filter(b => 
-      Math.abs(b.lat - hub.lat) < 0.007 && Math.abs(b.lon - hub.lon) < 0.007
-    );
+    const busesAtHub = busLocations.filter(b => {
+      const dist = Math.hypot(b.lat - hub.lat, b.lon - hub.lon);
+      if (dist > 0.008) return false;
+
+      // Must be the closest hub to prevent overlap between adjacent terminals
+      let closestHubId = hub.id;
+      let minDistance = dist;
+      for (const other of HUBS) {
+        const d = Math.hypot(b.lat - other.lat, b.lon - other.lon);
+        if (d < minDistance) {
+          minDistance = d;
+          closestHubId = other.id;
+        }
+      }
+      return closestHubId === hub.id;
+    });
 
     const parkedBuses = busesAtHub.filter(b => b.isParked);
 
