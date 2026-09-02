@@ -15,29 +15,30 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const treatmentsToday = todayStmt.get().count;
 
-    // 2. Total completed treatments
+    // 2. Total completed / valid treatments (synced with Fleet view)
+    const nowIso = new Date().toISOString();
     const totalCompletedStmt = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM reports 
-      WHERE status = 'הטיפול הושלם'
+      FROM buses 
+      WHERE next_treatment_date > ?
     `);
-    const totalCompleted = totalCompletedStmt.get().count;
+    const totalCompleted = totalCompletedStmt.get(nowIso).count;
 
     // 3. Completed for Dan BaDarom
     const danBaDaromStmt = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM reports 
-      WHERE operator = 'דן בדרום' AND status = 'הטיפול הושלם'
+      FROM buses 
+      WHERE operator = 'דן בדרום' AND next_treatment_date > ?
     `);
-    const completedDanBaDarom = danBaDaromStmt.get().count;
+    const completedDanBaDarom = danBaDaromStmt.get(nowIso).count;
 
     // 4. Completed for Dan Beer Sheva
     const danBeerShevaStmt = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM reports 
-      WHERE operator = 'דן באר שבע' AND status = 'הטיפול הושלם'
+      FROM buses 
+      WHERE operator = 'דן באר שבע' AND next_treatment_date > ?
     `);
-    const completedDanBeerSheva = danBeerShevaStmt.get().count;
+    const completedDanBeerSheva = danBeerShevaStmt.get(nowIso).count;
 
     // 5. Total Closed in EDI
     const ediClosedStmt = db.prepare(`
