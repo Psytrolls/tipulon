@@ -17,7 +17,8 @@ import {
   RefreshCw,
   MapPin,
   Navigation,
-  Radio
+  Radio,
+  Calendar
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
@@ -45,6 +46,7 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
   const cameraInputRef = useRef(null);
   const [showLiveMap, setShowLiveMap] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
 
   // Products from DB
   const [activeProducts, setActiveProducts] = useState([]);
@@ -901,12 +903,81 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                   {busInfo.liveDispatch.lineDescription && (
                     <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-xs">
                       <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
-                        <span>פירוט משימה:</span>
+                        <span>פירוט משימה נוכחית:</span>
                         {busInfo.liveDispatch.timeRange && (
                           <span className="font-mono text-slate-700 font-bold">{busInfo.liveDispatch.timeRange}</span>
                         )}
                       </div>
                       <div className="font-bold text-slate-800">{busInfo.liveDispatch.lineDescription}</div>
+                    </div>
+                  )}
+
+                  {/* Full Daily Schedule Button & Timeline */}
+                  {busInfo.liveDispatch.schedule && busInfo.liveDispatch.schedule.length > 0 && (
+                    <div className="pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowSchedule(!showSchedule)}
+                        className="w-full py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-950 border border-emerald-300 text-xs font-black flex items-center justify-between transition-all active:scale-[0.99] shadow-xs"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-emerald-700" />
+                          <span>לוח סידור עבודה יומי מלא ({busInfo.liveDispatch.schedule.length} משימות)</span>
+                        </span>
+                        <span className="text-[11px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-200">
+                          {showSchedule ? 'הסתר לוח זמנים ▲' : 'הצג לוח זמנים ▼'}
+                        </span>
+                      </button>
+
+                      {showSchedule && (
+                        <div className="mt-2.5 space-y-2 animate-fadeIn bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                          <div className="text-[11px] font-black text-slate-500 mb-1 px-1">
+                            סידור עבודה מפורט מהמחשב המרכזי של דן:
+                          </div>
+                          {busInfo.liveDispatch.schedule.map((task, idx) => (
+                            <div
+                              key={idx}
+                              className={`p-2.5 rounded-xl border text-xs transition-all ${
+                                task.isCurrent
+                                  ? 'bg-amber-50 border-amber-400 shadow-xs ring-1 ring-amber-300'
+                                  : task.statusCode === '4'
+                                  ? 'bg-white border-slate-200 opacity-75'
+                                  : 'bg-white border-slate-200'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-1.5 font-bold">
+                                  <span className="font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-[11px] border border-slate-200">
+                                    {task.startTime} - {task.endTime}
+                                  </span>
+                                  {task.isCurrent && (
+                                    <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-black animate-pulse">
+                                      פעיל כעת ⚡
+                                    </span>
+                                  )}
+                                </div>
+                                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md border ${
+                                  task.statusCode === '4'
+                                    ? 'bg-slate-100 text-slate-600 border-slate-200'
+                                    : task.statusCode === '3'
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                    : 'bg-blue-50 text-blue-800 border-blue-200'
+                                }`}>
+                                  {task.statusText}
+                                </span>
+                              </div>
+                              <div className="font-bold text-slate-900 text-xs">
+                                {task.description}
+                              </div>
+                              {task.accName && (
+                                <div className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                  סיווג: {task.accName}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

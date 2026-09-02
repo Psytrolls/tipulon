@@ -336,7 +336,24 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
         timeBadgeType: timingAnalysis.timeBadgeType,
         availableMinutes: timingAnalysis.availableMinutes,
         nextDeparture: timingAnalysis.nextDeparture,
-        isShiftFinished: timingAnalysis.isShiftFinished
+        isShiftFinished: timingAnalysis.isShiftFinished,
+        // Full daily schedule tasks
+        schedule: data.map((t) => {
+          const sNum = String(t.line_status || '');
+          let sText = 'מתוכנן';
+          if (sNum === '4') sText = 'הושלם';
+          else if (sNum === '3') sText = 'פעיל כעת';
+          else if (sNum === '2') sText = 'התקבל';
+          return {
+            startTime: t.order_start_time || '',
+            endTime: t.order_end_time || '',
+            description: t.line_description || '',
+            accName: t.acc_name || '',
+            statusCode: sNum,
+            statusText: sText,
+            isCurrent: t === selectedTask
+          };
+        })
       };
 
       // Save latest known location to DB for offline reference
