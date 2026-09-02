@@ -110,6 +110,11 @@ export async function syncFleetFromGov() {
   const totalBuses = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
   console.log(`🚌 [FleetSync] Sync complete. Total buses in database now: ${totalBuses} (Added: ${totalAdded}, Updated: ${totalUpdated})`);
 
+  // Asynchronously harvest real short numbers from Dan Ops API in background
+  setTimeout(() => {
+    harvestShortNumbersFromOps().catch(err => console.warn('Harvest notice:', err.message));
+  }, 1000);
+
   return {
     success: true,
     totalBusesInDb: totalBuses,
@@ -120,24 +125,72 @@ export async function syncFleetFromGov() {
 }
 
 /**
+ * Automatically harvests real internal short numbers and locations from the Dan Ops API
+ */
+export async function harvestShortNumbersFromOps() {
+  console.log('🔍 [FleetSync] Harvesting real short numbers and locations from Dan Ops API...');
+  const buses = db.prepare('SELECT bus_number, operator FROM buses').all();
+  let updatedCount = 0;
+
+  const updateStmt = db.prepare(`
+    UPDATE buses 
+    SET short_number = ?, 
+        last_known_location = COALESCE(?, last_known_location),
+        updated_at = datetime('now')
+    WHERE bus_number = ?
+  `);
+
+  // Batch process in chunks of 10
+  for (let i = 0; i < buses.length; i += 10) {
+    const chunk = buses.slice(i, i + 10);
+    await Promise.all(chunk.map(async (b) => {
+      const opId = b.operator === 'דן בדרום' ? 31 : 32;
+      try {
+        const url = `https://ops.dandarom.co.il/src/symcotech/ws_work.php?operatorId=${opId}&car_number=${b.bus_number}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const res = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data) && data.length > 0 && data[0].car_Short_number) {
+            const short = String(data[0].car_Short_number).trim();
+            const loc = data[0].acc_name || null;
+            updateStmt.run(short, loc, b.bus_number);
+            updatedCount++;
+          }
+        }
+      } catch (e) {}
+    }));
+  }
+
+  console.log(`✅ [FleetSync] Successfully harvested real short numbers for ${updatedCount} buses from Dan live system.`);
+  return updatedCount;
+}
+
+/**
  * Starts automated weekly fleet synchronization schedule
  * Runs every Sunday at 03:00 AM
  */
 export function startWeeklyFleetSyncCron() {
   console.log('⏰ [FleetSync] Initialized weekly fleet synchronization scheduler.');
 
-  // Run automatically on first launch if DB has fewer than 200 buses
+  // Run automatically on first launch
   setTimeout(async () => {
     try {
       const busCount = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
       if (busCount < 200) {
         console.log(`🚌 [FleetSync] Initial database has only ${busCount} buses. Running initial full fleet import from data.gov.il...`);
         await syncFleetFromGov();
+      } else {
+        console.log(`🚌 [FleetSync] Database has ${busCount} buses. Refreshing live short numbers from Dan Ops API...`);
+        await harvestShortNumbersFromOps();
       }
     } catch (e) {
       console.warn('Initial fleet sync notice:', e.message);
     }
-  }, 5000);
+  }, 4000);
 
   // Check every hour: if Sunday (0) at 03:00 AM, sync
   const ONE_HOUR = 60 * 60 * 1000;
