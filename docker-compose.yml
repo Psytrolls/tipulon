@@ -8,6 +8,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - TZ=Asia/Jerusalem
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
