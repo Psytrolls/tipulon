@@ -2,24 +2,13 @@ import { db } from '../db.js';
 
 export const HUBS = [
   { 
-    id: 'eldan_ashkelon', 
-    name: 'חניון אלדן (פארק צפוני)', 
-    shortName: 'חניון אלדן',
-    city: 'אשקלון', 
-    operator: 'דן בדרום', 
-    lat: 31.67319, 
-    lon: 34.60244,
-    keywords: ['אלדן', 'אשקלון עירוני', 'אשקלון'] 
-  },
-  { 
     id: 'habonim_br7', 
     name: 'חניון הבונים (עמק שרה)', 
     shortName: 'חניון הבונים',
     city: 'באר שבע', 
     operator: 'דן באר שבע', 
     lat: 31.22166, 
-    lon: 34.80662,
-    keywords: ['הבונים', 'עמק שרה', 'באר שבע עירוני'] 
+    lon: 34.80662
   },
   { 
     id: 'merkazit_br7', 
@@ -28,8 +17,25 @@ export const HUBS = [
     city: 'באר שבע', 
     operator: 'דן באר שבע', 
     lat: 31.24128, 
-    lon: 34.79799,
-    keywords: ['תחנה מרכזית', 'רכבת מרכז', 'באר שבע'] 
+    lon: 34.79799
+  },
+  { 
+    id: 'hatzerim_br7', 
+    name: 'מסוף חצרים', 
+    shortName: 'מסוף חצרים',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.24241, 
+    lon: 34.75188
+  },
+  { 
+    id: 'eldan_ashkelon', 
+    name: 'חניון אלדן (פארק צפוני)', 
+    shortName: 'חניון אלדן',
+    city: 'אשקלון', 
+    operator: 'דן בדרום', 
+    lat: 31.67319, 
+    lon: 34.60244
   },
   { 
     id: 'remez_ashkelon', 
@@ -38,18 +44,34 @@ export const HUBS = [
     city: 'אשקלון', 
     operator: 'דן בדרום', 
     lat: 31.66422, 
-    lon: 34.56642,
-    keywords: ['רמז', 'שמשון', 'אשקלון'] 
+    lon: 34.56642
+  },
+  { 
+    id: 'ashdod_depot', 
+    name: 'חניון ומסוף אשדוד', 
+    shortName: 'חניון אשדוד',
+    city: 'אשדוד', 
+    operator: 'דן בדרום', 
+    lat: 31.82640, 
+    lon: 34.66194
+  },
+  { 
+    id: 'malakhi_depot', 
+    name: 'תחנה מרכזית קרית מלאכי', 
+    shortName: 'קרית מלאכי',
+    city: 'קרית מלאכי', 
+    operator: 'דן בדרום', 
+    lat: 31.73023, 
+    lon: 34.75344
   },
   { 
     id: 'netivot_depot', 
-    name: 'חניון ומסוף רכבת נתיבות', 
+    name: 'חניון ומסוף נתיבות', 
     shortName: 'חניון נתיבות',
     city: 'נתיבות', 
     operator: 'דן בדרום', 
     lat: 31.31684, 
-    lon: 34.62841,
-    keywords: ['נתיבות'] 
+    lon: 34.62841
   },
   { 
     id: 'sderot_depot', 
@@ -58,18 +80,16 @@ export const HUBS = [
     city: 'שדרות', 
     operator: 'דן בדרום', 
     lat: 31.41128, 
-    lon: 34.58334,
-    keywords: ['שדרות'] 
+    lon: 34.58334
   },
   { 
     id: 'ofakim_depot', 
-    name: 'חניון עירוני אופקים', 
+    name: 'חניון אופקים', 
     shortName: 'חניון אופקים',
     city: 'אופקים', 
     operator: 'דן בדרום', 
     lat: 31.52392, 
-    lon: 34.60257,
-    keywords: ['אופקים'] 
+    lon: 34.60257
   },
   { 
     id: 'kiryat_gat', 
@@ -78,17 +98,16 @@ export const HUBS = [
     city: 'קרית גת', 
     operator: 'דן בדרום', 
     lat: 31.58918, 
-    lon: 34.78071,
-    keywords: ['קרית גת', 'גת'] 
+    lon: 34.78071
   }
 ];
 
 let cachedSnapshot = null;
 let lastSnapshotTime = 0;
-const SNAPSHOT_TTL = 45 * 1000; // 45 seconds cache
+const SNAPSHOT_TTL = 30 * 1000; // 30 seconds cache
 
 /**
- * Returns live status of all depots, parked buses, and buses requiring maintenance
+ * Returns strictly GPS-verified status of all depots, parked buses, and buses requiring maintenance
  */
 export async function getLiveDepotsSnapshot() {
   const now = Date.now();
@@ -96,28 +115,33 @@ export async function getLiveDepotsSnapshot() {
     return cachedSnapshot;
   }
 
-  const nowIso = new Date().toISOString();
-
   // 1. Get all buses from DB
   const allBuses = db.prepare(`
-    SELECT bus_number, short_number, operator, cluster, last_known_location, work_status,
+    SELECT bus_number, operator, cluster, last_known_location,
            next_treatment_date, last_treatment_date
     FROM buses
   `).all();
 
-  // 2. Fetch a batch of live GPS telemetry to discover real-time parked buses
-  const sampleBuses = allBuses.slice(0, 100);
-  const busLocationMap = new Map();
+  const busMap = new Map();
+  allBuses.forEach(b => busMap.set(b.bus_number, b));
 
-  // Batch query GPS in chunks of 15
-  for (let i = 0; i < sampleBuses.length; i += 15) {
-    const chunk = sampleBuses.slice(i, i + 15);
+  // 2. Fetch live GPS telemetry from Dan's ops server
+  // Sample across both operators
+  const daromBuses = allBuses.filter(b => b.operator === 'דן בדרום').slice(0, 180);
+  const br7Buses = allBuses.filter(b => b.operator === 'דן באר שבע').slice(0, 120);
+  const sampleBuses = [...daromBuses, ...br7Buses];
+
+  const busLocations = [];
+
+  // Batch query GPS in chunks of 20
+  for (let i = 0; i < sampleBuses.length; i += 20) {
+    const chunk = sampleBuses.slice(i, i + 20);
     await Promise.all(chunk.map(async (b) => {
       const opId = b.operator === 'דן בדרום' ? 31 : 32;
       try {
         const url = `https://ops.dandarom.co.il/src/symcotech/sym_pos.php?operatorId=${opId}&car_number=${b.bus_number}`;
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
 
@@ -128,7 +152,16 @@ export async function getLiveDepotsSnapshot() {
             const lon = parseFloat(data[0].Lon);
             const speed = parseInt(data[0].Speed || 0);
             if (lat > 30 && lon > 34) {
-              busLocationMap.set(b.bus_number, { lat, lon, speed, isParked: speed === 0 });
+              busLocations.push({
+                bus_number: b.bus_number,
+                operator: b.operator,
+                lat,
+                lon,
+                speed,
+                isParked: speed === 0,
+                next_treatment_date: b.next_treatment_date,
+                last_treatment_date: b.last_treatment_date
+              });
             }
           }
         }
@@ -136,42 +169,18 @@ export async function getLiveDepotsSnapshot() {
     }));
   }
 
-  // 3. Match buses to hubs
+  // 3. Match buses to hubs ONLY BY EXACT GPS PROXIMITY (~700m radius)
   const hubsResult = HUBS.map((hub) => {
-    const matchedBuses = [];
+    // Proximity matching: within ~0.007 degrees (~700 meters)
+    const busesAtHub = busLocations.filter(b => 
+      Math.abs(b.lat - hub.lat) < 0.007 && Math.abs(b.lon - hub.lon) < 0.007
+    );
 
-    for (const b of allBuses) {
-      const gps = busLocationMap.get(b.bus_number);
-      let isInsideHub = false;
+    const parkedBuses = busesAtHub.filter(b => b.isParked);
 
-      // Check GPS coordinate match (within ~1.5km)
-      if (gps && Math.abs(gps.lat - hub.lat) < 0.015 && Math.abs(gps.lon - hub.lon) < 0.015) {
-        isInsideHub = true;
-      } 
-      // Or check text location / cluster match
-      else if (b.last_known_location && hub.keywords.some(kw => b.last_known_location.includes(kw))) {
-        isInsideHub = true;
-      }
-      else if (b.cluster && hub.keywords.some(kw => b.cluster.includes(kw))) {
-        isInsideHub = true;
-      }
-
-      if (isInsideHub) {
-        const needsTreatment = !b.next_treatment_date || new Date(b.next_treatment_date) <= new Date();
-        matchedBuses.push({
-          bus_number: b.bus_number,
-          short_number: b.short_number || b.bus_number.slice(-4),
-          operator: b.operator,
-          needsTreatment,
-          next_treatment_date: b.next_treatment_date,
-          last_treatment_date: b.last_treatment_date,
-          isParked: gps ? gps.isParked : true,
-          speed: gps ? gps.speed : 0
-        });
-      }
-    }
-
-    const availableForTreatment = matchedBuses.filter(b => b.needsTreatment && b.isParked);
+    const busesForTreatment = parkedBuses.filter(b => 
+      !b.next_treatment_date || new Date(b.next_treatment_date) <= new Date()
+    );
 
     return {
       id: hub.id,
@@ -181,10 +190,19 @@ export async function getLiveDepotsSnapshot() {
       operator: hub.operator,
       lat: hub.lat,
       lon: hub.lon,
-      totalParkedCount: matchedBuses.filter(b => b.isParked).length,
-      availableForTreatmentCount: availableForTreatment.length,
-      busesForTreatment: availableForTreatment.slice(0, 15),
-      allBuses: matchedBuses.slice(0, 30),
+      totalParkedCount: parkedBuses.length,
+      availableForTreatmentCount: busesForTreatment.length,
+      busesForTreatment: busesForTreatment.map(b => ({
+        bus_number: b.bus_number,
+        operator: b.operator,
+        last_treatment_date: b.last_treatment_date,
+        next_treatment_date: b.next_treatment_date
+      })),
+      allBuses: parkedBuses.map(b => ({
+        bus_number: b.bus_number,
+        operator: b.operator,
+        speed: b.speed
+      })),
       wazeUrl: `https://waze.com/ul?ll=${hub.lat},${hub.lon}&navigate=yes`,
       mapsUrl: `https://www.google.com/maps/search/?api=1&query=${hub.lat},${hub.lon}`
     };

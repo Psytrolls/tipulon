@@ -223,11 +223,14 @@ router.get('/', requireAuth, (req, res) => {
     const hubs = [
       { id: 'habonim_br7', name: 'חניון הבונים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22166, lon: 34.80662 },
       { id: 'merkazit_br7', name: 'תחנה מרכזית', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24128, lon: 34.79799 },
+      { id: 'hatzerim_br7', name: 'מסוף חצרים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24241, lon: 34.75188 },
       { id: 'eldan_ashkelon', name: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244 },
+      { id: 'remez_ashkelon', name: 'מסוף רמז', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66422, lon: 34.56642 },
+      { id: 'ashdod_depot', name: 'חניון אשדוד', city: 'אשדוד', operator: 'דן בדרום', lat: 31.82640, lon: 34.66194 },
+      { id: 'malakhi_depot', name: 'קרית מלאכי', city: 'קרית מלאכי', operator: 'דן בדרום', lat: 31.73023, lon: 34.75344 },
       { id: 'netivot_depot', name: 'חניון נתיבות', city: 'נתיבות', operator: 'דן בדרום', lat: 31.31684, lon: 34.62841 },
       { id: 'sderot_depot', name: 'חניון שדרות', city: 'שדרות', operator: 'דן בדרום', lat: 31.41128, lon: 34.58334 },
       { id: 'ofakim_depot', name: 'חניון אופקים', city: 'אופקים', operator: 'דן בדרום', lat: 31.52392, lon: 34.60257 },
-      { id: 'remez_ashkelon', name: 'מסוף רמז', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66422, lon: 34.56642 },
       { id: 'kiryat_gat', name: 'חניון קרית גת', city: 'קרית גת', operator: 'דן בדרום', lat: 31.58918, lon: 34.78071 }
     ];
 
