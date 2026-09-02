@@ -46,12 +46,23 @@ async function fetchGpsCoordinates(opId, cleanBusNumber) {
   return null;
 }
 
+export function getIsraelNowMinutes() {
+  const now = new Date();
+  const ilTimeStr = now.toLocaleTimeString('en-US', { 
+    timeZone: 'Asia/Jerusalem', 
+    hour12: false, 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+  const [h, m] = ilTimeStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
 /**
  * Calculates smart layover window, time sufficiency, and destination for navigation
  */
 function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName, gpsInfo = null) {
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const nowMinutes = getIsraelNowMinutes();
 
   let targetStation = currentTask.acc_name || '';
   const desc = currentTask.line_description || '';
@@ -126,7 +137,13 @@ function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName, gpsInf
         }
       } else {
         // Bus currently parked at station / depot
-        const remainingNow = Math.max(0, toMins(nextDeparture) - nowMinutes);
+        let remainingNow = toMins(nextDeparture) - nowMinutes;
+        if (remainingNow < 0 && toMins(nextDeparture) < 240) {
+          remainingNow += 1440;
+        }
+        remainingNow = Math.max(0, remainingNow);
+        availableMinutes = remainingNow;
+
         if (remainingNow >= 20) {
           timeBadgeType = 'SUCCESS';
           isTimeSufficient = true;
