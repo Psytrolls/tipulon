@@ -174,8 +174,13 @@ export default function LoginView() {
       </div>
 
       {/* Footer info */}
-      <div className="relative text-center mt-6 z-10 text-[11px] text-emerald-200/50">
-        מאובטח בטכנולוגיית הצפנה מתקדמת • גרסה 2.0
+      <div className="relative text-center mt-6 z-10 text-xs text-emerald-200/80 space-y-1">
+        <p className="font-semibold">
+          אפיון ופיתוח המערכת: <span className="text-emerald-400 font-black">יבגני קבישר</span>
+        </p>
+        <p className="text-[11px] text-emerald-200/50">
+          מערכת בקרה וניהול טיפולים מונעים באוטובוסים • גרסה 2.4 © 2026
+        </p>
       </div>
 
     </div>

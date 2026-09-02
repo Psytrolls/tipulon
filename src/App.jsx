@@ -114,8 +114,14 @@ export default function App() {
         )}
       </main>
 
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-400">
-        טיפולון – מערכת טיפול מונע באוטובוסים © 2026
+      <footer className="border-t border-slate-200 bg-white py-3.5 text-center text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2">
+          <span className="font-bold text-slate-800">טיפולון – מערכת בקרה וניהול טיפולים מונעים</span>
+          <span className="hidden sm:inline text-slate-300">•</span>
+          <span>אפיון ופיתוח: <strong className="text-emerald-700 font-black">יבגני קבישר</strong></span>
+          <span className="hidden sm:inline text-slate-300">•</span>
+          <span className="text-slate-400">גרסה 2.4 © 2026</span>
+        </div>
       </footer>
     </div>
   );
