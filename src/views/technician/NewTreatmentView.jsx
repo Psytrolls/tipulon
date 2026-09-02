@@ -18,7 +18,8 @@ import {
   MapPin,
   Navigation,
   Radio,
-  Calendar
+  Calendar,
+  Search
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
@@ -546,41 +547,66 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
             </div>
           </div>
 
-          {/* Bus Number Input */}
-          <div className="space-y-2">
+          {/* Bus Number Input Box */}
+          <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-black text-slate-700">מספר אוטובוס (לוחית רישוי)</label>
-              <span className="text-[11px] font-bold text-slate-400">7-8 ספרות</span>
+              <label className="block text-xs font-black text-slate-800">
+                מספר אוטובוס (לוחית רישוי)
+              </label>
+              <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
+                7–8 ספרות
+              </span>
             </div>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={8}
-                value={busNumber}
-                onChange={(e) => setBusNumber(e.target.value.replace(/[^0-9]/g, ''))}
-                onKeyDown={(e) => e.key === 'Enter' && handleSearchBus()}
-                placeholder="הזן מספר רישוי (לדוגמה: 17759703)"
-                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left tracking-wider"
-                dir="ltr"
-              />
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={8}
+                  value={busNumber}
+                  onChange={(e) => setBusNumber(e.target.value.replace(/[^0-9]/g, ''))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleSearchBus()}
+                  placeholder="הקלד מספר רישוי..."
+                  className="w-full pl-9 pr-4 py-3.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-lg font-black text-slate-900 focus:bg-white focus:border-emerald-600 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none transition-all placeholder:text-slate-400 placeholder:text-sm placeholder:font-normal font-mono"
+                  dir="ltr"
+                />
+                {busNumber && (
+                  <button
+                    type="button"
+                    onClick={() => { setBusNumber(''); setBusInfo(null); setBusError(''); }}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 bg-slate-200/60 rounded-full"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
               <button
                 type="button"
                 onClick={() => handleSearchBus()}
                 disabled={searchingBus || !busNumber.trim()}
-                className="px-6 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl flex items-center gap-2 transition-all disabled:opacity-50"
+                className="py-3.5 px-6 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-sm rounded-2xl shadow-md shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:shadow-none flex-shrink-0"
               >
-                {searchingBus ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'בדוק'}
+                {searchingBus ? (
+                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                ) : (
+                  <>
+                    <Search className="w-4 h-4" />
+                    <span>בדוק</span>
+                  </>
+                )}
               </button>
             </div>
-            <span className="text-[11px] text-slate-400 block font-medium">
-              💡 הזן מספר רישוי מלא בן 7–8 ספרות לבדיקת משימה ותוקף טיפול מונע.
-            </span>
+
+            <p className="text-[11px] text-slate-400 font-medium">
+              הקלד את מספר הרישוי המלא של האוטובוס ולחץ על "בדוק".
+            </p>
 
             {busError && (
-              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 animate-shake">
-                <span>⚠️</span>
+              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-2 animate-shake">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
                 <span>{busError}</span>
               </div>
             )}
