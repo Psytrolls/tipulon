@@ -40,21 +40,12 @@ export const HUBS = [
   },
   { 
     id: 'merkazit_ashkelon', 
-    name: 'תחנה מרכזית אשקלון', 
-    shortName: 'תחנה מרכזית',
-    city: 'אשקלון', 
-    operator: 'דן בדרום', 
-    lat: 31.66800, 
-    lon: 34.57200
-  },
-  { 
-    id: 'remez_ashkelon', 
-    name: 'מסוף רמז', 
-    shortName: 'מסוף רמז',
+    name: 'תחנה מרכזית (מסוף רמז)', 
+    shortName: 'תחנה מרכזית אשקלון',
     city: 'אשקלון', 
     operator: 'דן בדרום', 
     lat: 31.66440, 
-    lon: 34.56660
+    lon: 34.56680
   },
   { 
     id: 'ashdod_depot', 
