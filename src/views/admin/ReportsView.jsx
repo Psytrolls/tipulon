@@ -32,6 +32,29 @@ export default function ReportsView({ initialReportId = null }) {
   const [showExportModal, setShowExportModal] = useState(false);
   const [downloadingOp, setDownloadingOp] = useState(null);
 
+  // Sync fleet state
+  const [syncingFleet, setSyncingFleet] = useState(false);
+  const [syncNotice, setSyncNotice] = useState('');
+
+  const handleSyncFleet = async () => {
+    try {
+      setSyncingFleet(true);
+      setSyncNotice('');
+      const res = await fetch('/api/buses/sync-fleet', { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncNotice(`✅ צי האוטובוסים סונכרן בהצלחה מול משרד התחבורה! סה"כ ${data.totalBusesInDb} אוטובוסים במערכת (${data.totalAdded} חדשים נוספו).`);
+        setTimeout(() => setSyncNotice(''), 7000);
+      } else {
+        setSyncNotice(`⚠️ שגיאה בסנכרון: ${data.error}`);
+      }
+    } catch (e) {
+      setSyncNotice('⚠️ שגיאה בהתחברות למשרד התחבורה');
+    } finally {
+      setSyncingFleet(false);
+    }
+  };
+
   // Report details modal
   const [selectedReport, setSelectedReport] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
@@ -186,15 +209,33 @@ export default function ReportsView({ initialReportId = null }) {
         </div>
 
         {isAdmin && (
-          <button
-            onClick={() => setShowExportModal(true)}
-            className="self-start sm:self-auto py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all"
-          >
-            <Download className="w-4 h-4" />
-            <span>ייצוא ל-Excel מעוצב (RTL)</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={handleSyncFleet}
+              disabled={syncingFleet}
+              className="py-2.5 px-3.5 bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
+              title="סנכרון מלא של כל צי האוטובוסים מול מאגר משרד התחבורה Data.gov.il"
+            >
+              <RefreshCw className={`w-4 h-4 text-emerald-400 ${syncingFleet ? 'animate-spin' : ''}`} />
+              <span>{syncingFleet ? 'מסנכרן...' : 'סנכרן צי ממשרד התחבורה'}</span>
+            </button>
+
+            <button
+              onClick={() => setShowExportModal(true)}
+              className="py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center gap-2 transition-all"
+            >
+              <Download className="w-4 h-4" />
+              <span>ייצוא ל-Excel מעוצב (RTL)</span>
+            </button>
+          </div>
         )}
       </div>
+
+      {syncNotice && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-900 animate-fadeIn">
+          {syncNotice}
+        </div>
+      )}
 
       {/* Live KPI Counters: Total, Dan BaDarom, Dan Beer Sheva, EDI Closed, EDI Open */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -375,6 +416,7 @@ export default function ReportsView({ initialReportId = null }) {
                 <tr>
                   <th className="p-3.5">מפעיל</th>
                   <th className="p-3.5">מספר אוטובוס</th>
+                  <th className="p-3.5">מיקום / סניף</th>
                   <th className="p-3.5">טכנאי מבצע</th>
                   <th className="p-3.5">תאריך טיפול</th>
                   <th className="p-3.5">תוצאת טיפול</th>
@@ -394,6 +436,9 @@ export default function ReportsView({ initialReportId = null }) {
                       </span>
                     </td>
                     <td className="p-3.5 font-black text-slate-900">{report.bus_number}</td>
+                    <td className="p-3.5 text-slate-600 font-medium">
+                      {report.location || report.cluster || 'מרכז תפעול'}
+                    </td>
                     <td className="p-3.5 text-slate-700">{report.technician_name}</td>
                     <td className="p-3.5 text-slate-500 font-medium">
                       {new Date(report.created_at).toLocaleDateString('he-IL')}

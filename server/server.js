@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import { initDatabase } from './db.js';
 import { authenticateUser } from './auth.js';
 import { startBackupScheduler } from './backupService.js';
+import { startWeeklyFleetSyncCron } from './services/fleetSyncService.js';
 
 import authRoutes from './routes/authRoutes.js';
 import busRoutes from './routes/busRoutes.js';
@@ -21,6 +22,7 @@ const __dirname = path.dirname(__filename);
 // Initialize DB and Seed Data
 initDatabase();
 startBackupScheduler();
+startWeeklyFleetSyncCron();
 
 const app = express();
 const PORT = process.env.PORT || 3000;

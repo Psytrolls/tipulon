@@ -118,9 +118,18 @@ export function initDatabase() {
 
   // Safe migrations for existing DB
   try { db.exec("ALTER TABLE buses ADD COLUMN operator TEXT DEFAULT 'דן באר שבע'"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN short_number TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN cluster TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN bus_type TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN production_year INTEGER"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN last_known_location TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN work_plan TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE buses ADD COLUMN work_status TEXT"); } catch (e) {}
+
   try { db.exec("ALTER TABLE reports ADD COLUMN operator TEXT DEFAULT 'דן באר שבע'"); } catch (e) {}
   try { db.exec("ALTER TABLE reports ADD COLUMN is_edi_closed INTEGER DEFAULT 0"); } catch (e) {}
   try { db.exec("ALTER TABLE reports ADD COLUMN edi_closed_at DATETIME"); } catch (e) {}
+  try { db.exec("ALTER TABLE reports ADD COLUMN location TEXT"); } catch (e) {}
 
   seedInitialData();
 }

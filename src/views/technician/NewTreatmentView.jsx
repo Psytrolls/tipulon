@@ -14,7 +14,10 @@ import {
   Info,
   Clock,
   Scan,
-  RefreshCw
+  RefreshCw,
+  MapPin,
+  Navigation,
+  Radio
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
@@ -35,6 +38,10 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
   const [photoError, setPhotoError] = useState('');
   const [detectedCandidates, setDetectedCandidates] = useState([]);
   const [ocrSuccessMsg, setOcrSuccessMsg] = useState('');
+
+  // Autocomplete suggestions
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const cameraInputRef = useRef(null);
 
@@ -70,9 +77,70 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
       .finally(() => setLoadingProducts(false));
   }, []);
 
-  // Handle manual bus lookup
+  // Autocomplete when typing 2 to 6 digits (short number or suffix)
+  useEffect(() => {
+    const clean = busNumber.replace(/[^0-9]/g, '').trim();
+    if (clean.length >= 2 && clean.length <= 6) {
+      const timer = setTimeout(async () => {
+        try {
+          setLoadingSuggestions(true);
+          const res = await fetch(`/api/buses/autocomplete?q=${encodeURIComponent(clean)}&operator=${encodeURIComponent(operator)}`);
+          if (res.ok) {
+            const data = await res.json();
+            setAutocompleteSuggestions(data.matches || []);
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoadingSuggestions(false);
+        }
+      }, 200);
+      return () => clearTimeout(timer);
+    } else {
+      setAutocompleteSuggestions([]);
+    }
+  }, [busNumber, operator]);
+
+  // Handle manual or autocompleted bus lookup
   const handleSearchBus = async (numberToSearch = null) => {
     const targetNumber = (numberToSearch || busNumber).replace(/[^0-9]/g, '').trim();
+    if (!targetNumber) {
+      setBusError('נא להזין מספר אוטובוס או מספר קצר');
+      return;
+    }
+
+    // If short number entered (< 7 digits), resolve automatically
+    if (targetNumber.length < 7) {
+      setSearchingBus(true);
+      setBusError('');
+      try {
+        const autoRes = await fetch(`/api/buses/autocomplete?q=${encodeURIComponent(targetNumber)}&operator=${encodeURIComponent(operator)}`);
+        const autoData = await autoRes.json();
+        const matches = autoData.matches || [];
+
+        if (matches.length === 1) {
+          // Exactly 1 match found! Auto-fill full number
+          const resolvedBusNumber = matches[0].bus_number;
+          setBusNumber(resolvedBusNumber);
+          setAutocompleteSuggestions([]);
+          return handleSearchBus(resolvedBusNumber);
+        } else if (matches.length > 1) {
+          setAutocompleteSuggestions(matches);
+          setBusError(`נמצאו ${matches.length} אוטובוסים עם מספר זה. בחר את האוטובוס המתאים למטה:`);
+          setSearchingBus(false);
+          return;
+        } else {
+          setBusError(`לא נמצא אוטובוס עם מספר קצר "${targetNumber}". נסה להזין מספר רישוי מלא.`);
+          setSearchingBus(false);
+          return;
+        }
+      } catch (e) {
+        setBusError('שגיאה באיתור מספר קצר');
+        setSearchingBus(false);
+        return;
+      }
+    }
+
     const validationErr = validateBusNumber(targetNumber);
     if (validationErr) {
       setBusError(validationErr);
@@ -82,15 +150,19 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
     setSearchingBus(true);
     setBusError('');
     setBusInfo(null);
+    setAutocompleteSuggestions([]);
 
     try {
-      const res = await fetch(`/api/buses/search/${encodeURIComponent(targetNumber)}`);
+      const res = await fetch(`/api/buses/search/${encodeURIComponent(targetNumber)}?operator=${encodeURIComponent(operator)}`);
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'שגיאה באיתור אוטובוס');
       }
       setBusInfo(data);
       setBusNumber(targetNumber);
+      if (data.operator && data.operator !== operator) {
+        setOperator(data.operator);
+      }
     } catch (err) {
       setBusError(err.message);
     } finally {
@@ -595,8 +667,8 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
           {/* Manual Input */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-black text-slate-700">מספר אוטובוס (לוחית רישוי)</label>
-              <span className="text-[11px] font-bold text-slate-400">7 עד 8 ספרות</span>
+              <label className="block text-xs font-black text-slate-700">מספר אוטובוס (מלא או מספר קצר)</label>
+              <span className="text-[11px] font-bold text-slate-400">קצר (3-4) או מלא (7-8)</span>
             </div>
             <div className="flex gap-2">
               <input
@@ -607,7 +679,7 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                 value={busNumber}
                 onChange={(e) => setBusNumber(e.target.value.replace(/[^0-9]/g, ''))}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearchBus()}
-                placeholder="לדוגמה: 6922258 או 12345678"
+                placeholder="הזן מספר קצר (לדוגמה 1687) או מספר רישוי מלא"
                 className="flex-1 px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left tracking-wider"
                 dir="ltr"
               />
@@ -620,7 +692,38 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
                 {searchingBus ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'בדוק'}
               </button>
             </div>
-            <span className="text-[11px] text-slate-400 block font-medium">חובה 7 או 8 ספרות (לא ניתן להזין רצף של ספרות זהות או בדיקת דמה)</span>
+            <span className="text-[11px] text-slate-400 block font-medium">
+              💡 הזן מספר קצר (3–4 ספרות) והמערכת תשלים אוטומטית, או הקלד מספר רישוי מלא (7–8 ספרות).
+            </span>
+
+            {/* Autocomplete Suggestions Chips */}
+            {autocompleteSuggestions.length > 0 && (
+              <div className="p-3 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-1.5 animate-fadeIn">
+                <span className="text-xs font-bold text-emerald-900 block flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>אוטובוסים שנמצאו לפי מספר זה (לחץ לבחירה מיידית):</span>
+                </span>
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {autocompleteSuggestions.map((m) => (
+                    <button
+                      key={m.bus_number}
+                      type="button"
+                      onClick={() => handleSearchBus(m.bus_number)}
+                      className="px-3 py-1.5 bg-white hover:bg-emerald-600 hover:text-white text-slate-800 border border-emerald-300 rounded-xl text-xs font-black shadow-sm flex items-center gap-1.5 transition-all active:scale-95"
+                    >
+                      <span>{m.bus_number}</span>
+                      {m.short_number && m.short_number !== m.bus_number && (
+                        <span className="text-[10px] opacity-75 font-normal">({m.short_number})</span>
+                      )}
+                      <span className="text-[10px] text-emerald-800 bg-emerald-100 px-1 py-0.2 rounded font-bold">
+                        {m.operator}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {busError && (
               <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold flex items-center gap-1.5 animate-shake">
                 <span>⚠️</span>
@@ -631,13 +734,61 @@ export default function NewTreatmentView({ onTreatmentCompleted }) {
 
           {/* Bus Check Result Banner */}
           {busInfo && (
-            <div className="p-5 rounded-2xl border transition-all space-y-3 bg-slate-50 border-slate-200">
+            <div className="p-5 rounded-2xl border transition-all space-y-4 bg-slate-50 border-slate-200">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-black text-slate-800">
-                  בדיקת זכאות לאוטובוס {busInfo.busNumber}:
-                </span>
+                <div>
+                  <span className="text-sm font-black text-slate-900 block">
+                    אוטובוס {busInfo.busNumber}
+                    {busInfo.shortNumber && busInfo.shortNumber !== busInfo.busNumber && (
+                      <span className="mr-1.5 text-xs font-bold text-slate-500">(מספר קצר: {busInfo.shortNumber})</span>
+                    )}
+                  </span>
+                  <span className="text-xs text-slate-500 font-bold">{busInfo.operator}</span>
+                </div>
                 <StatusBadge status={busInfo.status} />
               </div>
+
+              {/* Live Dispatch & Location Card from Ops System */}
+              {busInfo.liveDispatch && (
+                <div className="p-3.5 rounded-xl border border-slate-200 bg-white shadow-sm space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-emerald-600" />
+                      <span className="text-xs font-black text-slate-800">מיקום וסידור עבודה חי:</span>
+                    </div>
+                    <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${
+                      busInfo.liveDispatch.isParked 
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
+                        : 'bg-amber-50 text-amber-800 border-amber-300'
+                    }`}>
+                      {busInfo.liveDispatch.isParked ? '🟢 בחניון / פנוי לטיפול' : '🟡 בנסיעה פעילה בקו'}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block">סניף / חניון פעילות:</span>
+                      <span className="font-black text-slate-800">{busInfo.liveDispatch.location || busInfo.cluster || 'חניון מרכזי'}</span>
+                    </div>
+                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
+                      <span className="text-[10px] text-slate-400 block">סטטוס משימה:</span>
+                      <span className="font-black text-slate-800">{busInfo.liveDispatch.statusLabel}</span>
+                    </div>
+                  </div>
+
+                  {busInfo.liveDispatch.lineDescription && (
+                    <div className="bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-0.5">
+                        <span>משימה אחרונה:</span>
+                        {busInfo.liveDispatch.timeRange && (
+                          <span className="font-mono text-slate-700 font-bold">{busInfo.liveDispatch.timeRange}</span>
+                        )}
+                      </div>
+                      <div className="font-bold text-slate-800">{busInfo.liveDispatch.lineDescription}</div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Blocking Condition: Treatment already valid */}
               {!busInfo.canStartTreatment ? (

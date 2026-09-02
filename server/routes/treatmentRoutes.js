@@ -139,16 +139,18 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
     const photoPath = req.file ? `/uploads/${req.file.filename}` : null;
     // Treatment date: strictly date without time ('YYYY-MM-DD')
     const now = new Date().toISOString().slice(0, 10);
+    const busLoc = existingBus?.last_known_location || existingBus?.cluster || null;
 
     // Begin saving report
     const insertReportStmt = db.prepare(`
-      INSERT INTO reports (bus_number, operator, technician_id, technician_name, photo_path, summary, result, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO reports (bus_number, operator, location, technician_id, technician_name, photo_path, summary, result, status, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const reportResult = insertReportStmt.run(
       cleanBusNumber,
       operator,
+      busLoc,
       req.user.id,
       req.user.fullName,
       photoPath,
@@ -402,6 +404,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
     worksheet.columns = [
       { header: 'מפעיל / חברה', key: 'operator', width: 16 },
       { header: 'מספר אוטובוס', key: 'bus_number', width: 16 },
+      { header: 'מיקום / סניף', key: 'location', width: 18 },
       { header: 'תאריך טיפול', key: 'created_at', width: 16 },
       { header: 'שם הטכנאי', key: 'technician_name', width: 18 },
       { header: 'רשימת המכשירים ומצבם', key: 'devices', width: 42 },
@@ -449,6 +452,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       const row = worksheet.addRow({
         operator: r.operator || 'דן באר שבע',
         bus_number: r.bus_number,
+        location: r.location || 'מרכז תפעול',
         created_at: formattedDate,
         technician_name: r.technician_name,
         devices: devListStr,

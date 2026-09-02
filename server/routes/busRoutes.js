@@ -7,6 +7,8 @@ import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { extractBusNumberFromImage } from '../ocr.js';
 import { validateBusNumber } from '../validators.js';
+import { getBusLiveDispatch } from '../services/dispatchService.js';
+import { syncFleetFromGov } from '../services/fleetSyncService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -113,8 +115,78 @@ export function evaluateBusStatus(bus) {
   };
 }
 
+// GET /api/buses/autocomplete?q=1687&operator=...
+router.get('/autocomplete', requireAuth, (req, res) => {
+  try {
+    const q = (req.query.q || '').replace(/[^0-9]/g, '').trim();
+    const operator = req.query.operator || null;
+
+    if (!q || q.length < 2) {
+      return res.json({ matches: [] });
+    }
+
+    let sql = `
+      SELECT bus_number, operator, cluster, short_number, status, production_year, last_known_location
+      FROM buses
+      WHERE (
+        bus_number = ? 
+        OR bus_number LIKE ? 
+        OR short_number = ?
+        OR bus_number LIKE '%' || ?
+      )
+    `;
+    const params = [q, `${q}%`, q, q];
+
+    if (operator) {
+      sql += ' AND operator = ?';
+      params.push(operator);
+    }
+
+    sql += ' ORDER BY CASE WHEN bus_number = ? THEN 1 WHEN short_number = ? THEN 2 ELSE 3 END, bus_number ASC LIMIT 8';
+    params.push(q, q);
+
+    const matches = db.prepare(sql).all(...params);
+    res.json({ matches });
+  } catch (err) {
+    console.error('Bus autocomplete error:', err);
+    res.status(500).json({ error: 'שגיאה בהשלמה אוטומטית' });
+  }
+});
+
+// GET /api/buses/:busNumber/live-dispatch
+router.get('/:busNumber/live-dispatch', requireAuth, async (req, res) => {
+  try {
+    const busNumber = req.params.busNumber.replace(/[^0-9]/g, '').trim();
+    const operator = req.query.operator || null;
+    const dispatch = await getBusLiveDispatch(busNumber, operator);
+    res.json(dispatch);
+  } catch (err) {
+    console.error('Live dispatch error:', err);
+    res.status(500).json({ error: 'שגיאה בשליפת סידור עבודה' });
+  }
+});
+
+// POST /api/buses/sync-fleet - Trigger admin sync from data.gov.il
+router.post('/sync-fleet', requireAdmin, async (req, res) => {
+  try {
+    const result = await syncFleetFromGov();
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'סנכרון צי אוטובוסים',
+      'משרד התחבורה',
+      'Data.gov.il',
+      `סונכרנו בהצלחה ${result.totalBusesInDb} אוטובוסים (${result.totalAdded} חדשים)`
+    );
+    res.json(result);
+  } catch (err) {
+    console.error('Fleet sync error:', err);
+    res.status(500).json({ error: 'שגיאה בסנכרון צי מול משרד התחבורה' });
+  }
+});
+
 // GET /api/buses/search/:busNumber
-router.get('/search/:busNumber', requireAuth, (req, res) => {
+router.get('/search/:busNumber', requireAuth, async (req, res) => {
   try {
     const busNumber = req.params.busNumber.replace(/[^0-9]/g, '').trim();
     const validationError = validateBusNumber(busNumber);
@@ -123,7 +195,9 @@ router.get('/search/:busNumber', requireAuth, (req, res) => {
     }
 
     const busStmt = db.prepare(`
-      SELECT b.bus_number, b.status, b.last_treatment_date, b.next_treatment_date,
+      SELECT b.bus_number, b.operator, b.cluster, b.bus_type, b.production_year,
+             b.short_number, b.last_known_location, b.work_plan, b.work_status,
+             b.status, b.last_treatment_date, b.next_treatment_date,
              r.technician_name as last_technician_name, r.result as last_result, r.id as last_report_id,
              r.created_at as report_created_at
       FROM buses b
@@ -135,16 +209,21 @@ router.get('/search/:busNumber', requireAuth, (req, res) => {
 
     let bus = busStmt.get(busNumber);
 
+    // Fetch live dispatch in parallel
+    const liveDispatch = await getBusLiveDispatch(busNumber, bus?.operator || req.query.operator);
+
     if (!bus) {
       return res.json({
         exists: false,
         busNumber,
+        operator: liveDispatch?.operator || req.query.operator || 'דן באר שבע',
         status: 'נדרש טיפול',
         lastTreatmentDate: null,
         nextTreatmentDate: null,
         lastTechnicianName: null,
         canStartTreatment: true,
-        message: 'אוטובוס חדש במערכת - מאושר לביצוע טיפול מונע'
+        message: 'אוטובוס חדש במערכת - מאושר לביצוע טיפול מונע',
+        liveDispatch
       });
     }
 
@@ -153,6 +232,11 @@ router.get('/search/:busNumber', requireAuth, (req, res) => {
     res.json({
       exists: true,
       busNumber: bus.bus_number,
+      operator: bus.operator || liveDispatch?.operator || 'דן באר שבע',
+      cluster: bus.cluster || null,
+      busType: bus.bus_type || null,
+      productionYear: bus.production_year || null,
+      shortNumber: bus.short_number || liveDispatch?.shortNumber || null,
       status: evaluation.status,
       lastTreatmentDate: bus.last_treatment_date || bus.report_created_at || null,
       nextTreatmentDate: bus.next_treatment_date || null,
@@ -161,7 +245,8 @@ router.get('/search/:busNumber', requireAuth, (req, res) => {
       lastReportId: bus.last_report_id || null,
       canStartTreatment: evaluation.canStartTreatment,
       blockReason: evaluation.blockReason,
-      message: evaluation.message
+      message: evaluation.message,
+      liveDispatch
     });
   } catch (err) {
     console.error('Bus search error:', err);
