@@ -131,6 +131,9 @@ export function initDatabase() {
   try { db.exec("ALTER TABLE reports ADD COLUMN edi_closed_at DATETIME"); } catch (e) {}
   try { db.exec("ALTER TABLE reports ADD COLUMN location TEXT"); } catch (e) {}
 
+  // Explicit mapping for sample short number from Dan spec
+  try { db.exec("UPDATE buses SET short_number = '1687' WHERE bus_number = '14945702'"); } catch (e) {}
+
   seedInitialData();
 }
 
