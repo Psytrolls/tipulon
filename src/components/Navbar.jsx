@@ -12,7 +12,8 @@ import {
   Menu, 
   X,
   AlertTriangle,
-  MapPin
+  MapPin,
+  BookOpen
 } from 'lucide-react';
 
 export default function Navbar({ currentView, setCurrentView }) {
@@ -105,6 +106,17 @@ export default function Navbar({ currentView, setCurrentView }) {
               {isAdmin ? 'מנהל' : 'טכנאי'}
             </span>
 
+            <a
+              href="/guide.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="מדריך הפעלה והדרכה"
+              className="p-2 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1 text-xs font-bold"
+            >
+              <BookOpen className="w-5 h-5 text-emerald-600" />
+              <span className="hidden md:inline">הדרכה</span>
+            </a>
+
             <button
               onClick={logout}
               title="התנתק מהמערכת"
@@ -149,6 +161,16 @@ export default function Navbar({ currentView, setCurrentView }) {
               </button>
             );
           })}
+          
+          <a
+            href="/guide.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-base font-bold text-emerald-700 bg-emerald-50/70 hover:bg-emerald-100 transition-colors text-right mt-2"
+          >
+            <BookOpen className="w-5 h-5 text-emerald-600" />
+            <span>מדריך הפעלה והדרכה 📖</span>
+          </a>
         </div>
       )}
     </header>

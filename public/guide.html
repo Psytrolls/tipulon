@@ -46,11 +46,14 @@
         </div>
         <div>
           <h1 class="font-black text-lg text-emerald-400">טיפולון – מדריך הפעלה צעד-אחר-צעד לטכנאי</h1>
-          <p class="text-xs text-slate-400">הדרכה מפורטת, פשוטה וברורה לביצוע טיפול מונע בשטח</p>
+          <p class="text-xs text-slate-400">הדרכה מפורטת, פשוטה וברורה לביצוע טיפול מונע בשטח (מעודכן 2026)</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
+        <a href="/" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
+          🏠 <span>חזרה לאפליקציה</span>
+        </a>
         <button onclick="window.print()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 active:scale-95">
           🖨️ <span>הדפס או שמור כ-PDF</span>
         </button>
@@ -70,30 +73,30 @@
       
       <div class="text-center space-y-4 max-w-2xl mx-auto pt-4">
         <span class="inline-block py-1.5 px-4 bg-emerald-100 text-emerald-800 font-black text-xs rounded-full uppercase tracking-wider">
-          שקף 1 מתוך 8 • פתיחה ומבוא
+          שקף 1 מתוך 9 • פתיחה ומבוא
         </span>
         <h2 class="text-3xl sm:text-4xl font-black text-slate-900 leading-tight">
           מדריך ביצוע טיפול מונע באוטובוסים
         </h2>
         <p class="text-slate-600 text-base sm:text-lg">
-          המערכת הדיגיטלית החדשה שמחליפה את דפי הנייר ומאפשרת לתעד טיפול מלא ב-<strong>פחות מ-2 דקות</strong> ישירות מהטלפון הנייד!
+          המערכת הדיגיטלית החכמה שמחברת אתכם ללוויין (GPS) ולסידור העבודה ומאפשרת לתעד טיפול מלא ב-<strong>פחות מ-2 דקות</strong> ישירות מהטלפון הנייד!
         </p>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-right">
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div class="text-2xl mb-1">⏱️</div>
-            <h3 class="font-black text-slate-800 text-sm">מהיר בטירוף</h3>
-            <p class="text-xs text-slate-500 mt-1">בחירה חכמה של דגמי המכשירים בקליק אחד בלבד ללא הקלדות מיותרות.</p>
+            <div class="text-2xl mb-1">🗺️</div>
+            <h3 class="font-black text-slate-800 text-sm">מפת חניונים חיה</h3>
+            <p class="text-xs text-slate-500 mt-1">מאתרת איפה עומדים כרגע אוטובוסים עם הפסקה מעל 20 דקות ומובילה ב-Waze.</p>
           </div>
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
             <div class="text-2xl mb-1">🛡️</div>
             <h3 class="font-black text-slate-800 text-sm">הגנה מטעויות</h3>
-            <p class="text-xs text-slate-500 mt-1">המערכת בודקת אוטומטית תוקף 6 חודשים ומונעת טעויות ברישום.</p>
+            <p class="text-xs text-slate-500 mt-1">בדיקה אוטומטית של תוקף 6 חודשים וחישוב חלון זמנים עד ליציאה הבאה.</p>
           </div>
           <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div class="text-2xl mb-1">📱</div>
-            <h3 class="font-black text-slate-800 text-sm">אפליקציה בכיס</h3>
-            <p class="text-xs text-slate-500 mt-1">פועלת ישירות ממסך הבית של הטלפון כמו אפליקציה אמיתית.</p>
+            <div class="text-2xl mb-1">⚡</div>
+            <h3 class="font-black text-slate-800 text-sm">מהיר בטירוף</h3>
+            <p class="text-xs text-slate-500 mt-1">בחירה חכמה של דגמי המכשירים בקליק אחד ללא הקלדות מיותרות.</p>
           </div>
         </div>
       </div>
@@ -214,12 +217,80 @@
       </div>
     </section>
 
-    <!-- SLIDE 4: Step 1 - Bus Selection & 6 Months Rule -->
+    <!-- SLIDE 4: Live Depot Map & Finding Buses -->
+    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-emerald-500 space-y-6 page-break">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 4 • חדש! מפת חניונים חיה 🗺️</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">איפה יש אוטובוסים שמחכים לטיפול כעת?</h2>
+        </div>
+        <div class="text-3xl">📍</div>
+      </div>
+
+      <p class="text-slate-700 text-sm sm:text-base leading-relaxed">
+        במקום לחפש אוטובוסים פיזית בשטח, לוחצים בסרגל העליון על <strong>«מפת חניונים 🗺️»</strong> ורואים את כל מתחמי הדרום בזמן אמת:
+      </p>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-3 text-xs sm:text-sm text-slate-700 font-medium">
+          <div class="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-1">
+            <strong class="text-emerald-900 block text-sm">1. איתור אוטובוסים לפי לווין (GPS):</strong>
+            <p>המערכת סורקת את כל 11 המתחמים (באר שבע, אלדן אשקלון, מסוף רמז, עד הלום אשדוד, קרית מלאכי, נתיבות, שדרות וכו') ומציגה כמה אוטובוסים עומדים כעת במקום.</p>
+          </div>
+
+          <div class="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 space-y-1">
+            <strong class="text-blue-900 block text-sm">2. חוק 20 הדקות הפנויות ⏱️:</strong>
+            <p>אוטובוס מוצג כ-<strong>«זמין לטיפול»</strong> רק אם אין לו סידור עבודה כרגע, או שהוא סיים משמרת ללילה, או שיש לו <strong>הפסקה של מעל 20 דקות</strong> עד ליציאה הבאה!</p>
+          </div>
+
+          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+            <strong class="text-slate-900 block text-sm">3. ניווט Waze והתחלת טיפול בלחיצה אחת:</strong>
+            <p>לחיצה על <strong>Waze</strong> פותחת ניווט ישיר לחניון, ולחיצה על <strong>«התחל טיפול»</strong> ליד מספר הרישוי פותחת מיד את דוח הטיפול מוכן להזנה!</p>
+          </div>
+        </div>
+
+        <!-- Depot Map Mockup Card -->
+        <div class="bg-slate-50 p-5 rounded-3xl border-2 border-slate-200 space-y-3">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-black text-slate-900 text-sm">חניון ומסוף עד הלום (אשדוד)</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded">דן בדרום</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-center">
+              <div class="p-2 bg-slate-50 rounded-xl border">
+                <span class="text-[10px] text-slate-500 block">עומדים כעת</span>
+                <span class="text-xl font-black text-slate-800">21</span>
+              </div>
+              <div class="p-2 bg-emerald-50 rounded-xl border border-emerald-300">
+                <span class="text-[10px] text-emerald-700 block">זמינים לטיפול</span>
+                <span class="text-xl font-black text-emerald-700">20</span>
+              </div>
+            </div>
+            <div class="flex gap-2 pt-1">
+              <div class="flex-1 py-1.5 bg-blue-600 text-white text-center rounded-lg text-xs font-bold">Waze ↗</div>
+              <div class="flex-1 py-1.5 bg-slate-800 text-white text-center rounded-lg text-xs font-bold">Google Maps ↗</div>
+            </div>
+          </div>
+
+          <div class="p-3 bg-white rounded-xl border flex items-center justify-between">
+            <div>
+              <span class="font-mono font-black text-sm text-slate-900">53151403</span>
+              <span class="block text-[10px] text-emerald-700 font-bold">🟢 ללא סידור עבודה כעת</span>
+            </div>
+            <div class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black">
+              התחל טיפול ➔
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: Step 1 - Bus Selection & Full License Plate -->
     <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 4 • שלב 1 בתהליך</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">בחירת מפעיל ובדיקת מספר אוטובוס</h2>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 5 • שלב 1 בתהליך</span>
+          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">הזנת מספר רישוי ובדיקת חלון זמנים</h2>
         </div>
         <div class="text-3xl">🚍</div>
       </div>
@@ -227,7 +298,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="space-y-4 text-sm font-medium text-slate-800 leading-relaxed">
           <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
-            <strong class="text-emerald-900 block mb-1">א. בוחרים את המפעיל בלחיצה אחת:</strong>
+            <strong class="text-emerald-900 block mb-1">א. בוחרים את המפעיל:</strong>
             <div class="grid grid-cols-2 gap-2 mt-2">
               <div class="border-2 border-emerald-600 bg-white p-3 rounded-xl text-center font-black text-xs text-emerald-900 shadow-sm">
                 דן באר שבע<br><span class="text-[10px] text-slate-500 font-normal">מינימום 3 מכשירים</span>
@@ -239,20 +310,20 @@
           </div>
 
           <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <strong class="text-slate-900 block">ב. מקלידים מספר אוטובוס (מלא או קצר!):</strong>
+            <strong class="text-slate-900 block">ב. מקלידים מספר רישוי מלא (7–8 ספרות):</strong>
             <p class="text-xs text-slate-600">
-              ניתן להקליד <strong>מספר קצר (3–4 ספרות)</strong> והמערכת תשלים אותו אוטומטית למספר רישוי מלא, או להקליד ישירות מספר רישוי מלא (7–8 ספרות).
+              הקלד את מספר הרישוי המלא שעל האוטובוס (למשל: <code>17759703</code> או <code>53118903</code>) ולחץ על <strong>«בדוק»</strong>.
             </p>
             <div class="bg-emerald-50 text-emerald-800 p-2 rounded-xl text-xs font-bold border border-emerald-200">
-              💡 טיפ: מקלידים למשל <code>1687</code> או <code>234</code> — והמערכת מזהה ומשלימה מיד!
+              💡 טיפ: בטלפון נפתחת מקלדת ספרות גדולה, ויש כפתור ✕ מהיר לניקוי המספר בלחיצה אחת.
             </div>
           </div>
 
           <div class="p-3 bg-blue-50 rounded-2xl border border-blue-200 space-y-1.5">
-            <strong class="text-blue-900 block mb-0.5">ג. בדיקת זכאות וסידור עבודה חי 📍:</strong>
+            <strong class="text-blue-900 block mb-0.5">ג. בדיקת זכאות ולוח זמנים חי:</strong>
             <ul class="text-xs space-y-1 text-blue-950 list-disc list-inside">
-              <li><strong>זכאות לטיפול:</strong> בדיקה מול 6 חודשים תקופתיים.</li>
-              <li><strong>מיקום וסידור עבודה:</strong> המערכת שולפת מסידור העבודה של דן היכן האוטובוס נמצא (סניף/חניון) והאם <strong>«נסיעה הסתיימה – פנוי בחניון»</strong> או בנסיעה פעילה!</li>
+              <li><strong>תוקף 6 חודשים:</strong> האם עברו 6 חודשים מהטיפול הקודם?</li>
+              <li><strong>זמן פנוי לטיפול:</strong> המערכת מציינת: <em>«פנוי לטיפול! נותרו 42 דקות פנויות (יוצא ב-22:50)»</em>.</li>
             </ul>
           </div>
         </div>
@@ -265,16 +336,25 @@
           </div>
 
           <div>
-            <label class="text-xs font-bold text-slate-700 block mb-1">מספר אוטובוס</label>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-xs font-black text-slate-700">מספר אוטובוס (לוחית רישוי)</label>
+              <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">7–8 ספרות</span>
+            </div>
             <div class="flex gap-2">
-              <input type="text" value="17780403" disabled class="bg-white border-2 border-emerald-500 rounded-xl p-2.5 font-black text-base text-slate-900 flex-1 text-center font-mono">
-              <button class="bg-emerald-600 text-white font-bold px-4 rounded-xl text-xs">בדוק</button>
+              <input type="text" value="17759703" disabled class="bg-white border-2 border-emerald-500 rounded-xl p-3 font-black text-base text-slate-900 flex-1 text-center font-mono">
+              <button class="bg-emerald-600 text-white font-black px-5 rounded-xl text-xs shadow-md">בדוק 🔍</button>
             </div>
           </div>
 
           <div class="bg-emerald-100 border border-emerald-300 p-3 rounded-xl text-emerald-900 text-xs font-black text-center flex items-center justify-center gap-2">
             <span>✅</span>
-            <span>האוטובוס זכאי לטיפול מונע!</span>
+            <span>האוטובוס מאושר לביצוע טיפול מונע!</span>
+          </div>
+
+          <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-1 text-xs">
+            <span class="font-bold text-slate-800 block">🟢 מיקום וסידור עבודה חי:</span>
+            <span class="text-slate-600 block">תחנה: <strong>תחנה מרכזית (מסוף רמז) אשקלון</strong></span>
+            <span class="text-emerald-700 font-bold block">עומד במקום – פנוי לטיפול מונע!</span>
           </div>
 
           <button class="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-2">
@@ -285,11 +365,11 @@
       </div>
     </section>
 
-    <!-- SLIDE 5: Step 2 - Number of devices -->
+    <!-- SLIDE 6: Step 2 - Number of devices -->
     <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 5 • שלב 2 בתהליך</span>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 6 • שלב 2 בתהליך</span>
           <h2 class="text-2xl sm:text-3xl font-black text-slate-900">כמה מכשירים יש באוטובוס?</h2>
         </div>
         <div class="text-3xl">🔢</div>
@@ -326,11 +406,11 @@
       </div>
     </section>
 
-    <!-- SLIDE 6: Step 3 - Smart Device Selection (HIGHLIGHT!) -->
+    <!-- SLIDE 7: Step 3 - Smart Device Selection -->
     <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-emerald-500 space-y-6 page-break">
       <div class="flex items-center justify-between border-b border-emerald-100 pb-4">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 6 • הכי חשוב! שלב 3</span>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 7 • הכי חשוב! שלב 3</span>
           <h2 class="text-2xl sm:text-3xl font-black text-slate-900">צ'ק-ליסט מכשירים ובחירה חכמה ⚡</h2>
         </div>
         <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-black flex items-center justify-center text-lg">
@@ -412,11 +492,11 @@
       </div>
     </section>
 
-    <!-- SLIDE 7: Step 4 & 5 - Summary & Submit -->
+    <!-- SLIDE 8: Step 4 & 5 - Summary & Submit -->
     <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
       <div class="flex items-center justify-between border-b border-slate-100 pb-4">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 7 • שלבים 4 ו-5</span>
+          <span class="text-xs font-black text-emerald-600 uppercase">שקף 8 • שלבים 4 ו-5</span>
           <h2 class="text-2xl sm:text-3xl font-black text-slate-900">סיכום הטיפול ושליחת הדוח</h2>
         </div>
         <div class="text-3xl">✅</div>
@@ -462,7 +542,7 @@
           </div>
           <h3 class="text-xl font-black text-emerald-900">דוח הטיפול נשמר בהצלחה!</h3>
           <p class="text-xs text-emerald-700">
-            הדוח עלה ישירות לענן, האוטובוס עודכן כמשוריין ל-6 חודשים קדימה והנתונים מופיעים מיד באקסל של המנהל!
+            הדוח עלה ישירות לענן, האוטובוס עודכן כמשוריין ל-6 חודשים קדימה והנתונים מופיעים מיד באקסל ובדוחות המנהל!
           </p>
           <button class="py-2.5 px-6 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-md">
             פתח טיפול לאוטובוס הבא ➔
@@ -471,11 +551,11 @@
       </div>
     </section>
 
-    <!-- SLIDE 8: Top 5 Golden Rules for Field Technicians -->
+    <!-- SLIDE 9: Top 5 Golden Rules for Field Technicians -->
     <section class="slide-card bg-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-800 space-y-6 page-break">
       <div class="flex items-center justify-between border-b border-slate-800 pb-4">
         <div>
-          <span class="text-xs font-black text-emerald-400 uppercase">שקף 8 • סיכום וכללי ברזל</span>
+          <span class="text-xs font-black text-emerald-400 uppercase">שקף 9 • סיכום וכללי ברזל</span>
           <h2 class="text-2xl sm:text-3xl font-black text-white">5 כללי ברזל לעבודה חלקה בשטח 🛡️</h2>
         </div>
         <div class="text-3xl">⭐</div>
@@ -483,8 +563,8 @@
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
         <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
-          <div class="font-black text-emerald-400 text-base">1. הקפדה על מספר אוטובוס מדויק</div>
-          <p class="text-slate-300">תמיד לבדוק את לוחית הרישוי על גבי האוטובוס. המספר חייב להיות בן 7 או 8 ספרות.</p>
+          <div class="font-black text-emerald-400 text-base">1. הקפדה על מספר רישוי מלא (7–8 ספרות)</div>
+          <p class="text-slate-300">תמיד לבדוק את לוחית הרישוי על גבי האוטובוס. המספר חייב להיות מספר רישוי מלא ללא מספרים מקוצרים.</p>
         </div>
 
         <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
@@ -493,7 +573,7 @@
         </div>
 
         <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
-          <div class="font-black text-emerald-400 text-base">3. מכשירים: שימוש בכפתורי הבחירה</div>
+          <div class="font-black text-emerald-400 text-base">3. מכשירים: שימוש בכפתורי הבחירה החכמה</div>
           <p class="text-slate-300">לא לשבור את הראש: לחיצה אחת על <code>PCE 415</code> מסדרת לכם את כל שאר המכשירים כ-<code>VPE 420</code> אוטומטית.</p>
         </div>
 
