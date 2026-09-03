@@ -625,6 +625,39 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                 <StatusBadge status={busInfo.status} />
               </div>
 
+              {/* 1. Primary Eligibility Status (ALWAYS AT THE VERY TOP!) */}
+              {!busInfo.canStartTreatment ? (
+                <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 space-y-2 shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-2 font-black text-sm text-rose-700">
+                    <ShieldAlert className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                    <span>אין צורך בביצוע טיפול מונע לאוטובוס זה!</span>
+                  </div>
+                  <p className="text-xs font-semibold text-rose-800 pr-7 leading-relaxed">
+                    {busInfo.blockReason || 'לאוטובוס קיים טיפול מונע בתוקף ואין צורך בביצוע טיפול כפול.'}
+                  </p>
+                  {busInfo.lastTechnicianName && (
+                    <p className="text-xs text-rose-700 font-bold pr-7">
+                      בוצע לאחרונה ע״י: <span className="underline">{busInfo.lastTechnicianName}</span>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 text-emerald-900 space-y-1.5 shadow-sm animate-fadeIn">
+                  <div className="flex items-center gap-2 font-black text-sm text-emerald-800">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <span>האוטובוס מאושר לביצוע טיפול מונע!</span>
+                  </div>
+                  <p className="text-xs text-emerald-800 pr-7">
+                    {busInfo.message || 'האוטובוס נדרש לבדיקה שגרתית מלאה.'}
+                  </p>
+                  {busInfo.lastTreatmentDate && (
+                    <p className="text-[11px] text-emerald-700 pr-7">
+                      טיפול קודם: {new Date(busInfo.lastTreatmentDate).toLocaleDateString('he-IL')}
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Live Dispatch & Location Card from Ops System */}
               {busInfo.liveDispatch && (
                 <div className="p-4 rounded-2xl border border-slate-200 bg-white shadow-sm space-y-3">
@@ -638,12 +671,12 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                         ? 'bg-emerald-50 text-emerald-800 border-emerald-300' 
                         : 'bg-amber-50 text-amber-800 border-amber-300'
                     }`}>
-                      {busInfo.liveDispatch.isParked ? '🟢 בחניון / פנוי לטיפול' : '🟡 בנסיעה פעילה בקו'}
+                      {busInfo.liveDispatch.isParked ? '🟢 בחניון / פנוי' : '🟡 בנסיעה פעילה בקו'}
                     </span>
                   </div>
 
-                  {/* Smart Layover & Time Window Verdict */}
-                  {busInfo.liveDispatch.timeVerdictText && (
+                  {/* Smart Layover & Time Window Verdict (ONLY shown when bus is eligible for treatment) */}
+                  {busInfo.canStartTreatment && busInfo.liveDispatch.timeVerdictText && (
                     <div className={`p-3 rounded-xl border text-xs font-black flex items-start gap-2 ${
                       busInfo.liveDispatch.timeBadgeType === 'DANGER'
                         ? 'bg-rose-50 border-rose-300 text-rose-800'
@@ -819,7 +852,7 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                               key={idx}
                               className={`p-2.5 rounded-xl border text-xs transition-all ${
                                 task.isCurrent
-                                  ? 'bg-amber-50 border-amber-400 shadow-xs ring-1 ring-amber-300'
+                                   ? 'bg-amber-50 border-amber-400 shadow-xs ring-1 ring-amber-300'
                                   : task.statusCode === '4'
                                   ? 'bg-white border-slate-200 opacity-75'
                                   : 'bg-white border-slate-200'
@@ -859,40 +892,6 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Blocking Condition: Treatment already valid */}
-              {!busInfo.canStartTreatment ? (
-                <div className="p-4 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 space-y-1.5 animate-fadeIn">
-                  <div className="flex items-center gap-2 font-black text-sm text-rose-700">
-                    <ShieldAlert className="w-5 h-5 text-rose-600 flex-shrink-0" />
-                    <span>אין צורך בביצוע טיפול מונע לאוטובוס זה!</span>
-                  </div>
-                  <p className="text-xs font-medium text-rose-800 pr-7">
-                    {busInfo.blockReason || 'לאוטובוס קיים טיפול מונע בתוקף ואין צורך בביצוע טיפול כפול.'}
-                  </p>
-                  {busInfo.lastTechnicianName && (
-                    <p className="text-[11px] text-rose-600 pr-7">
-                      בוצע לאחרונה ע״י: <strong>{busInfo.lastTechnicianName}</strong>
-                    </p>
-                  )}
-                </div>
-              ) : (
-                /* Allowed Condition: Treatment needed or new bus */
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 space-y-1.5 animate-fadeIn">
-                  <div className="flex items-center gap-2 font-black text-sm text-emerald-800">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                    <span>האוטובוס מאושר לביצוע טיפול מונע!</span>
-                  </div>
-                  <p className="text-xs text-emerald-800 pr-7">
-                    {busInfo.message || 'האוטובוס נדרש לבדיקה שגרתית מלאה.'}
-                  </p>
-                  {busInfo.lastTreatmentDate && (
-                    <p className="text-[11px] text-emerald-700 pr-7">
-                      טיפול קודם: {new Date(busInfo.lastTreatmentDate).toLocaleDateString('he-IL')}
-                    </p>
                   )}
                 </div>
               )}
