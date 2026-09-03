@@ -282,7 +282,7 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
                     האוטובוסים במתחם זה נמצאים בטיפולים מכניים בתוך מבנה המוסך. אין כניסה לטכנאים ללא אישור ותיאום מנהל המוסך.
                   </p>
                 </div>
-              ) : selectedHub.busesForTreatment.length === 0 ? (
+              ) : (selectedHub.busesForTreatment || []).length === 0 ? (
                 <div className="p-10 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-1">
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                   <p className="text-xs font-bold text-slate-700">כל האוטובוסים בחניון זה מטופלים ובתוקף!</p>
@@ -290,7 +290,7 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
                 </div>
               ) : (
                 <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {selectedHub.busesForTreatment.map((b) => (
+                  {(selectedHub.busesForTreatment || []).map((b) => (
                     <div
                       key={b.bus_number}
                       className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-xl border border-slate-200 hover:border-emerald-300 transition-all flex items-center justify-between gap-3"
