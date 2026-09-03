@@ -207,16 +207,16 @@ router.get('/', requireAuth, (req, res) => {
     const totalCount = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
     const br7Count = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ?').get('דן באר שבע').count;
     const daromCount = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ?').get('דן בדרום').count;
-    const validCount = db.prepare('SELECT COUNT(*) as count FROM buses WHERE next_treatment_date > ?').get(nowIso).count;
+    const validCount = db.prepare("SELECT COUNT(DISTINCT bus_number) as count FROM reports WHERE status = 'הטיפול הושלם'").get().count;
     const pendingCount = totalCount - validCount;
     const progressPercent = totalCount > 0 ? Math.round((validCount / totalCount) * 100) : 0;
 
-    // Per-operator separate breakdown
-    const br7Valid = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ? AND next_treatment_date > ?').get('דן באר שבע', nowIso).count;
+    // Per-operator separate breakdown (Synced with completed treatments)
+    const br7Valid = db.prepare("SELECT COUNT(DISTINCT bus_number) as count FROM reports WHERE operator = ? AND status = 'הטיפול הושלם'").get('דן באר שבע').count;
     const br7Pending = br7Count - br7Valid;
     const br7Progress = br7Count > 0 ? Math.round((br7Valid / br7Count) * 100) : 0;
 
-    const daromValid = db.prepare('SELECT COUNT(*) as count FROM buses WHERE operator = ? AND next_treatment_date > ?').get('דן בדרום', nowIso).count;
+    const daromValid = db.prepare("SELECT COUNT(DISTINCT bus_number) as count FROM reports WHERE operator = ? AND status = 'הטיפול הושלם'").get('דן בדרום').count;
     const daromPending = daromCount - daromValid;
     const daromProgress = daromCount > 0 ? Math.round((daromValid / daromCount) * 100) : 0;
 
@@ -251,11 +251,9 @@ router.get('/', requireAuth, (req, res) => {
     }
 
     if (status === 'valid') {
-      whereClauses.push('b.next_treatment_date > ?');
-      params.push(nowIso);
+      whereClauses.push("b.bus_number IN (SELECT DISTINCT bus_number FROM reports WHERE status = 'הטיפול הושלם')");
     } else if (status === 'pending') {
-      whereClauses.push('(b.next_treatment_date IS NULL OR b.next_treatment_date <= ?)');
-      params.push(nowIso);
+      whereClauses.push("b.bus_number NOT IN (SELECT DISTINCT bus_number FROM reports WHERE status = 'הטיפול הושלם')");
     }
 
     if (search && search.trim()) {
