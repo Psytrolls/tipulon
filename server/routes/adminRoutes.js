@@ -15,7 +15,10 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const treatmentsToday = todayStmt.get().count;
 
-    // 2. Total completed treatments (synced with Reports view)
+    // Total reports filed in the system
+    const totalReports = db.prepare('SELECT COUNT(*) as count FROM reports').get().count;
+
+    // 2. Total completed treatments
     const totalCompletedStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM reports 
@@ -39,19 +42,19 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const completedDanBeerSheva = danBeerShevaStmt.get().count;
 
-    // 5. Total Closed in EDI (Completed treatments only)
+    // 5. Total Closed in EDI
     const ediClosedStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM reports 
-      WHERE status = 'הטיפול הושלם' AND is_edi_closed = 1
+      WHERE is_edi_closed = 1
     `);
     const ediClosed = ediClosedStmt.get().count;
 
-    // 6. Total Open in EDI (Completed treatments awaiting EDI closure)
+    // 6. Total Open in EDI (Awaiting closure: completed + follow-up queue)
     const ediOpenStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM reports 
-      WHERE status = 'הטיפול הושלם' AND (is_edi_closed = 0 OR is_edi_closed IS NULL)
+      WHERE is_edi_closed = 0 OR is_edi_closed IS NULL
     `);
     const ediOpen = ediOpenStmt.get().count;
 
@@ -91,6 +94,7 @@ router.get('/dashboard', requireAdmin, (req, res) => {
 
     res.json({
       metrics: {
+        totalReports,
         treatmentsToday,
         totalCompleted,
         completedDanBaDarom,

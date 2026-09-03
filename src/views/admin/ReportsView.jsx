@@ -237,23 +237,28 @@ export default function ReportsView({ initialReportId = null }) {
         </div>
       )}
 
-      {/* Live KPI Counters: Total, Dan BaDarom, Dan Beer Sheva, EDI Closed, EDI Open */}
+      {/* Live KPI Counters: Total Reports, Dan BaDarom, Dan Beer Sheva, EDI Closed, EDI Open */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         
-        {/* Total Completed */}
+        {/* Total Reports Filed */}
         <div 
           onClick={() => { setSearchBus(''); setFilterOperator(''); setFilterResult(''); setFilterEdi(''); }}
           title="לחץ לאיפוס סינון והצגת כל הדוחות"
           className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-slate-400 transition-all group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">סה"כ הושלמו</span>
+            <span className="text-xs font-bold text-slate-500">סה"כ דוחות שנפתחו</span>
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">
-            {reports.filter(r => r.status === 'הטיפול הושלם').length}
+            {reports.length}
           </div>
-          <span className="text-[10px] text-slate-400 block mt-0.5">כל האוטובוסים שטופלו</span>
+          <div className="text-[10px] text-slate-500 font-bold block mt-0.5">
+            <span className="text-emerald-700">{reports.filter(r => r.status === 'הטיפול הושלם').length} הושלמו</span>
+            {reports.filter(r => r.status === 'הועבר להמשך טיפול').length > 0 && (
+              <span className="text-rose-600 mr-1"> | {reports.filter(r => r.status === 'הועבר להמשך טיפול').length} המשך טיפול</span>
+            )}
+          </div>
         </div>
 
         {/* Dan BaDarom */}
@@ -305,7 +310,7 @@ export default function ReportsView({ initialReportId = null }) {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
           </div>
           <div className="text-2xl font-black text-emerald-800 mt-1">
-            {reports.filter(r => r.status === 'הטיפול הושלם' && r.is_edi_closed === 1).length}
+            {reports.filter(r => r.is_edi_closed === 1).length}
           </div>
           <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">✓ סגורים ומעודכנים</span>
         </div>
@@ -323,9 +328,14 @@ export default function ReportsView({ initialReportId = null }) {
             <Clock className="w-3.5 h-3.5 text-amber-700" />
           </div>
           <div className="text-2xl font-black text-amber-700 mt-1">
-            {reports.filter(r => r.status === 'הטיפול הושלם' && !r.is_edi_closed).length}
+            {reports.filter(r => !r.is_edi_closed).length}
           </div>
-          <span className="text-[10px] text-amber-800 font-bold block mt-0.5">⏳ ממתינים לסגירה</span>
+          <span className="text-[10px] text-amber-800 font-bold block mt-0.5">
+            {reports.filter(r => r.status === 'הטיפול הושלם' && !r.is_edi_closed).length} הושלמו
+            {reports.filter(r => r.status === 'הועבר להמשך טיפול' && !r.is_edi_closed).length > 0 && (
+              ` + ${reports.filter(r => r.status === 'הועבר להמשך טיפול' && !r.is_edi_closed).length} המשך טיפול`
+            )}
+          </span>
         </div>
 
       </div>

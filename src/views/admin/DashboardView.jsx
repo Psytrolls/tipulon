@@ -244,14 +244,19 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           
-          {/* Total Completed */}
+          {/* Total Reports in System */}
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-4 shadow-sm border border-slate-700">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-bold text-slate-300">סה"כ בוצעו</span>
+              <span className="text-xs font-bold text-slate-300">סה"כ דוחות שנפתחו</span>
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="text-2xl sm:text-3xl font-black">{metrics.totalCompleted || 0}</div>
-            <span className="text-[11px] text-slate-400 mt-0.5 block">אוטובוסים שהושלם להם טיפול</span>
+            <div className="text-2xl sm:text-3xl font-black">{metrics.totalReports || metrics.totalCompleted || 0}</div>
+            <div className="text-[10px] text-slate-400 mt-0.5 block font-medium">
+              <span className="text-emerald-400 font-bold">{metrics.totalCompleted || 0} הושלמו</span>
+              {Boolean(metrics.followUpQueue) && (
+                <span className="text-rose-300 font-bold mr-1"> | {metrics.followUpQueue} המשך טיפול</span>
+              )}
+            </div>
           </div>
 
           {/* Dan BaDarom */}
@@ -291,7 +296,10 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
               <Clock className="w-4 h-4 text-amber-700" />
             </div>
             <div className="text-2xl sm:text-3xl font-black text-amber-700">{metrics.ediOpen || 0}</div>
-            <span className="text-[11px] text-amber-800 font-medium mt-0.5 block">⏳ ממתינים לסגירה באדי</span>
+            <span className="text-[10px] text-amber-800 font-medium mt-0.5 block">
+              {(metrics.totalCompleted && metrics.ediClosed) ? (metrics.totalCompleted - metrics.ediClosed) : (metrics.ediOpen || 0)} הושלמו
+              {Boolean(metrics.followUpQueue) && ` + ${metrics.followUpQueue} המשך טיפול`}
+            </span>
           </div>
 
         </div>
