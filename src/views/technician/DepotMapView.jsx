@@ -9,28 +9,54 @@ import {
   ArrowRight, 
   Clock, 
   Sparkles,
-  ExternalLink
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
+
+const INITIAL_HUBS = [
+  { id: 'habonim_parking', name: 'חניון רכב כבד (הבונים)', shortName: 'חניון רכב כבד', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80640, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2222,34.8064&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2222,34.8064' },
+  { id: 'habonim_garage', name: 'מוסך דן (עמק שרה)', shortName: 'מוסך דן (אין כניסה)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80880, isRestricted: true, type: 'GARAGE', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2222,34.8088&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2222,34.8088' },
+  { id: 'merkazit_br7', name: 'תחנה מרכזית (רציפים וחניון)', shortName: 'תחנה מרכזית', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24128, lon: 34.79799, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.24128,34.79799&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.24128,34.79799' },
+  { id: 'hatzerim_br7', name: 'מסוף חצרים', shortName: 'מסוף חצרים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24241, lon: 34.75188, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.24241,34.75188&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.24241,34.75188' },
+  { id: 'rakevet_tzafon_br7', name: 'מסוף רכבת צפון (אוניברסיטה)', shortName: 'רכבת צפון', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.26090, lon: 34.76390, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2609,34.7639&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2609,34.7639' },
+  { id: 'turner_br7', name: 'מסוף אצטדיון טרנר', shortName: 'אצטדיון טרנר', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.27250, lon: 34.78120, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2725,34.7812&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2725,34.7812' },
+  { id: 'ramot_br7', name: 'מסוף רמות', shortName: 'מסוף רמות', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.26350, lon: 34.81080, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2635,34.8108&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2635,34.8108' },
+  { id: 'big_br7', name: 'מסוף ביג (המשק)', shortName: 'מסוף ביג', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.23840, lon: 34.81150, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2384,34.8115&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2384,34.8115' },
+  { id: 'masof_ya_br7', name: 'מסוף י"א', shortName: 'מסוף י"א', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.25240, lon: 34.76960, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2524,34.7696&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2524,34.7696' },
+  { id: 'beit_almin_br7', name: 'מסוף בית עלמין', shortName: 'בית עלמין', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22080, lon: 34.82300, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.2208,34.823&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.2208,34.823' },
+  { id: 'eldan_ashkelon', name: 'חניון אלדן (פארק צפוני)', shortName: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.67319,34.60244&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.67319,34.60244' },
+  { id: 'merkazit_ashkelon', name: 'תחנה מרכזית (מסוף רמז)', shortName: 'תחנה מרכזית אשקלון', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66440, lon: 34.56680, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.6644,34.5668&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.6644,34.5668' },
+  { id: 'ashdod_depot', name: 'חניון ומסוף עד הלום (אשדוד)', shortName: 'עד הלום אשדוד', city: 'אשדוד', operator: 'דן בדרום', lat: 31.78000, lon: 34.66520, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.78,34.6652&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.78,34.6652' },
+  { id: 'malakhi_depot', name: 'תחנה מרכזית קרית מלאכי', shortName: 'קרית מלאכי', city: 'קרית מלאכי', operator: 'דן בדרום', lat: 31.73023, lon: 34.75344, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.73023,34.75344&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.73023,34.75344' },
+  { id: 'ofakim_depot', name: 'חניון ומסוף אופקים', shortName: 'חניון אופקים', city: 'אופקים', operator: 'דן בדרום', lat: 31.32160, lon: 34.62340, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.3216,34.6234&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.3216,34.6234' },
+  { id: 'netivot_depot', name: 'חניון ומסוף נתיבות', shortName: 'חניון נתיבות', city: 'נתיבות', operator: 'דן בדרום', lat: 31.41128, lon: 34.58334, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.41128,34.58334&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.41128,34.58334' },
+  { id: 'sderot_depot', name: 'חניון ומסוף שדרות', shortName: 'חניון שדרות', city: 'שדרות', operator: 'דן בדרום', lat: 31.52200, lon: 34.60350, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.522,34.6035&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.522,34.6035' },
+  { id: 'kiryat_gat', name: 'חניון ומסוף קרית גת', shortName: 'חניון קרית גת', city: 'קרית גת', operator: 'דן בדרום', lat: 31.60900, lon: 34.77040, isRestricted: false, type: 'PARKING', totalParkedCount: 0, availableForTreatmentCount: 0, busesForTreatment: [], wazeUrl: 'https://waze.com/ul?ll=31.609,34.7704&navigate=yes', mapsUrl: 'https://www.google.com/maps/search/?api=1&query=31.609,34.7704' }
+];
 
 export default function DepotMapView({ onSelectBusForTreatment }) {
   const [loading, setLoading] = useState(true);
-  const [hubs, setHubs] = useState([]);
-  const [selectedHubId, setSelectedHubId] = useState('habonim_br7');
+  const [hubs, setHubs] = useState(INITIAL_HUBS);
+  const [selectedHubId, setSelectedHubId] = useState('habonim_parking');
   const [operatorFilter, setOperatorFilter] = useState(''); // '' = all, 'דן באר שבע', 'דן בדרום'
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const fetchLiveDepots = async () => {
     try {
       setLoading(true);
+      setErrorMsg(null);
       const res = await fetch('/api/buses/depots-live');
       if (res.ok) {
         const data = await res.json();
-        setHubs(data.hubs || []);
-        if (data.hubs?.length > 0 && !selectedHubId) {
-          setSelectedHubId(data.hubs[0].id);
+        if (Array.isArray(data?.hubs) && data.hubs.length > 0) {
+          setHubs(data.hubs);
         }
+      } else {
+        setErrorMsg('לא ניתן לקבל נתונים עדכניים כעת מהשרת');
       }
     } catch (err) {
       console.error('Failed to load depots map data:', err);
+      setErrorMsg('שגיאת תקשורת בטעינת נתוני מפה');
     } finally {
       setLoading(false);
     }
@@ -40,8 +66,9 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
     fetchLiveDepots();
   }, []);
 
-  const filteredHubs = hubs.filter(h => !operatorFilter || h.operator === operatorFilter);
-  const selectedHub = hubs.find(h => h.id === selectedHubId) || filteredHubs[0] || null;
+  const safeHubs = Array.isArray(hubs) && hubs.length > 0 ? hubs : INITIAL_HUBS;
+  const filteredHubs = safeHubs.filter(h => !operatorFilter || h.operator === operatorFilter);
+  const selectedHub = filteredHubs.find(h => h.id === selectedHubId) || filteredHubs[0] || safeHubs[0];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -61,14 +88,33 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
         </div>
 
         <button
+          type="button"
           onClick={fetchLiveDepots}
           disabled={loading}
           className="self-start sm:self-auto py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 text-emerald-400 ${loading ? 'animate-spin' : ''}`} />
-          <span>רענן מפה בזמן אמת</span>
+          <span>{loading ? 'סורק לוויין בזמן אמת...' : 'רענן מפה בזמן אמת'}</span>
         </button>
       </div>
+
+      {/* Loading Banner */}
+      {loading && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center gap-3 animate-pulse">
+          <RefreshCw className="w-4 h-4 text-emerald-600 animate-spin flex-shrink-0" />
+          <span className="text-xs font-bold text-emerald-900">
+            סורק כעת מיקומי GPS בזמן אמת של 18 מסופים וחניונים בדרום...
+          </span>
+        </div>
+      )}
+
+      {/* Error Message if any */}
+      {errorMsg && !loading && (
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3">
+          <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+          <span className="text-xs font-bold text-rose-900">{errorMsg}</span>
+        </div>
+      )}
 
       {/* Operator Filter Switcher */}
       <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 rounded-2xl w-full sm:w-max">
