@@ -11,6 +11,7 @@ import ReportsView from './views/admin/ReportsView';
 import AuditLogsView from './views/admin/AuditLogsView';
 import FleetView from './views/admin/FleetView';
 import DepotMapView from './views/technician/DepotMapView';
+import ErrorBoundary from './components/ErrorBoundary';
 import InstallPwaBanner from './components/InstallPwaBanner';
 
 export default function App() {
@@ -74,12 +75,14 @@ export default function App() {
         )}
 
         {viewToRender === 'depot-map' && (
-          <DepotMapView 
-            onSelectBusForTreatment={(busNum) => {
-              setPreselectedBusNumber(busNum);
-              setCurrentView('new-treatment');
-            }} 
-          />
+          <ErrorBoundary onReset={() => setCurrentView('new-treatment')}>
+            <DepotMapView 
+              onSelectBusForTreatment={(busNum) => {
+                setPreselectedBusNumber(busNum);
+                setCurrentView('new-treatment');
+              }} 
+            />
+          </ErrorBoundary>
         )}
 
         {viewToRender === 'dashboard' && isAdmin && (

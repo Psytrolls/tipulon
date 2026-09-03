@@ -242,137 +242,147 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
       </div>
 
       {/* Selected Hub Detail Section */}
-      {selectedHub && (
-        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-5 animate-fadeIn">
-          
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">{selectedHub.isRestricted ? '🔧' : '📍'}</span>
-                <h2 className="text-xl font-black text-slate-900">{selectedHub.name} ({selectedHub.city})</h2>
-              </div>
-              <p className="text-xs text-slate-500 font-medium mt-0.5">
-                {selectedHub.isRestricted ? (
-                  <span className="text-rose-600 font-black">
-                    ⛔ שטח מוסך סגור: נמצאים כעת {selectedHub.totalParkedCount} אוטובוסים בתיקונים/טיפולים בתוך המוסך. אין כניסת טכנאי כרטוס!
-                  </span>
-                ) : (
-                  <>נמצאים כעת {selectedHub.totalParkedCount} אוטובוסים עומדים | <strong>{selectedHub.availableForTreatmentCount} זמינים לביצוע טיפול מונע</strong></>
-                )}
-              </p>
-            </div>
+      {selectedHub && (() => {
+        const hubLat = Number(selectedHub?.lat) || 31.2222;
+        const hubLon = Number(selectedHub?.lon) || 34.8064;
+        const hubName = selectedHub?.name || 'חניון';
+        const hubCity = selectedHub?.city || '';
+        const isRestricted = Boolean(selectedHub?.isRestricted || selectedHub?.type === 'GARAGE');
+        const totalParked = selectedHub?.totalParkedCount || 0;
+        const availableCount = isRestricted ? 0 : (selectedHub?.availableForTreatmentCount || 0);
+        const busesList = Array.isArray(selectedHub?.busesForTreatment) ? selectedHub.busesForTreatment : [];
+        const waze = selectedHub?.wazeUrl || `https://waze.com/ul?ll=${hubLat},${hubLon}&navigate=yes`;
+        const gmaps = selectedHub?.mapsUrl || `https://www.google.com/maps/search/?api=1&query=${hubLat},${hubLon}`;
 
-            <div className="flex items-center gap-2">
-              <a
-                href={selectedHub.wazeUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
-              >
-                <Navigation className="w-4 h-4" />
-                <span>נווט לחניון ב-Waze</span>
-              </a>
-
-              <a
-                href={selectedHub.mapsUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
-              >
-                <MapPin className="w-4 h-4 text-rose-500" />
-                <span>Google Maps</span>
-              </a>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        return (
+          <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 space-y-5 animate-fadeIn">
             
-            {/* Embedded Live Map for the Selected Hub */}
-            <div className="space-y-2">
-              <span className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                <span>🗺️</span>
-                <span>מפת מיקום החניון והמתחם:</span>
-              </span>
-              <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-inner h-72">
-                <iframe
-                  title="Hub Map"
-                  width="100%"
-                  height="100%"
-                  frameBorder="0"
-                  scrolling="no"
-                  marginHeight="0"
-                  marginWidth="0"
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${(selectedHub.lon - 0.008).toFixed(6)},${(selectedHub.lat - 0.005).toFixed(6)},${(selectedHub.lon + 0.008).toFixed(6)},${(selectedHub.lat + 0.005).toFixed(6)}&layer=mapnik&marker=${selectedHub.lat.toFixed(6)},${selectedHub.lon.toFixed(6)}`}
-                  className="w-full h-full border-0"
-                />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">{isRestricted ? '🔧' : '📍'}</span>
+                  <h2 className="text-xl font-black text-slate-900">{hubName} {hubCity ? `(${hubCity})` : ''}</h2>
+                </div>
+                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                  {isRestricted ? (
+                    <span className="text-rose-600 font-black">
+                      ⛔ שטח מוסך סגור: נמצאים כעת {totalParked} אוטובוסים בתיקונים/טיפולים בתוך המוסך. אין כניסת טכנאי כרטוס!
+                    </span>
+                  ) : (
+                    <>נמצאים כעת {totalParked} אוטובוסים עומדים | <strong>{availableCount} זמינים לביצוע טיפול מונע</strong></>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={waze}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>נווט לחניון ב-Waze</span>
+                </a>
+
+                <a
+                  href={gmaps}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="py-2 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+                >
+                  <MapPin className="w-4 h-4 text-rose-500" />
+                  <span>Google Maps</span>
+                </a>
               </div>
             </div>
 
-            {/* List of Buses Ready for Treatment in This Hub */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              
+              {/* Embedded Live Map for the Selected Hub */}
+              <div className="space-y-2">
                 <span className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  <span>אוטובוסים זמינים לטיפול כעת בחניון זה:</span>
+                  <span>🗺️</span>
+                  <span>מפת מיקום החניון והמתחם:</span>
                 </span>
-                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  {selectedHub.availableForTreatmentCount} זמינים
-                </span>
+                <div className="rounded-2xl overflow-hidden border border-slate-300 shadow-inner h-72">
+                  <iframe
+                    title="Hub Map"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${(hubLon - 0.008).toFixed(6)},${(hubLat - 0.005).toFixed(6)},${(hubLon + 0.008).toFixed(6)},${(hubLat + 0.005).toFixed(6)}&layer=mapnik&marker=${hubLat.toFixed(6)},${hubLon.toFixed(6)}`}
+                    className="w-full h-full border-0"
+                  />
+                </div>
               </div>
 
-              {selectedHub.isRestricted ? (
-                <div className="p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2">
-                  <span className="text-3xl block">🚫</span>
-                  <p className="text-sm font-black text-rose-900">מתחם מוסך דן – שטח סגור לטכנאי כרטוס</p>
-                  <p className="text-xs text-rose-700 font-medium max-w-sm mx-auto leading-relaxed">
-                    האוטובוסים במתחם זה נמצאים בטיפולים מכניים בתוך מבנה המוסך. אין כניסה לטכנאים ללא אישור ותיאום מנהל המוסך.
-                  </p>
+              {/* List of Buses Ready for Treatment in This Hub */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-emerald-600" />
+                    <span>אוטובוסים זמינים לטיפול כעת בחניון זה:</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    {availableCount} זמינים
+                  </span>
                 </div>
-              ) : (selectedHub.busesForTreatment || []).length === 0 ? (
-                <div className="p-10 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-1">
-                  <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                  <p className="text-xs font-bold text-slate-700">כל האוטובוסים בחניון זה מטופלים ובתוקף!</p>
-                  <p className="text-[11px] text-slate-400">אין כרגע אוטובוסים הדורשים טיפול מונע במתחם זה.</p>
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                  {(selectedHub.busesForTreatment || []).map((b) => (
-                    <div
-                      key={b.bus_number}
-                      className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-xl border border-slate-200 hover:border-emerald-300 transition-all flex items-center justify-between gap-3"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-black text-slate-900 text-sm font-mono">{b.bus_number}</span>
-                          {b.statusHint && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-900 border border-emerald-300">
-                              {b.statusHint}
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">
-                          {b.last_treatment_date ? `טיפול קודם: ${new Date(b.last_treatment_date).toLocaleDateString('he-IL')}` : 'טרם בוצע טיפול ראשון'}
-                        </div>
-                      </div>
 
-                      <button
-                        type="button"
-                        onClick={() => onSelectBusForTreatment && onSelectBusForTreatment(b.bus_number)}
-                        className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+                {isRestricted ? (
+                  <div className="p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2">
+                    <span className="text-3xl block">🚫</span>
+                    <p className="text-sm font-black text-rose-900">מתחם מוסך דן – שטח סגור לטכנאי כרטוס</p>
+                    <p className="text-xs text-rose-700 font-medium max-w-sm mx-auto leading-relaxed">
+                      האוטובוסים במתחם זה נמצאים בטיפולים מכניים בתוך מבנה המוסך. אין כניסה לטכנאים ללא אישור ותיאום מנהל המוסך.
+                    </p>
+                  </div>
+                ) : busesList.length === 0 ? (
+                  <div className="p-10 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-1">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <p className="text-xs font-bold text-slate-700">כל האוטובוסים בחניון זה מטופלים ובתוקף!</p>
+                    <p className="text-[11px] text-slate-400">אין כרגע אוטובוסים הדורשים טיפול מונע במתחם זה.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {busesList.map((b) => (
+                      <div
+                        key={b.bus_number}
+                        className="p-3 bg-slate-50 hover:bg-emerald-50/50 rounded-xl border border-slate-200 hover:border-emerald-300 transition-all flex items-center justify-between gap-3"
                       >
-                        <span>התחל טיפול</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-black text-slate-900 text-sm font-mono">{b.bus_number}</span>
+                            {b.statusHint && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100/80 text-emerald-900 border border-emerald-300">
+                                {b.statusHint}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-medium mt-0.5">
+                            {b.last_treatment_date ? `טיפול קודם: ${new Date(b.last_treatment_date).toLocaleDateString('he-IL')}` : 'טרם בוצע טיפול ראשון'}
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => onSelectBusForTreatment && onSelectBusForTreatment(b.bus_number)}
+                          className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-black rounded-lg shadow-sm flex items-center gap-1.5 transition-all"
+                        >
+                          <span>התחל טיפול</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
 
           </div>
-
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );
