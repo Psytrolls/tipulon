@@ -154,6 +154,7 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
         {filteredHubs.map((hub) => {
           const isSelected = selectedHub?.id === hub.id;
           const isRestricted = Boolean(hub.isRestricted || hub.type === 'GARAGE');
+          const hasReady = Boolean(!isRestricted && (hub.availableForTreatmentCount || 0) > 0);
 
           return (
             <div
