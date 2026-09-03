@@ -66,13 +66,22 @@ export const HUBS = [
     lon: 34.75344
   },
   { 
+    id: 'ofakim_depot', 
+    name: 'חניון ומסוף אופקים', 
+    shortName: 'חניון אופקים',
+    city: 'אופקים', 
+    operator: 'דן בדרום', 
+    lat: 31.32160, 
+    lon: 34.62340
+  },
+  { 
     id: 'netivot_depot', 
     name: 'חניון ומסוף נתיבות', 
     shortName: 'חניון נתיבות',
     city: 'נתיבות', 
     operator: 'דן בדרום', 
-    lat: 31.31684, 
-    lon: 34.62841
+    lat: 31.41128, 
+    lon: 34.58334
   },
   { 
     id: 'sderot_depot', 
@@ -80,17 +89,8 @@ export const HUBS = [
     shortName: 'חניון שדרות',
     city: 'שדרות', 
     operator: 'דן בדרום', 
-    lat: 31.41128, 
-    lon: 34.58334
-  },
-  { 
-    id: 'ofakim_depot', 
-    name: 'חניון אופקים', 
-    shortName: 'חניון אופקים',
-    city: 'אופקים', 
-    operator: 'דן בדרום', 
-    lat: 31.52392, 
-    lon: 34.60257
+    lat: 31.52200, 
+    lon: 34.60350
   },
   { 
     id: 'kiryat_gat', 
@@ -98,8 +98,8 @@ export const HUBS = [
     shortName: 'חניון קרית גת',
     city: 'קרית גת', 
     operator: 'דן בדרום', 
-    lat: 31.58918, 
-    lon: 34.78071
+    lat: 31.60900, 
+    lon: 34.77040
   }
 ];
 

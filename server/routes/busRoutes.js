@@ -228,10 +228,10 @@ router.get('/', requireAuth, (req, res) => {
       { id: 'merkazit_ashkelon', name: 'תחנה מרכזית (רמז)', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66440, lon: 34.56680 },
       { id: 'ashdod_depot', name: 'חניון עד הלום (אשדוד)', city: 'אשדוד', operator: 'דן בדרום', lat: 31.78000, lon: 34.66520 },
       { id: 'malakhi_depot', name: 'קרית מלאכי', city: 'קרית מלאכי', operator: 'דן בדרום', lat: 31.73023, lon: 34.75344 },
-      { id: 'netivot_depot', name: 'חניון נתיבות', city: 'נתיבות', operator: 'דן בדרום', lat: 31.31684, lon: 34.62841 },
-      { id: 'sderot_depot', name: 'חניון שדרות', city: 'שדרות', operator: 'דן בדרום', lat: 31.41128, lon: 34.58334 },
-      { id: 'ofakim_depot', name: 'חניון אופקים', city: 'אופקים', operator: 'דן בדרום', lat: 31.52392, lon: 34.60257 },
-      { id: 'kiryat_gat', name: 'חניון קרית גת', city: 'קרית גת', operator: 'דן בדרום', lat: 31.58918, lon: 34.78071 }
+      { id: 'ofakim_depot', name: 'חניון ומסוף אופקים', city: 'אופקים', operator: 'דן בדרום', lat: 31.32160, lon: 34.62340 },
+      { id: 'netivot_depot', name: 'חניון ומסוף נתיבות', city: 'נתיבות', operator: 'דן בדרום', lat: 31.41128, lon: 34.58334 },
+      { id: 'sderot_depot', name: 'חניון ומסוף שדרות', city: 'שדרות', operator: 'דן בדרום', lat: 31.52200, lon: 34.60350 },
+      { id: 'kiryat_gat', name: 'חניון ומסוף קרית גת', city: 'קרית גת', operator: 'דן בדרום', lat: 31.60900, lon: 34.77040 }
     ];
 
     // Filtered Query
