@@ -15,44 +15,43 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const treatmentsToday = todayStmt.get().count;
 
-    // 2. Total completed / valid treatments (synced with Fleet view)
-    const nowIso = new Date().toISOString();
+    // 2. Total completed treatments (synced with Reports view)
     const totalCompletedStmt = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM buses 
-      WHERE next_treatment_date > ?
+      FROM reports 
+      WHERE status = 'הטיפול הושלם'
     `);
-    const totalCompleted = totalCompletedStmt.get(nowIso).count;
+    const totalCompleted = totalCompletedStmt.get().count;
 
     // 3. Completed for Dan BaDarom
     const danBaDaromStmt = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM buses 
-      WHERE operator = 'דן בדרום' AND next_treatment_date > ?
+      FROM reports 
+      WHERE operator = 'דן בדרום' AND status = 'הטיפול הושלם'
     `);
-    const completedDanBaDarom = danBaDaromStmt.get(nowIso).count;
+    const completedDanBaDarom = danBaDaromStmt.get().count;
 
     // 4. Completed for Dan Beer Sheva
     const danBeerShevaStmt = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM buses 
-      WHERE operator = 'דן באר שבע' AND next_treatment_date > ?
+      FROM reports 
+      WHERE operator = 'דן באר שבע' AND status = 'הטיפול הושלם'
     `);
-    const completedDanBeerSheva = danBeerShevaStmt.get(nowIso).count;
+    const completedDanBeerSheva = danBeerShevaStmt.get().count;
 
-    // 5. Total Closed in EDI
+    // 5. Total Closed in EDI (Completed treatments only)
     const ediClosedStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM reports 
-      WHERE is_edi_closed = 1
+      WHERE status = 'הטיפול הושלם' AND is_edi_closed = 1
     `);
     const ediClosed = ediClosedStmt.get().count;
 
-    // 6. Total Open in EDI (not yet closed)
+    // 6. Total Open in EDI (Completed treatments awaiting EDI closure)
     const ediOpenStmt = db.prepare(`
       SELECT COUNT(*) as count 
       FROM reports 
-      WHERE is_edi_closed = 0 OR is_edi_closed IS NULL
+      WHERE status = 'הטיפול הושלם' AND (is_edi_closed = 0 OR is_edi_closed IS NULL)
     `);
     const ediOpen = ediOpenStmt.get().count;
 

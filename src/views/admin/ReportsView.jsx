@@ -305,7 +305,7 @@ export default function ReportsView({ initialReportId = null }) {
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
           </div>
           <div className="text-2xl font-black text-emerald-800 mt-1">
-            {reports.filter(r => r.is_edi_closed === 1).length}
+            {reports.filter(r => r.status === 'הטיפול הושלם' && r.is_edi_closed === 1).length}
           </div>
           <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">✓ סגורים ומעודכנים</span>
         </div>
@@ -323,7 +323,7 @@ export default function ReportsView({ initialReportId = null }) {
             <Clock className="w-3.5 h-3.5 text-amber-700" />
           </div>
           <div className="text-2xl font-black text-amber-700 mt-1">
-            {reports.filter(r => !r.is_edi_closed).length}
+            {reports.filter(r => r.status === 'הטיפול הושלם' && !r.is_edi_closed).length}
           </div>
           <span className="text-[10px] text-amber-800 font-bold block mt-0.5">⏳ ממתינים לסגירה</span>
         </div>
