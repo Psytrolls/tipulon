@@ -105,7 +105,7 @@ export const HUBS = [
 
 let cachedSnapshot = null;
 let lastSnapshotTime = 0;
-const SNAPSHOT_TTL = 30 * 1000; // 30 seconds cache
+const SNAPSHOT_TTL = 60 * 1000; // 60 seconds cache - protects client server from excess load
 
 /**
  * Returns strictly GPS-verified status of all depots, parked buses, and buses requiring maintenance
