@@ -849,7 +849,7 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                               <div className="font-bold text-slate-900 text-xs">
                                 {task.description}
                               </div>
-                              {task.accName && (
+                              {task.accName && !task.accName.includes('תח"צ') && !task.accName.includes('תחבורה ציבורית') && (
                                 <div className="text-[10px] text-slate-400 font-medium mt-0.5">
                                   סיווג: {task.accName}
                                 </div>

@@ -63,50 +63,49 @@ export function getIsraelNowMinutes() {
  * Extracts home branch (city) and night depot from dispatch and telemetry
  */
 function parseBranchAndNightDepot(tasks, opName, gpsInfo) {
-  let homeBranch = opName === 'דן באר שבע' ? 'באר שבע' : 'צפון הנגב';
-  let nightDepot = opName === 'דן באר שבע' ? 'באר שבע (חניון הבונים)' : '';
+  if (opName === 'דן באר שבע') {
+    return {
+      homeBranch: 'באר שבע',
+      nightDepot: 'חניון הבונים (באר שבע)'
+    };
+  }
+
+  let homeBranch = 'צפון הנגב';
+  let nightDepot = '';
+
+  const knownCities = ['אשקלון', 'אשדוד', 'נתיבות', 'שדרות', 'קרית גת', 'קריית גת', 'קרית מלאכי', 'קריית מלאכי', 'אופקים', 'באר שבע'];
 
   if (Array.isArray(tasks) && tasks.length > 0) {
-    const acc = tasks[0]?.acc_name || '';
-    const clean = acc.replace('מנהלתי -', '').replace('ריקות -', '').trim();
-    if (clean.includes('אשקלון')) {
-      homeBranch = 'אשקלון';
-      nightDepot = 'חניון אלדן (אשקלון)';
-    } else if (clean.includes('אשדוד')) {
-      homeBranch = 'אשדוד';
-      nightDepot = 'חניון עד הלום (אשדוד)';
-    } else if (clean.includes('נתיבות')) {
-      homeBranch = 'נתיבות';
-      nightDepot = 'חניון נתיבות';
-    } else if (clean.includes('שדרות')) {
-      homeBranch = 'שדרות';
-      nightDepot = 'חניון שדרות';
-    } else if (clean.includes('קרית גת') || clean.includes('קריית גת')) {
-      homeBranch = 'קרית גת';
-      nightDepot = 'חניון קרית גת';
-    } else if (clean.includes('קרית מלאכי') || clean.includes('קריית מלאכי')) {
-      homeBranch = 'קרית מלאכי';
-      nightDepot = 'תחנה מרכזית קרית מלאכי';
-    } else if (clean.includes('אופקים')) {
-      homeBranch = 'אופקים';
-      nightDepot = 'חניון אופקים';
-    } else if (clean.includes('באר שבע')) {
-      homeBranch = 'באר שבע';
-      nightDepot = 'חניון הבונים (באר שבע)';
-    } else if (clean) {
-      homeBranch = clean;
+    for (const t of tasks) {
+      const combined = `${t.acc_name || ''} ${t.line_description || ''}`;
+      for (const city of knownCities) {
+        if (combined.includes(city)) {
+          homeBranch = city.replace('קריית', 'קרית');
+          break;
+        }
+      }
+      if (homeBranch !== 'צפון הנגב') break;
     }
+
+    if (homeBranch === 'אשקלון') nightDepot = 'חניון אלדן (אשקלון)';
+    else if (homeBranch === 'אשדוד') nightDepot = 'חניון עד הלום (אשדוד)';
+    else if (homeBranch === 'נתיבות') nightDepot = 'חניון ומסוף נתיבות';
+    else if (homeBranch === 'שדרות') nightDepot = 'חניון ומסוף שדרות';
+    else if (homeBranch === 'קרית גת') nightDepot = 'חניון ומסוף קרית גת';
+    else if (homeBranch === 'קרית מלאכי') nightDepot = 'תחנה מרכזית קרית מלאכי';
+    else if (homeBranch === 'אופקים') nightDepot = 'חניון ומסוף אופקים';
+    else if (homeBranch === 'באר שבע') nightDepot = 'חניון הבונים (באר שבע)';
 
     const lastTask = tasks[tasks.length - 1];
     if (lastTask && lastTask.acc_name) {
-      const lastAcc = lastTask.acc_name.replace('מנהלתי -', '').replace('ריקות -', '').trim();
+      const lastAcc = `${lastTask.acc_name} ${lastTask.line_description || ''}`;
       if (lastAcc.includes('אשקלון')) nightDepot = 'חניון אלדן / רמז (אשקלון)';
       else if (lastAcc.includes('אשדוד')) nightDepot = 'חניון עד הלום (אשדוד)';
-      else if (lastAcc.includes('נתיבות')) nightDepot = 'חניון נתיבות';
-      else if (lastAcc.includes('שדרות')) nightDepot = 'חניון שדרות';
-      else if (lastAcc.includes('קרית גת')) nightDepot = 'חניון קרית גת';
+      else if (lastAcc.includes('נתיבות')) nightDepot = 'חניון ומסוף נתיבות';
+      else if (lastAcc.includes('שדרות')) nightDepot = 'חניון ומסוף שדרות';
+      else if (lastAcc.includes('קרית גת')) nightDepot = 'חניון ומסוף קרית גת';
       else if (lastAcc.includes('קרית מלאכי')) nightDepot = 'קרית מלאכי';
-      else if (lastAcc.includes('אופקים')) nightDepot = 'חניון אופקים';
+      else if (lastAcc.includes('אופקים')) nightDepot = 'חניון ומסוף אופקים';
       else if (lastAcc.includes('באר שבע')) nightDepot = 'חניון הבונים (באר שבע)';
     }
   }
