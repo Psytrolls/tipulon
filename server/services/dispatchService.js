@@ -59,34 +59,75 @@ export function getIsraelNowMinutes() {
   return h * 60 + m;
 }
 
+function cleanDepotName(desc, homeBranch) {
+  if (!desc) return '';
+  let name = desc;
+  if (name.includes('-')) {
+    const parts = name.split('-').map(s => s.trim());
+    if (parts.length >= 2) {
+      const last = parts[parts.length - 1];
+      const prev = parts[parts.length - 2];
+      if (prev.includes('חניון') || prev.includes('מסוף') || prev.includes('תחנה') || prev.includes('רכבת')) {
+        name = `${prev} ${last}`;
+      } else {
+        name = last;
+      }
+    }
+  } else if (name.includes(':')) {
+    const parts = name.split(':').map(s => s.trim());
+    name = parts[parts.length - 1];
+  }
+  name = name.replace(/^חזרה לחניון\s*:?\s*/, '').replace(/^נסיעה ריקה ל-?/, '').trim();
+  if (name === 'חניון' && homeBranch) name = `חניון ${homeBranch}`;
+  return name;
+}
+
 /**
  * Extracts home branch (city) and night depot from dispatch and telemetry
  */
 function parseBranchAndNightDepot(tasks, opName, gpsInfo) {
-  if (opName === 'דן באר שבע') {
-    return {
-      homeBranch: 'באר שבע',
-      nightDepot: 'חניון הבונים (באר שבע)'
-    };
-  }
-
-  let homeBranch = 'צפון הנגב';
+  let homeBranch = opName === 'דן באר שבע' ? 'באר שבע' : 'צפון הנגב';
   let nightDepot = '';
 
   const knownCities = ['אשקלון', 'אשדוד', 'נתיבות', 'שדרות', 'קרית גת', 'קריית גת', 'קרית מלאכי', 'קריית מלאכי', 'אופקים', 'באר שבע'];
 
   if (Array.isArray(tasks) && tasks.length > 0) {
-    for (const t of tasks) {
-      const combined = `${t.acc_name || ''} ${t.line_description || ''}`;
-      for (const city of knownCities) {
-        if (combined.includes(city)) {
-          homeBranch = city.replace('קריית', 'קרית');
-          break;
+    // 1. Resolve Home Branch / City
+    if (opName === 'דן באר שבע') {
+      homeBranch = 'באר שבע';
+    } else {
+      for (const t of tasks) {
+        const combined = `${t.acc_name || ''} ${t.line_description || ''}`;
+        for (const city of knownCities) {
+          if (combined.includes(city)) {
+            homeBranch = city.replace('קריית', 'קרית');
+            break;
+          }
         }
+        if (homeBranch !== 'צפון הנגב') break;
       }
-      if (homeBranch !== 'צפון הנגב') break;
     }
 
+    // 2. Resolve Night Depot dynamically from the end of the shift
+    for (let i = tasks.length - 1; i >= 0; i--) {
+      const desc = tasks[i].line_description || '';
+      if (desc && !desc.includes('גמר משמרת') && desc !== 'גמר') {
+        nightDepot = cleanDepotName(desc, homeBranch);
+        if (nightDepot) break;
+      }
+    }
+
+    // If still empty, check last task acc_name
+    if (!nightDepot && tasks[tasks.length - 1]?.acc_name) {
+      const acc = tasks[tasks.length - 1].acc_name.replace('מנהלתי -', '').replace('ריקות -', '').trim();
+      if (acc && !acc.includes('תח"צ') && !acc.includes('מנהלתי')) {
+        nightDepot = `חניון ${acc}`;
+      }
+    }
+  }
+
+  // Fallback defaults if not found in shift
+  if (!nightDepot) {
     if (homeBranch === 'אשקלון') nightDepot = 'חניון אלדן (אשקלון)';
     else if (homeBranch === 'אשדוד') nightDepot = 'חניון עד הלום (אשדוד)';
     else if (homeBranch === 'נתיבות') nightDepot = 'חניון ומסוף נתיבות';
@@ -95,19 +136,6 @@ function parseBranchAndNightDepot(tasks, opName, gpsInfo) {
     else if (homeBranch === 'קרית מלאכי') nightDepot = 'תחנה מרכזית קרית מלאכי';
     else if (homeBranch === 'אופקים') nightDepot = 'חניון ומסוף אופקים';
     else if (homeBranch === 'באר שבע') nightDepot = 'חניון הבונים (באר שבע)';
-
-    const lastTask = tasks[tasks.length - 1];
-    if (lastTask && lastTask.acc_name) {
-      const lastAcc = `${lastTask.acc_name} ${lastTask.line_description || ''}`;
-      if (lastAcc.includes('אשקלון')) nightDepot = 'חניון אלדן / רמז (אשקלון)';
-      else if (lastAcc.includes('אשדוד')) nightDepot = 'חניון עד הלום (אשדוד)';
-      else if (lastAcc.includes('נתיבות')) nightDepot = 'חניון ומסוף נתיבות';
-      else if (lastAcc.includes('שדרות')) nightDepot = 'חניון ומסוף שדרות';
-      else if (lastAcc.includes('קרית גת')) nightDepot = 'חניון ומסוף קרית גת';
-      else if (lastAcc.includes('קרית מלאכי')) nightDepot = 'קרית מלאכי';
-      else if (lastAcc.includes('אופקים')) nightDepot = 'חניון ומסוף אופקים';
-      else if (lastAcc.includes('באר שבע')) nightDepot = 'חניון הבונים (באר שבע)';
-    }
   }
 
   // If currently parked with GPS and no active task, resolve from coords
