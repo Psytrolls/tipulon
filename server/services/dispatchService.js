@@ -60,6 +60,70 @@ export function getIsraelNowMinutes() {
 }
 
 /**
+ * Extracts home branch (city) and night depot from dispatch and telemetry
+ */
+function parseBranchAndNightDepot(tasks, opName, gpsInfo) {
+  let homeBranch = opName === 'דן באר שבע' ? 'באר שבע' : 'צפון הנגב';
+  let nightDepot = opName === 'דן באר שבע' ? 'באר שבע (חניון הבונים)' : '';
+
+  if (Array.isArray(tasks) && tasks.length > 0) {
+    const acc = tasks[0]?.acc_name || '';
+    const clean = acc.replace('מנהלתי -', '').replace('ריקות -', '').trim();
+    if (clean.includes('אשקלון')) {
+      homeBranch = 'אשקלון';
+      nightDepot = 'חניון אלדן (אשקלון)';
+    } else if (clean.includes('אשדוד')) {
+      homeBranch = 'אשדוד';
+      nightDepot = 'חניון עד הלום (אשדוד)';
+    } else if (clean.includes('נתיבות')) {
+      homeBranch = 'נתיבות';
+      nightDepot = 'חניון נתיבות';
+    } else if (clean.includes('שדרות')) {
+      homeBranch = 'שדרות';
+      nightDepot = 'חניון שדרות';
+    } else if (clean.includes('קרית גת') || clean.includes('קריית גת')) {
+      homeBranch = 'קרית גת';
+      nightDepot = 'חניון קרית גת';
+    } else if (clean.includes('קרית מלאכי') || clean.includes('קריית מלאכי')) {
+      homeBranch = 'קרית מלאכי';
+      nightDepot = 'תחנה מרכזית קרית מלאכי';
+    } else if (clean.includes('אופקים')) {
+      homeBranch = 'אופקים';
+      nightDepot = 'חניון אופקים';
+    } else if (clean.includes('באר שבע')) {
+      homeBranch = 'באר שבע';
+      nightDepot = 'חניון הבונים (באר שבע)';
+    } else if (clean) {
+      homeBranch = clean;
+    }
+
+    const lastTask = tasks[tasks.length - 1];
+    if (lastTask && lastTask.acc_name) {
+      const lastAcc = lastTask.acc_name.replace('מנהלתי -', '').replace('ריקות -', '').trim();
+      if (lastAcc.includes('אשקלון')) nightDepot = 'חניון אלדן / רמז (אשקלון)';
+      else if (lastAcc.includes('אשדוד')) nightDepot = 'חניון עד הלום (אשדוד)';
+      else if (lastAcc.includes('נתיבות')) nightDepot = 'חניון נתיבות';
+      else if (lastAcc.includes('שדרות')) nightDepot = 'חניון שדרות';
+      else if (lastAcc.includes('קרית גת')) nightDepot = 'חניון קרית גת';
+      else if (lastAcc.includes('קרית מלאכי')) nightDepot = 'קרית מלאכי';
+      else if (lastAcc.includes('אופקים')) nightDepot = 'חניון אופקים';
+      else if (lastAcc.includes('באר שבע')) nightDepot = 'חניון הבונים (באר שבע)';
+    }
+  }
+
+  // If currently parked with GPS and no active task, resolve from coords
+  if (gpsInfo && gpsInfo.lat && gpsInfo.lon) {
+    const resolved = getStationNameFromCoords(gpsInfo.lat, gpsInfo.lon);
+    if (resolved) {
+      if (!homeBranch || homeBranch === 'צפון הנגב') homeBranch = resolved.city;
+      if (!nightDepot) nightDepot = resolved.stationName;
+    }
+  }
+
+  return { homeBranch, nightDepot };
+}
+
+/**
  * Calculates smart layover window, time sufficiency, and destination for navigation
  */
 function analyzeTimeWindowAndNavigation(tasks, currentTask, operatorName, gpsInfo = null) {
@@ -333,12 +397,15 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
 
       // Compute smart layover time and maps navigation
       const timingAnalysis = analyzeTimeWindowAndNavigation(data, selectedTask, opName, gpsInfo);
+      const branchInfo = parseBranchAndNightDepot(data, opName, gpsInfo);
 
       const result = {
         hasLiveDispatch: true,
         hasGps: Boolean(gpsInfo?.hasGps),
         operator: opName,
         operatorId: opId,
+        homeBranch: branchInfo.homeBranch,
+        nightDepot: branchInfo.nightDepot,
         shortNumber: selectedTask.car_Short_number ? String(selectedTask.car_Short_number) : null,
         location: selectedTask.acc_name || 'מרכז תפעול',
         lineDescription: desc,
@@ -411,6 +478,8 @@ export async function getBusLiveDispatch(busNumber, requestedOperator = null) {
   const fallback = {
     hasLiveDispatch: false,
     hasGps: false,
+    homeBranch: row?.cluster || (cleanBusNumber ? 'צפון הנגב' : 'מרכז תפעול'),
+    nightDepot: row?.last_known_location || 'חניון מרכזי',
     location: fallbackLoc,
     targetStation: fallbackLoc,
     mapsUrl,

@@ -701,24 +701,30 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                       </div>
                     </div>
 
-                    {/* GPS Telemetry Pills (Speed, Heading, Coordinates) */}
-                    {busInfo.liveDispatch.hasGps && (
-                      <div className="flex items-center gap-1.5 flex-wrap text-[11px] font-bold">
-                        <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900 border border-emerald-300">
-                          {busInfo.liveDispatch.speed > 0 
-                            ? `⚡ מהירות: ${busInfo.liveDispatch.speed} קמ"ש` 
-                            : '🅿️ עומד במקום (0 קמ"ש)'}
+                    {/* Clean Status & Branch / Night Depot Pills */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-xs font-bold">
+                      <span className={`px-2.5 py-1 rounded-lg flex items-center gap-1.5 ${
+                        busInfo.liveDispatch.isParked || busInfo.liveDispatch.speed === 0
+                          ? 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                          : 'bg-amber-100 text-amber-900 border border-amber-300'
+                      }`}>
+                        {busInfo.liveDispatch.isParked || busInfo.liveDispatch.speed === 0
+                          ? '🅿️ חונה במקום'
+                          : '🚍 בתנועה / בנסיעה'}
+                      </span>
+
+                      {busInfo.liveDispatch.homeBranch && (
+                        <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200">
+                          🏢 סניף: <strong>{busInfo.liveDispatch.homeBranch}</strong>
                         </span>
-                        <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-800">
-                          📍 {busInfo.liveDispatch.lat?.toFixed(4)}, {busInfo.liveDispatch.lon?.toFixed(4)}
+                      )}
+
+                      {busInfo.liveDispatch.nightDepot && (
+                        <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-900 border border-purple-200">
+                          🌙 חניון לילה: <strong>{busInfo.liveDispatch.nightDepot}</strong>
                         </span>
-                        {busInfo.liveDispatch.heading !== null && (
-                          <span className="px-2 py-0.5 rounded-md bg-slate-200 text-slate-700">
-                            🧭 כיוון: {busInfo.liveDispatch.heading}°
-                          </span>
-                        )}
-                      </div>
-                    )}
+                      )}
+                    </div>
 
                     {/* Destination / Station Link */}
                     <a
