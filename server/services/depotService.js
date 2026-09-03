@@ -4,8 +4,8 @@ import { getBusLiveDispatch } from './dispatchService.js';
 export const HUBS = [
   { 
     id: 'habonim_parking', 
-    name: 'חניון הבונים (חניה תפעולית)', 
-    shortName: 'חניון הבונים (חניה)',
+    name: 'חניון רכב כבד (הבונים)', 
+    shortName: 'חניון רכב כבד',
     city: 'באר שבע', 
     operator: 'דן באר שבע', 
     lat: 31.22220, 
@@ -27,12 +27,14 @@ export const HUBS = [
   },
   { 
     id: 'merkazit_br7', 
-    name: 'תחנה מרכזית באר שבע', 
+    name: 'תחנה מרכזית (רציפים וחניון)', 
     shortName: 'תחנה מרכזית',
     city: 'באר שבע', 
     operator: 'דן באר שבע', 
     lat: 31.24128, 
-    lon: 34.79799
+    lon: 34.79799,
+    isRestricted: false,
+    type: 'PARKING'
   },
   { 
     id: 'hatzerim_br7', 
@@ -41,7 +43,75 @@ export const HUBS = [
     city: 'באר שבע', 
     operator: 'דן באר שבע', 
     lat: 31.24241, 
-    lon: 34.75188
+    lon: 34.75188,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'rakevet_tzafon_br7', 
+    name: 'מסוף רכבת צפון (אוניברסיטה)', 
+    shortName: 'רכבת צפון',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.26090, 
+    lon: 34.76390,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'turner_br7', 
+    name: 'מסוף אצטדיון טרנר', 
+    shortName: 'אצטדיון טרנר',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.27250, 
+    lon: 34.78120,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'ramot_br7', 
+    name: 'מסוף רמות', 
+    shortName: 'מסוף רמות',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.26350, 
+    lon: 34.81080,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'big_br7', 
+    name: 'מסוף ביג (המשק)', 
+    shortName: 'מסוף ביג',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.23840, 
+    lon: 34.81150,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'masof_ya_br7', 
+    name: 'מסוף י"א', 
+    shortName: 'מסוף י"א',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.25240, 
+    lon: 34.76960,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'beit_almin_br7', 
+    name: 'מסוף בית עלמין', 
+    shortName: 'בית עלמין',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.22080, 
+    lon: 34.82300,
+    isRestricted: false,
+    type: 'PARKING'
   },
   { 
     id: 'eldan_ashkelon', 

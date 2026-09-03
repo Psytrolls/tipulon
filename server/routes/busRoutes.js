@@ -221,10 +221,16 @@ router.get('/', requireAuth, (req, res) => {
     const daromProgress = daromCount > 0 ? Math.round((daromValid / daromCount) * 100) : 0;
 
     const hubs = [
-      { id: 'habonim_parking', name: 'חניון הבונים (חניה תפעולית)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80640, isRestricted: false, type: 'PARKING' },
+      { id: 'habonim_parking', name: 'חניון רכב כבד (הבונים)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80640, isRestricted: false, type: 'PARKING' },
       { id: 'habonim_garage', name: 'מוסך דן (עמק שרה)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80880, isRestricted: true, type: 'GARAGE', warningText: 'מתחם מוסך דן הינו שטח סגור. אין כניסת טכנאים לביצוע טיפולים ללא תיאום מנהל מוסך!' },
-      { id: 'merkazit_br7', name: 'תחנה מרכזית', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24128, lon: 34.79799 },
-      { id: 'hatzerim_br7', name: 'מסוף חצרים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24241, lon: 34.75188 },
+      { id: 'merkazit_br7', name: 'תחנה מרכזית (רציפים וחניון)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24128, lon: 34.79799, isRestricted: false, type: 'PARKING' },
+      { id: 'hatzerim_br7', name: 'מסוף חצרים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24241, lon: 34.75188, isRestricted: false, type: 'PARKING' },
+      { id: 'rakevet_tzafon_br7', name: 'מסוף רכבת צפון (אוניברסיטה)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.26090, lon: 34.76390, isRestricted: false, type: 'PARKING' },
+      { id: 'turner_br7', name: 'מסוף אצטדיון טרנר', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.27250, lon: 34.78120, isRestricted: false, type: 'PARKING' },
+      { id: 'ramot_br7', name: 'מסוף רמות', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.26350, lon: 34.81080, isRestricted: false, type: 'PARKING' },
+      { id: 'big_br7', name: 'מסוף ביג (המשק)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.23840, lon: 34.81150, isRestricted: false, type: 'PARKING' },
+      { id: 'masof_ya_br7', name: 'מסוף י"א', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.25240, lon: 34.76960, isRestricted: false, type: 'PARKING' },
+      { id: 'beit_almin_br7', name: 'מסוף בית עלמין', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22080, lon: 34.82300, isRestricted: false, type: 'PARKING' },
       { id: 'eldan_ashkelon', name: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244 },
       { id: 'merkazit_ashkelon', name: 'תחנה מרכזית (רמז)', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66440, lon: 34.56680 },
       { id: 'ashdod_depot', name: 'חניון עד הלום (אשדוד)', city: 'אשדוד', operator: 'דן בדרום', lat: 31.78000, lon: 34.66520 },
