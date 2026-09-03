@@ -4,7 +4,7 @@ import { getBusLiveDispatch } from './dispatchService.js';
 export const HUBS = [
   { 
     id: 'habonim_br7', 
-    name: 'חניון הבונים (עמק שרה)', 
+    name: 'חניון הבונים (רכב כבד)', 
     shortName: 'חניון הבונים',
     city: 'באר שבע', 
     operator: 'דן באר שבע', 

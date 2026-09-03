@@ -78,6 +78,14 @@ function cleanDepotName(desc, homeBranch) {
     name = parts[parts.length - 1];
   }
   name = name.replace(/^חזרה לחניון\s*:?\s*/, '').replace(/^נסיעה ריקה ל-?/, '').trim();
+
+  // Canonicalize Beer Sheva 3 official night depots
+  if (homeBranch === 'באר שבע') {
+    if (name.includes('חצרים')) return 'מסוף חצרים';
+    if (name.includes('מרכזית') || name.includes('רמז')) return 'תחנה מרכזית באר שבע';
+    if (name.includes('הבונים') || name.includes('עמק שרה')) return 'חניון הבונים (רכב כבד)';
+  }
+
   if (name === 'חניון' && homeBranch) name = `חניון ${homeBranch}`;
   return name;
 }
