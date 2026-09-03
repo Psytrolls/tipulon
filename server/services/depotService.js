@@ -3,13 +3,27 @@ import { getBusLiveDispatch } from './dispatchService.js';
 
 export const HUBS = [
   { 
-    id: 'habonim_br7', 
-    name: 'חניון הבונים (רכב כבד)', 
-    shortName: 'חניון הבונים',
+    id: 'habonim_parking', 
+    name: 'חניון הבונים (חניה תפעולית)', 
+    shortName: 'חניון הבונים (חניה)',
     city: 'באר שבע', 
     operator: 'דן באר שבע', 
-    lat: 31.22166, 
-    lon: 34.80662
+    lat: 31.22220, 
+    lon: 34.80640,
+    isRestricted: false,
+    type: 'PARKING'
+  },
+  { 
+    id: 'habonim_garage', 
+    name: 'מוסך דן (עמק שרה)', 
+    shortName: 'מוסך דן (אין כניסה)',
+    city: 'באר שבע', 
+    operator: 'דן באר שבע', 
+    lat: 31.22220, 
+    lon: 34.80880,
+    isRestricted: true,
+    type: 'GARAGE',
+    warningText: 'מתחם מוסך דן הינו שטח סגור. אין כניסת טכנאים לביצוע טיפולים ללא תיאום מנהל מוסך!'
   },
   { 
     id: 'merkazit_br7', 

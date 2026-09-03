@@ -107,7 +107,7 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {filteredHubs.map((hub) => {
           const isSelected = selectedHub?.id === hub.id;
-          const hasReady = hub.availableForTreatmentCount > 0;
+          const isRestricted = Boolean(hub.isRestricted || hub.type === 'GARAGE');
 
           return (
             <div
@@ -115,41 +115,54 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
               onClick={() => setSelectedHubId(hub.id)}
               className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs space-y-3 ${
                 isSelected
-                  ? 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500'
+                  ? isRestricted
+                    ? 'bg-rose-50/90 border-rose-500 ring-2 ring-rose-500'
+                    : 'bg-emerald-50/70 border-emerald-500 ring-2 ring-emerald-500'
+                  : isRestricted
+                  ? 'bg-rose-50/30 border-rose-200 hover:border-rose-300'
                   : 'bg-white border-slate-200 hover:border-slate-300'
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="flex items-center gap-1.5 font-black text-slate-900 text-sm">
-                    <span>📍</span>
+                    <span>{isRestricted ? '🔧' : '📍'}</span>
                     <span>{hub.shortName || hub.name}</span>
                   </div>
                   <span className="text-[11px] text-slate-500 font-bold block">{hub.city}</span>
                 </div>
-                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                  hub.operator === 'דן בדרום' ? 'bg-blue-50 text-blue-800' : 'bg-emerald-50 text-emerald-800'
-                }`}>
-                  {hub.operator}
-                </span>
+                <div className="flex flex-col items-end gap-1">
+                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                    hub.operator === 'דן בדרום' ? 'bg-blue-50 text-blue-800' : 'bg-emerald-50 text-emerald-800'
+                  }`}>
+                    {hub.operator}
+                  </span>
+                  {isRestricted && (
+                    <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                      🚫 שטח סגור
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Counters */}
               <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                <div className={`p-2 rounded-xl border ${isRestricted ? 'bg-rose-100/50 border-rose-200' : 'bg-slate-50 border-slate-200'}`}>
                   <span className="text-[10px] text-slate-400 font-bold block">עומדים כעת</span>
-                  <span className="text-base font-black text-slate-800">{hub.totalParkedCount}</span>
+                  <span className={`text-base font-black ${isRestricted ? 'text-rose-900' : 'text-slate-800'}`}>{hub.totalParkedCount}</span>
                 </div>
 
                 <div className={`p-2 rounded-xl border ${
-                  hasReady 
+                  isRestricted
+                    ? 'bg-slate-50 border-slate-200 text-slate-400'
+                    : hasReady 
                     ? 'bg-emerald-100/70 border-emerald-300 text-emerald-950' 
                     : 'bg-slate-50 border-slate-200 text-slate-400'
                 }`}>
                   <span className="text-[10px] font-bold block">זמינים לטיפול</span>
                   <span className="text-base font-black flex items-center justify-center gap-1">
-                    {hasReady && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>}
-                    <span>{hub.availableForTreatmentCount}</span>
+                    {!isRestricted && hasReady && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>}
+                    <span>{isRestricted ? '0 (נעול)' : hub.availableForTreatmentCount}</span>
                   </span>
                 </div>
               </div>
@@ -189,11 +202,17 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-2xl">📍</span>
+                <span className="text-2xl">{selectedHub.isRestricted ? '🔧' : '📍'}</span>
                 <h2 className="text-xl font-black text-slate-900">{selectedHub.name} ({selectedHub.city})</h2>
               </div>
               <p className="text-xs text-slate-500 font-medium mt-0.5">
-                נמצאים כעת {selectedHub.totalParkedCount} אוטובוסים עומדים | <strong>{selectedHub.availableForTreatmentCount} זמינים לביצוע טיפול מונע</strong>
+                {selectedHub.isRestricted ? (
+                  <span className="text-rose-600 font-black">
+                    ⛔ שטח מוסך סגור: נמצאים כעת {selectedHub.totalParkedCount} אוטובוסים בתיקונים/טיפולים בתוך המוסך. אין כניסת טכנאי כרטוס!
+                  </span>
+                ) : (
+                  <>נמצאים כעת {selectedHub.totalParkedCount} אוטובוסים עומדים | <strong>{selectedHub.availableForTreatmentCount} זמינים לביצוע טיפול מונע</strong></>
+                )}
               </p>
             </div>
 
@@ -255,7 +274,15 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
                 </span>
               </div>
 
-              {selectedHub.busesForTreatment.length === 0 ? (
+              {selectedHub.isRestricted ? (
+                <div className="p-8 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2">
+                  <span className="text-3xl block">🚫</span>
+                  <p className="text-sm font-black text-rose-900">מתחם מוסך דן – שטח סגור לטכנאי כרטוס</p>
+                  <p className="text-xs text-rose-700 font-medium max-w-sm mx-auto leading-relaxed">
+                    האוטובוסים במתחם זה נמצאים בטיפולים מכניים בתוך מבנה המוסך. אין כניסה לטכנאים ללא אישור ותיאום מנהל המוסך.
+                  </p>
+                </div>
+              ) : selectedHub.busesForTreatment.length === 0 ? (
                 <div className="p-10 rounded-2xl bg-slate-50 border border-slate-200 text-center space-y-1">
                   <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
                   <p className="text-xs font-bold text-slate-700">כל האוטובוסים בחניון זה מטופלים ובתוקף!</p>

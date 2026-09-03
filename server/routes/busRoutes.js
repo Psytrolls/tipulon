@@ -221,7 +221,8 @@ router.get('/', requireAuth, (req, res) => {
     const daromProgress = daromCount > 0 ? Math.round((daromValid / daromCount) * 100) : 0;
 
     const hubs = [
-      { id: 'habonim_br7', name: 'חניון הבונים (רכב כבד)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22166, lon: 34.80662 },
+      { id: 'habonim_parking', name: 'חניון הבונים (חניה תפעולית)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80640, isRestricted: false, type: 'PARKING' },
+      { id: 'habonim_garage', name: 'מוסך דן (עמק שרה)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22220, lon: 34.80880, isRestricted: true, type: 'GARAGE', warningText: 'מתחם מוסך דן הינו שטח סגור. אין כניסת טכנאים לביצוע טיפולים ללא תיאום מנהל מוסך!' },
       { id: 'merkazit_br7', name: 'תחנה מרכזית', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24128, lon: 34.79799 },
       { id: 'hatzerim_br7', name: 'מסוף חצרים', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.24241, lon: 34.75188 },
       { id: 'eldan_ashkelon', name: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244 },
