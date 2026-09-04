@@ -116,7 +116,7 @@ export function initDatabase() {
     );
   `);
 
-  // Safe migrations for existing DB
+  // Safe migrations and cleanups for existing DB
   try { db.exec("ALTER TABLE buses ADD COLUMN operator TEXT DEFAULT 'דן באר שבע'"); } catch (e) {}
   try { db.exec("ALTER TABLE buses ADD COLUMN short_number TEXT"); } catch (e) {}
   try { db.exec("ALTER TABLE buses ADD COLUMN cluster TEXT"); } catch (e) {}
@@ -134,6 +134,9 @@ export function initDatabase() {
   // Explicit mapping for sample short number from Dan spec
   try { db.exec("UPDATE buses SET short_number = '1687' WHERE bus_number = '14945702'"); } catch (e) {}
 
+  // Cleanup old test/mock buses from initial setup
+  try { db.exec("DELETE FROM buses WHERE bus_number IN ('1234567', '9876543', '5544332')"); } catch (e) {}
+
   seedInitialData();
 }
 
@@ -149,11 +152,12 @@ function seedInitialData() {
   const insertProduct = db.prepare('INSERT INTO products (name, is_active) VALUES (?, 1)');
   const activateProduct = db.prepare('UPDATE products SET is_active = 1 WHERE name = ?');
 
-  for (const prod of initialProducts) {
-    if (!checkProduct.get(prod)) {
-      insertProduct.run(prod);
+  for (const prodName of initialProducts) {
+    const existing = checkProduct.get(prodName);
+    if (!existing) {
+      insertProduct.run(prodName);
     } else {
-      activateProduct.run(prod);
+      activateProduct.run(prodName);
     }
   }
 
@@ -169,7 +173,10 @@ function seedInitialData() {
 
   // Seed Admin & Technician users
   const checkUser = db.prepare('SELECT id FROM users WHERE phone = ?');
-  const insertUser = db.prepare('INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active) VALUES (?, ?, ?, ?, ?, 1)');
+  const insertUser = db.prepare(`
+    INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active)
+    VALUES (?, ?, ?, ?, ?, 1)
+  `);
 
   // 1. Admin
   const adminPhone = normalizePhone(process.env.ADMIN_PHONE || '0501234567');
@@ -195,29 +202,6 @@ function seedInitialData() {
   } else if (envTechPin) {
     const { hash, salt } = hashPin(envTechPin);
     db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, techPhone);
-  }
-
-  // Seed sample buses
-  const checkBus = db.prepare('SELECT bus_number FROM buses WHERE bus_number = ?');
-  const insertBus = db.prepare('INSERT INTO buses (bus_number, status, last_treatment_date, next_treatment_date) VALUES (?, ?, ?, ?)');
-
-  if (!checkBus.get('1234567')) {
-    // Valid future treatment: 30 days ahead
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 30);
-    insertBus.run('1234567', 'טיפול בתוקף', new Date().toISOString(), futureDate.toISOString());
-  }
-
-  if (!checkBus.get('9876543')) {
-    // Treatment needed: no future date
-    insertBus.run('9876543', 'נדרש טיפול', null, null);
-  }
-
-  if (!checkBus.get('5544332')) {
-    // Overdue treatment: past date
-    const pastDate = new Date();
-    pastDate.setDate(pastDate.getDate() - 7);
-    insertBus.run('5544332', 'טיפול באיחור', null, pastDate.toISOString());
   }
 }
 
