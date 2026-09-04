@@ -12,7 +12,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./uploads:/app/uploads
-      - ${BACKUP_PATH:-/mnt/tank/tipulon_backups}:/app/data/backups
 
   tunnel:
     image: cloudflare/cloudflared:latest
