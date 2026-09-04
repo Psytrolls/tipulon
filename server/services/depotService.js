@@ -103,17 +103,6 @@ export const HUBS = [
     type: 'PARKING'
   },
   { 
-    id: 'beit_almin_br7', 
-    name: 'מסוף בית עלמין', 
-    shortName: 'בית עלמין',
-    city: 'באר שבע', 
-    operator: 'דן באר שבע', 
-    lat: 31.22080, 
-    lon: 34.82300,
-    isRestricted: false,
-    type: 'PARKING'
-  },
-  { 
     id: 'eldan_ashkelon', 
     name: 'חניון אלדן (פארק צפוני)', 
     shortName: 'חניון אלדן',

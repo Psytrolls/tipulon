@@ -230,7 +230,6 @@ router.get('/', requireAuth, (req, res) => {
       { id: 'ramot_br7', name: 'מסוף רמות', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.26350, lon: 34.81080, isRestricted: false, type: 'PARKING' },
       { id: 'big_br7', name: 'מסוף ביג (המשק)', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.23840, lon: 34.81150, isRestricted: false, type: 'PARKING' },
       { id: 'masof_ya_br7', name: 'מסוף י"א', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.25240, lon: 34.76960, isRestricted: false, type: 'PARKING' },
-      { id: 'beit_almin_br7', name: 'מסוף בית עלמין', city: 'באר שבע', operator: 'דן באר שבע', lat: 31.22080, lon: 34.82300, isRestricted: false, type: 'PARKING' },
       { id: 'eldan_ashkelon', name: 'חניון אלדן', city: 'אשקלון', operator: 'דן בדרום', lat: 31.67319, lon: 34.60244 },
       { id: 'merkazit_ashkelon', name: 'תחנה מרכזית (רמז)', city: 'אשקלון', operator: 'דן בדרום', lat: 31.66440, lon: 34.56680 },
       { id: 'ashdod_depot', name: 'חניון עד הלום (אשדוד)', city: 'אשדוד', operator: 'דן בדרום', lat: 31.78000, lon: 34.66520 },
