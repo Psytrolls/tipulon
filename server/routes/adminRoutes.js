@@ -18,6 +18,11 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     // Total reports filed in the system
     const totalReports = db.prepare('SELECT COUNT(*) as count FROM reports').get().count;
 
+    // Total fleet size from buses table
+    const totalFleet = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
+    const totalDanBaDarom = db.prepare("SELECT COUNT(*) as count FROM buses WHERE operator = 'דן בדרום'").get().count;
+    const totalDanBeerSheva = db.prepare("SELECT COUNT(*) as count FROM buses WHERE operator = 'דן באר שבע'").get().count;
+
     // 2. Total completed treatments
     const totalCompletedStmt = db.prepare(`
       SELECT COUNT(*) as count 
@@ -95,6 +100,9 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     res.json({
       metrics: {
         totalReports,
+        totalFleet,
+        totalDanBaDarom,
+        totalDanBeerSheva,
         treatmentsToday,
         totalCompleted,
         completedDanBaDarom,

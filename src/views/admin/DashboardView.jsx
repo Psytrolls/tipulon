@@ -260,23 +260,65 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
           </div>
 
           {/* Dan BaDarom */}
-          <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-black text-blue-900">דן בדרום</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-200 text-blue-900 rounded">מפעיל</span>
+          <div className="bg-blue-50/70 border border-blue-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-black text-blue-900">דן בדרום</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-200 text-blue-900 rounded">
+                  {metrics.totalDanBaDarom ? `${metrics.totalDanBaDarom} אוטובוסים` : 'מפעיל'}
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-blue-800">
+                {metrics.completedDanBaDarom || 0}
+                {metrics.totalDanBaDarom && (
+                  <span className="text-sm font-bold text-blue-600/70 mr-1.5">/ {metrics.totalDanBaDarom}</span>
+                )}
+              </div>
+              <span className="text-[11px] text-blue-600/90 font-bold mt-0.5 block">
+                {metrics.totalDanBaDarom 
+                  ? `${Math.round(((metrics.completedDanBaDarom || 0) / metrics.totalDanBaDarom) * 100)}% הושלמו`
+                  : 'טיפולים שהושלמו'}
+              </span>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-blue-800">{metrics.completedDanBaDarom || 0}</div>
-            <span className="text-[11px] text-blue-600/80 font-medium mt-0.5 block">טיפולים שהושלמו</span>
+            {Boolean(metrics.totalDanBaDarom) && (
+              <div className="w-full bg-blue-200/60 rounded-full h-1.5 mt-2.5 overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-full rounded-full transition-all duration-500" 
+                  style={{ width: `${Math.min(100, Math.round(((metrics.completedDanBaDarom || 0) / metrics.totalDanBaDarom) * 100))}%` }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Dan Beer Sheva */}
-          <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-black text-emerald-900">דן באר שבע</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded">מפעיל</span>
+          <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-black text-emerald-900">דן באר שבע</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-200 text-emerald-900 rounded">
+                  {metrics.totalDanBeerSheva ? `${metrics.totalDanBeerSheva} אוטובוסים` : 'מפעיל'}
+                </span>
+              </div>
+              <div className="text-2xl sm:text-3xl font-black text-emerald-800">
+                {metrics.completedDanBeerSheva || 0}
+                {metrics.totalDanBeerSheva && (
+                  <span className="text-sm font-bold text-emerald-600/70 mr-1.5">/ {metrics.totalDanBeerSheva}</span>
+                )}
+              </div>
+              <span className="text-[11px] text-emerald-700 font-bold mt-0.5 block">
+                {metrics.totalDanBeerSheva 
+                  ? `${Math.round(((metrics.completedDanBeerSheva || 0) / metrics.totalDanBeerSheva) * 100)}% הושלמו`
+                  : 'טיפולים שהושלמו'}
+              </span>
             </div>
-            <div className="text-2xl sm:text-3xl font-black text-emerald-800">{metrics.completedDanBeerSheva || 0}</div>
-            <span className="text-[11px] text-emerald-600/80 font-medium mt-0.5 block">טיפולים שהושלמו</span>
+            {Boolean(metrics.totalDanBeerSheva) && (
+              <div className="w-full bg-emerald-200/60 rounded-full h-1.5 mt-2.5 overflow-hidden">
+                <div 
+                  className="bg-emerald-600 h-full rounded-full transition-all duration-500" 
+                  style={{ width: `${Math.min(100, Math.round(((metrics.completedDanBeerSheva || 0) / metrics.totalDanBeerSheva) * 100))}%` }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Closed in EDI */}
