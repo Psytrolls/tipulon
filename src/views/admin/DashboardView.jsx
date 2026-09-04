@@ -176,63 +176,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
         </div>
       </div>
 
-      {/* 4 KPI Cards (Matching spec Section 7.1) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* Card 1: Treatments Today */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-slate-500">טיפולים היום</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Calendar className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-slate-900">{metrics.treatmentsToday}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">דוחות שנחתמו בתאריך הנוכחי</span>
-        </div>
-
-        {/* Card 2: Treatment Needed */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-amber-700">נדרש טיפול</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-amber-600">{metrics.treatmentNeeded}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">ללא טיפול תקף או שהמועד הגיע</span>
-        </div>
-
-        {/* Card 3: Follow Up Queue */}
-        <div 
-          onClick={onNavigateToFollowUp}
-          className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden cursor-pointer hover:border-rose-300 transition-all group"
-        >
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-rose-700">המשך טיפול</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <AlertTriangle className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-rose-600">{metrics.followUpQueue}</div>
-          <span className="text-[11px] text-rose-500 font-bold mt-1 block">אוטובוסים שהועברו לטיפול נוסף ←</span>
-        </div>
-
-        {/* Card 4: Overdue */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-rose-700">באיחור</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="text-3xl font-black text-rose-600">{metrics.overdue}</div>
-          <span className="text-[11px] text-slate-400 mt-1 block">מועד הטיפול הבא עבר</span>
-        </div>
-
-      </div>
-
-      {/* Real-time Counters: Total Completed, Dan BaDarom, Dan Beer Sheva, EDI Closed & Open */}
+      {/* Top Main Section: Real-time Counters - Total, Dan BaDarom, Dan Beer Sheva, EDI Closed & Open */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-black text-slate-800 flex items-center gap-2">
@@ -345,6 +289,62 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
           </div>
 
         </div>
+      </div>
+
+      {/* Second Section: Operational Status Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* Card 1: Treatments Today */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-slate-500">טיפולים היום</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <Calendar className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900">{metrics.treatmentsToday}</div>
+          <span className="text-[11px] text-slate-400 mt-1 block">דוחות שנחתמו בתאריך הנוכחי</span>
+        </div>
+
+        {/* Card 2: Treatment Needed */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-amber-700">נדרש טיפול</span>
+            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-amber-600">{metrics.treatmentNeeded}</div>
+          <span className="text-[11px] text-slate-400 mt-1 block">ללא טיפול תקף או שהמועד הגיע</span>
+        </div>
+
+        {/* Card 3: Follow Up Queue */}
+        <div 
+          onClick={onNavigateToFollowUp}
+          className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden cursor-pointer hover:border-rose-300 transition-all group"
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-rose-700">המשך טיפול</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-rose-600">{metrics.followUpQueue}</div>
+          <span className="text-[11px] text-rose-500 font-bold mt-1 block">אוטובוסים שהועברו לטיפול נוסף ←</span>
+        </div>
+
+        {/* Card 4: Overdue */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold text-rose-700">באיחור</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+              <Clock className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-rose-600">{metrics.overdue}</div>
+          <span className="text-[11px] text-slate-400 mt-1 block">מועד הטיפול הבא עבר</span>
+        </div>
+
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
