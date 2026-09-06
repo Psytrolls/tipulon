@@ -58,6 +58,9 @@ export default function ReportsView({ initialReportId = null }) {
   // Report details modal
   const [selectedReport, setSelectedReport] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isEditingResolution, setIsEditingResolution] = useState(false);
+  const [editResolutionText, setEditResolutionText] = useState('');
+  const [savingResolution, setSavingResolution] = useState(false);
 
   const handleDownloadOperatorExcel = async (op = '') => {
     try {
@@ -175,15 +178,47 @@ export default function ReportsView({ initialReportId = null }) {
   const handleViewDetails = async (reportId) => {
     try {
       setLoadingDetails(true);
+      setIsEditingResolution(false);
       const res = await fetch(`/api/treatments/${reportId}`);
       if (res.ok) {
         const data = await res.json();
         setSelectedReport(data);
+        setEditResolutionText(data.resolution_notes || '');
       }
     } catch (err) {
       console.error('Failed to load report details:', err);
     } finally {
       setLoadingDetails(false);
+    }
+  };
+
+  const handleSaveResolution = async () => {
+    if (!selectedReport) return;
+    try {
+      setSavingResolution(true);
+      const res = await fetch(`/api/treatments/${selectedReport.id}/resolution`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolutionNotes: editResolutionText })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSelectedReport(prev => ({
+          ...prev,
+          resolution_notes: data.resolutionNotes,
+          resolved_at: data.resolvedAt,
+          resolved_by: data.resolvedBy
+        }));
+        setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, resolution_notes: data.resolutionNotes } : r));
+        setIsEditingResolution(false);
+      } else {
+        alert('שגיאה בשמירת פרטי התיקון');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('שגיאה בשמירת פרטי התיקון');
+    } finally {
+      setSavingResolution(false);
     }
   };
 
@@ -630,23 +665,120 @@ export default function ReportsView({ initialReportId = null }) {
               </p>
             </div>
 
-            {/* Resolution Notes / Client Fix if available */}
-            {selectedReport.resolution_notes && (
+            {/* Resolution Notes / Client Fix Section */}
+            {isEditingResolution ? (
+              <div className="bg-emerald-50/90 p-4 rounded-2xl border border-emerald-400 space-y-2.5 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>עריכת פירוט תיקון הלקוח / מוסך:</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        const text = await navigator.clipboard.readText();
+                        if (text) {
+                          setEditResolutionText(prev => prev ? `${prev} | ${text}` : text);
+                        }
+                      } catch (e) {
+                        console.warn('Clipboard read error:', e);
+                      }
+                    }}
+                    className="text-[11px] font-bold text-emerald-800 hover:text-emerald-950 bg-emerald-100 px-2 py-0.5 rounded-lg"
+                  >
+                    📋 הדבק מהלוח
+                  </button>
+                </div>
+
+                <textarea
+                  rows={2}
+                  value={editResolutionText}
+                  onChange={(e) => setEditResolutionText(e.target.value)}
+                  placeholder="הקלד או הדבק מה הלקוח תיקן..."
+                  className="w-full p-2.5 bg-white border border-emerald-300 rounded-xl text-xs font-bold text-emerald-950 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+
+                <div className="flex flex-wrap gap-1">
+                  {[
+                    'בוצעה החלפת SPM ע״י מפעיל',
+                    'תוקנה הזנת מתח / פיוז',
+                    'הוחלף מכשיר במוסך מפעיל',
+                    'טופל במוסך ונמצא תקין'
+                  ].map((tpl) => (
+                    <button
+                      key={tpl}
+                      type="button"
+                      onClick={() => setEditResolutionText(tpl)}
+                      className="text-[10px] font-bold px-2 py-0.5 bg-white hover:bg-emerald-100 text-emerald-800 rounded border border-emerald-200"
+                    >
+                      + {tpl}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingResolution(false)}
+                    className="py-1.5 px-3 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-lg"
+                  >
+                    ביטול
+                  </button>
+                  <button
+                    type="button"
+                    disabled={savingResolution}
+                    onClick={handleSaveResolution}
+                    className="py-1.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm disabled:opacity-50"
+                  >
+                    {savingResolution ? 'שומר...' : 'שמור פירוט'}
+                  </button>
+                </div>
+              </div>
+            ) : selectedReport.resolution_notes ? (
               <div className="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-300 space-y-1.5 animate-fadeIn">
                 <div className="flex items-center justify-between flex-wrap gap-1">
                   <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                     <span>פירוט תיקון הלקוח / סגירת המשך טיפול:</span>
                   </span>
-                  {selectedReport.resolved_at && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-                      נסגר ב-{new Date(selectedReport.resolved_at).toLocaleDateString('he-IL')} {selectedReport.resolved_by ? `ע"י ${selectedReport.resolved_by}` : ''}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {selectedReport.resolved_at && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                        נסגר ב-{new Date(selectedReport.resolved_at).toLocaleDateString('he-IL')} {selectedReport.resolved_by ? `ע"י ${selectedReport.resolved_by}` : ''}
+                      </span>
+                    )}
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditResolutionText(selectedReport.resolution_notes || '');
+                          setIsEditingResolution(true);
+                        }}
+                        className="text-[10px] font-bold text-emerald-800 hover:text-emerald-950 underline px-1"
+                      >
+                        ✏️ ערוך
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <p className="text-xs text-emerald-950 font-bold whitespace-pre-wrap leading-relaxed bg-white/70 p-2.5 rounded-xl border border-emerald-200">
                   {selectedReport.resolution_notes}
                 </p>
+              </div>
+            ) : isAdmin && (
+              <div className="text-left">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditResolutionText('');
+                    setIsEditingResolution(true);
+                  }}
+                  className="text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>+ הוסף פירוט תיקון לקוח / מוסך</span>
+                </button>
               </div>
             )}
 

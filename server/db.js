@@ -173,6 +173,36 @@ export function initDatabase() {
     `);
   } catch (e) {}
 
+  // Backfill resolution_notes from audit_logs for previously closed follow-ups
+  try {
+    const closedLogs = db.prepare(`
+      SELECT entity_id as bus_number, details, user_name, created_at
+      FROM audit_logs
+      WHERE action = 'סגירת המשך טיפול'
+    `).all();
+
+    const updateReportRes = db.prepare(`
+      UPDATE reports
+      SET resolution_notes = ?,
+          resolved_at = COALESCE(resolved_at, ?),
+          resolved_by = COALESCE(resolved_by, ?)
+      WHERE bus_number = ? AND (resolution_notes IS NULL OR resolution_notes = '')
+    `);
+
+    for (const log of closedLogs) {
+      let notes = log.details || '';
+      if (notes.includes('המשך טיפול נסגר על ידי מנהל: ')) {
+        notes = notes.replace('המשך טיפול נסגר על ידי מנהל: ', '').trim();
+      } else if (notes.includes('המשך טיפול נסגר על ידי מנהל')) {
+        notes = notes.replace('המשך טיפול נסגר על ידי מנהל', '').trim();
+      }
+      if (notes.startsWith(':')) notes = notes.substring(1).trim();
+      if (!notes) notes = 'המשך טיפול נסגר ע״י מנהל';
+
+      updateReportRes.run(notes, log.created_at, log.user_name || 'מנהל מערכת', log.bus_number);
+    }
+  } catch (e) {}
+
   seedInitialData();
 }
 

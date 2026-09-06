@@ -353,6 +353,48 @@ router.patch('/:id/edi', requireAdmin, (req, res) => {
   }
 });
 
+// PATCH /api/treatments/:id/resolution - Update resolution notes (Admin only)
+router.patch('/:id/resolution', requireAdmin, (req, res) => {
+  try {
+    const reportId = Number(req.params.id);
+    const { resolutionNotes } = req.body;
+    const now = new Date().toISOString();
+
+    const stmt = db.prepare(`
+      UPDATE reports
+      SET resolution_notes = ?,
+          resolved_at = COALESCE(resolved_at, ?),
+          resolved_by = COALESCE(resolved_by, ?)
+      WHERE id = ?
+    `);
+    const result = stmt.run(resolutionNotes || null, now, req.user.fullName || 'מנהל מערכת', reportId);
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'דוח לא נמצא' });
+    }
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'עדכון תיקון לקוח',
+      'דוח טיפול',
+      reportId,
+      `עודכנו הערות סגירת לקוח: ${resolutionNotes || 'ללא הערות'}`
+    );
+
+    res.json({
+      success: true,
+      reportId,
+      resolutionNotes,
+      resolvedAt: now,
+      resolvedBy: req.user.fullName
+    });
+  } catch (err) {
+    console.error('Update resolution notes error:', err);
+    res.status(500).json({ error: 'שגיאה בעדכון הערות סגירה' });
+  }
+});
+
 // GET /api/treatments/export/excel - Professional Styled RTL Excel (.xlsx) export with AutoFilter
 router.get('/export/excel', requireAdmin, async (req, res) => {
   try {
