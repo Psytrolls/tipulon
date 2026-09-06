@@ -148,12 +148,31 @@ router.post('/resolve-follow-up', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'נא להזין מספר אוטובוס' });
     }
 
-    const stmt = db.prepare(`
+    const now = new Date();
+    const nextDate = new Date(now);
+    nextDate.setMonth(nextDate.getMonth() + 6);
+
+    // 1. Update buses table
+    const stmtBus = db.prepare(`
       UPDATE buses 
-      SET status = 'הטיפול הושלם', updated_at = datetime('now')
+      SET status = 'טיפול בתוקף', 
+          last_treatment_date = ?, 
+          next_treatment_date = ?,
+          updated_at = datetime('now')
       WHERE bus_number = ?
     `);
-    stmt.run(busNumber);
+    stmtBus.run(now.toISOString(), nextDate.toISOString(), busNumber);
+
+    // 2. Update reports table for this bus that was marked as 'הועבר להמשך טיפול'
+    const noteSuffix = resolutionNotes ? ` (סגירת מנהל: ${resolutionNotes})` : ' (המשך טיפול נסגר)';
+    const stmtReport = db.prepare(`
+      UPDATE reports 
+      SET status = 'הטיפול הושלם',
+          result = 'תקין',
+          summary = summary || ?
+      WHERE bus_number = ? AND status = 'הועבר להמשך טיפול'
+    `);
+    stmtReport.run(noteSuffix, busNumber);
 
     logAudit(
       req.user.id,

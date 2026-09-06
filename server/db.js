@@ -137,6 +137,16 @@ export function initDatabase() {
   // Cleanup old test/mock buses from initial setup
   try { db.exec("DELETE FROM buses WHERE bus_number IN ('1234567', '9876543', '5544332')"); } catch (e) {}
 
+  // Fix previously resolved follow-up reports where bus was marked completed or valid
+  try {
+    db.exec(`
+      UPDATE reports
+      SET status = 'הטיפול הושלם', result = 'תקין'
+      WHERE status = 'הועבר להמשך טיפול'
+        AND bus_number IN (SELECT bus_number FROM buses WHERE status IN ('הטיפול הושלם', 'טיפול בתוקף'))
+    `);
+  } catch (e) {}
+
   seedInitialData();
 }
 
