@@ -630,6 +630,26 @@ export default function ReportsView({ initialReportId = null }) {
               </p>
             </div>
 
+            {/* Resolution Notes / Client Fix if available */}
+            {selectedReport.resolution_notes && (
+              <div className="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-300 space-y-1.5 animate-fadeIn">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <span className="text-xs font-black text-emerald-900 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                    <span>פירוט תיקון הלקוח / סגירת המשך טיפול:</span>
+                  </span>
+                  {selectedReport.resolved_at && (
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+                      נסגר ב-{new Date(selectedReport.resolved_at).toLocaleDateString('he-IL')} {selectedReport.resolved_by ? `ע"י ${selectedReport.resolved_by}` : ''}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-emerald-950 font-bold whitespace-pre-wrap leading-relaxed bg-white/70 p-2.5 rounded-xl border border-emerald-200">
+                  {selectedReport.resolution_notes}
+                </p>
+              </div>
+            )}
+
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => setSelectedReport(null)}

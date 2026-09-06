@@ -169,10 +169,13 @@ router.post('/resolve-follow-up', requireAdmin, (req, res) => {
       UPDATE reports 
       SET status = 'הטיפול הושלם',
           result = 'תקין',
-          summary = summary || ?
-      WHERE bus_number = ? AND status = 'הועבר להמשך טיפול'
+          summary = summary || ?,
+          resolution_notes = ?,
+          resolved_at = datetime('now'),
+          resolved_by = ?
+      WHERE bus_number = ? AND (status = 'הועבר להמשך טיפול' OR id = (SELECT id FROM reports WHERE bus_number = ? ORDER BY created_at DESC LIMIT 1))
     `);
-    stmtReport.run(noteSuffix, busNumber);
+    stmtReport.run(noteSuffix, resolutionNotes || null, req.user.fullName || 'מנהל מערכת', busNumber, busNumber);
 
     logAudit(
       req.user.id,

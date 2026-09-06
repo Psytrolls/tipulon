@@ -235,7 +235,9 @@ router.get('/', requireAuth, (req, res) => {
 
     let query = `
       SELECT r.id, r.bus_number, r.operator, r.technician_id, r.technician_name, r.photo_path,
-             r.summary, r.result, r.status, r.is_edi_closed, r.edi_closed_at, r.created_at, b.next_treatment_date
+             r.summary, r.result, r.status, r.is_edi_closed, r.edi_closed_at,
+             r.resolution_notes, r.resolved_at, r.resolved_by,
+             r.created_at, b.next_treatment_date
       FROM reports r
       LEFT JOIN buses b ON r.bus_number = b.bus_number
       WHERE 1=1
@@ -358,7 +360,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
 
     let query = `
       SELECT r.id, r.operator, r.bus_number, r.created_at, r.technician_name, r.summary, r.result, r.status,
-             r.is_edi_closed, r.edi_closed_at, b.next_treatment_date
+             r.is_edi_closed, r.edi_closed_at, r.resolution_notes, r.resolved_at, r.resolved_by, b.next_treatment_date
       FROM reports r
       LEFT JOIN buses b ON r.bus_number = b.bus_number
       WHERE 1=1
@@ -400,7 +402,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       views: [{ rightToLeft: true }] // RTL IN EXCEL!
     });
 
-    // Define Columns (Removed redundant report ID column)
+    // Define Columns
     worksheet.columns = [
       { header: 'מפעיל / חברה', key: 'operator', width: 16 },
       { header: 'מספר אוטובוס', key: 'bus_number', width: 16 },
@@ -409,6 +411,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
       { header: 'שם הטכנאי', key: 'technician_name', width: 18 },
       { header: 'רשימת המכשירים ומצבם', key: 'devices', width: 42 },
       { header: 'סיכום הטכנאי', key: 'summary', width: 38 },
+      { header: 'תיקון הלקוח (המשך טיפול)', key: 'resolution_notes', width: 32 },
       { header: 'תוצאת הטיפול', key: 'result', width: 25 },
       { header: 'סטטוס', key: 'status', width: 18 },
       { header: 'סגור באדי', key: 'is_edi_closed', width: 16 },

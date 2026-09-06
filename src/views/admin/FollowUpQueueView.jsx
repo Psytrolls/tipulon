@@ -146,16 +146,58 @@ export default function FollowUpQueueView({ onViewReport }) {
             </p>
 
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                הערות סגירה (אופציונלי):
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-slate-700">
+                  פירוט התיקון שבוצע ע"י הלקוח / מוסך:
+                </label>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const text = await navigator.clipboard.readText();
+                      if (text) {
+                        setResolutionNotes(prev => prev ? `${prev} | ${text}` : text);
+                      }
+                    } catch (e) {
+                      console.warn('Clipboard read error:', e);
+                    }
+                  }}
+                  className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded-lg transition-colors flex items-center gap-1"
+                  title="הדבק טקסט מהעתק (WhatsApp / הודעת לקוח)"
+                >
+                  <span>📋 הדבק מהלוח</span>
+                </button>
+              </div>
+
               <textarea
                 rows={3}
                 value={resolutionNotes}
                 onChange={(e) => setResolutionNotes(e.target.value)}
-                placeholder="פרט איזה תיקון בוצע ע״י הלקוח..."
+                placeholder="הדבק או הקלד מה הלקוח/מוסך עשה (למשל: בוצעה החלפת SPM ע״י מפעיל)..."
                 className="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
+
+              {/* Quick Template Chips */}
+              <div className="mt-2 space-y-1">
+                <span className="text-[10px] text-slate-400 font-bold block">תבניות מהירות לבחירה:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    'בוצעה החלפת SPM ע״י מפעיל',
+                    'תוקנה הזנת מתח / פיוז',
+                    'הוחלף מכשיר במוסך מפעיל',
+                    'טופל במוסך ונמצא תקין'
+                  ].map((tpl) => (
+                    <button
+                      key={tpl}
+                      type="button"
+                      onClick={() => setResolutionNotes(tpl)}
+                      className="text-[10px] font-bold px-2 py-1 bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 rounded-lg transition-colors"
+                    >
+                      + {tpl}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center gap-2 pt-2">
@@ -172,7 +214,7 @@ export default function FollowUpQueueView({ onViewReport }) {
                 onClick={() => handleResolve(resolvingBus)}
                 className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 disabled:opacity-50"
               >
-                {actionLoading ? 'מעדכן...' : 'אשר סגירה'}
+                {actionLoading ? 'מעדכן...' : 'אשר סגירה ושמור'}
               </button>
             </div>
           </div>

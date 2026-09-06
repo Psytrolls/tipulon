@@ -130,6 +130,9 @@ export function initDatabase() {
   try { db.exec("ALTER TABLE reports ADD COLUMN is_edi_closed INTEGER DEFAULT 0"); } catch (e) {}
   try { db.exec("ALTER TABLE reports ADD COLUMN edi_closed_at DATETIME"); } catch (e) {}
   try { db.exec("ALTER TABLE reports ADD COLUMN location TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE reports ADD COLUMN resolution_notes TEXT"); } catch (e) {}
+  try { db.exec("ALTER TABLE reports ADD COLUMN resolved_at DATETIME"); } catch (e) {}
+  try { db.exec("ALTER TABLE reports ADD COLUMN resolved_by TEXT"); } catch (e) {}
 
   // Explicit mapping for sample short number from Dan spec
   try { db.exec("UPDATE buses SET short_number = '1687' WHERE bus_number = '14945702'"); } catch (e) {}
