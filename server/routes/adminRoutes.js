@@ -143,14 +143,20 @@ router.get('/follow-up-queue', requireAdmin, (req, res) => {
 // POST /api/admin/resolve-follow-up - Resolve follow-up status
 router.post('/resolve-follow-up', requireAdmin, (req, res) => {
   try {
-    const { busNumber, resolutionNotes } = req.body;
+    const { busNumber, resolutionNotes, nextTreatmentDate } = req.body;
     if (!busNumber) {
       return res.status(400).json({ error: 'נא להזין מספר אוטובוס' });
     }
 
     const now = new Date();
-    const nextDate = new Date(now);
-    nextDate.setMonth(nextDate.getMonth() + 6);
+    let calculatedNextDate;
+    if (nextTreatmentDate) {
+      calculatedNextDate = new Date(nextTreatmentDate).toISOString();
+    } else {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() + 6);
+      calculatedNextDate = d.toISOString();
+    }
 
     // 1. Update buses table
     const stmtBus = db.prepare(`
@@ -161,7 +167,7 @@ router.post('/resolve-follow-up', requireAdmin, (req, res) => {
           updated_at = datetime('now')
       WHERE bus_number = ?
     `);
-    stmtBus.run(now.toISOString(), nextDate.toISOString(), busNumber);
+    stmtBus.run(now.toISOString(), calculatedNextDate, busNumber);
 
     // 2. Update reports table for this bus that was marked as 'הועבר להמשך טיפול'
     const noteSuffix = resolutionNotes ? ` (סגירת מנהל: ${resolutionNotes})` : ' (המשך טיפול נסגר)';

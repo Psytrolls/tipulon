@@ -7,6 +7,11 @@ export default function FollowUpQueueView({ onViewReport }) {
   const [loading, setLoading] = useState(true);
   const [resolvingBus, setResolvingBus] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
+  const [nextTreatmentDate, setNextTreatmentDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 6);
+    return d.toISOString().slice(0, 10);
+  });
   const [actionLoading, setActionLoading] = useState(false);
 
   const loadQueue = async () => {
@@ -34,11 +39,14 @@ export default function FollowUpQueueView({ onViewReport }) {
       const res = await fetch('/api/admin/resolve-follow-up', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ busNumber, resolutionNotes })
+        body: JSON.stringify({ busNumber, resolutionNotes, nextTreatmentDate })
       });
       if (res.ok) {
         setResolvingBus(null);
         setResolutionNotes('');
+        const d = new Date();
+        d.setMonth(d.getMonth() + 6);
+        setNextTreatmentDate(d.toISOString().slice(0, 10));
         loadQueue();
       }
     } catch (err) {
@@ -198,6 +206,19 @@ export default function FollowUpQueueView({ onViewReport }) {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                מועד הטיפול הבא (ברירת מחדל: עוד 6 חודשים):
+              </label>
+              <input
+                type="date"
+                value={nextTreatmentDate}
+                onChange={(e) => setNextTreatmentDate(e.target.value)}
+                className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                required
+              />
             </div>
 
             <div className="flex items-center gap-2 pt-2">

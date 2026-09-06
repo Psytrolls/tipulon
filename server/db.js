@@ -150,6 +150,29 @@ export function initDatabase() {
     `);
   } catch (e) {}
 
+  // Ensure every bus with completed treatment has next_treatment_date calculated (+6 months)
+  try {
+    db.exec(`
+      UPDATE buses
+      SET next_treatment_date = (
+        SELECT datetime(r.created_at, '+6 months')
+        FROM reports r
+        WHERE r.bus_number = buses.bus_number AND r.status = 'הטיפול הושלם'
+        ORDER BY r.created_at DESC
+        LIMIT 1
+      ),
+      last_treatment_date = COALESCE(last_treatment_date, (
+        SELECT r.created_at
+        FROM reports r
+        WHERE r.bus_number = buses.bus_number AND r.status = 'הטיפול הושלם'
+        ORDER BY r.created_at DESC
+        LIMIT 1
+      ))
+      WHERE (next_treatment_date IS NULL OR next_treatment_date = '')
+        AND EXISTS (SELECT 1 FROM reports r WHERE r.bus_number = buses.bus_number AND r.status = 'הטיפול הושלם')
+    `);
+  } catch (e) {}
+
   seedInitialData();
 }
 
