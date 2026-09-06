@@ -502,6 +502,7 @@ router.get('/export/excel', requireAdmin, async (req, res) => {
         technician_name: r.technician_name,
         devices: devListStr,
         summary: r.summary,
+        resolution_notes: r.resolution_notes || '-',
         result: r.result,
         status: r.status,
         is_edi_closed: r.is_edi_closed ? 'כן (סגור)' : 'לא (פתוח)',
