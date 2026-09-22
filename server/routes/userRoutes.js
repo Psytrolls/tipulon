@@ -9,14 +9,15 @@ const router = express.Router();
 router.get('/', requireAdmin, (req, res) => {
   try {
     const stmt = db.prepare(`
-      SELECT id, full_name, phone, role, is_active, must_change_pin, created_at
+      SELECT id, full_name, phone, role, is_active, is_super_admin, must_change_pin, created_at
       FROM users
-      ORDER BY id ASC
+      ORDER BY is_super_admin DESC, id ASC
     `);
     const users = stmt.all();
     const enrichedUsers = users.map(u => ({
       ...u,
       is_locked: isUserPhoneLocked(u.phone),
+      is_super_admin: Boolean(u.is_super_admin),
       must_change_pin: Boolean(u.must_change_pin)
     }));
     res.json(enrichedUsers);
@@ -63,8 +64,8 @@ router.post('/', requireAdmin, (req, res) => {
     const forceChange = mustChangePin !== undefined ? (mustChangePin ? 1 : 0) : 1;
 
     const insertStmt = db.prepare(`
-      INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, must_change_pin)
-      VALUES (?, ?, ?, ?, ?, 1, ?)
+      INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
+      VALUES (?, ?, ?, ?, ?, 1, 0, ?)
     `);
     const result = insertStmt.run(cleanName, cleanPhone, hash, salt, chosenRole, forceChange);
 
@@ -78,6 +79,7 @@ router.post('/', requireAdmin, (req, res) => {
       phone: cleanPhone,
       role: chosenRole,
       is_active: 1,
+      is_super_admin: false,
       must_change_pin: forceChange === 1
     });
   } catch (err) {
@@ -96,10 +98,14 @@ router.patch('/:id/role', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'תפקיד לא חוקי' });
     }
 
-    const checkStmt = db.prepare('SELECT id, full_name, role FROM users WHERE id = ?');
+    const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin, role FROM users WHERE id = ?');
     const user = checkStmt.get(id);
     if (!user) {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    if (user.is_super_admin || user.phone === '0546434001') {
+      return res.status(403).json({ error: 'לא ניתן לשנות את תפקידו של מנהל העל (Super Admin)' });
     }
 
     const updateStmt = db.prepare('UPDATE users SET role = ? WHERE id = ?');
@@ -124,10 +130,14 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'לא ניתן להשבית את המשתמש הנוכחי של עצמך' });
     }
 
-    const checkStmt = db.prepare('SELECT id, full_name, is_active FROM users WHERE id = ?');
+    const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin, is_active FROM users WHERE id = ?');
     const user = checkStmt.get(id);
     if (!user) {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    if (user.is_super_admin || user.phone === '0546434001') {
+      return res.status(403).json({ error: 'לא ניתן להשבית את חשבון מנהל העל (Super Admin)' });
     }
 
     const newActive = user.is_active ? 0 : 1;
@@ -141,6 +151,50 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
   } catch (err) {
     console.error('Toggle user active error:', err);
     res.status(500).json({ error: 'שגיאה בשינוי סטטוס משתמש' });
+  }
+});
+
+// DELETE /api/users/:id - Delete user permanently (Admin only)
+router.delete('/:id', requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (Number(id) === req.user.id) {
+      return res.status(400).json({ error: 'לא ניתן למחוק את המשתמש הנוכחי של עצמך' });
+    }
+
+    const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin FROM users WHERE id = ?');
+    const targetUser = checkStmt.get(id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    if (targetUser.is_super_admin || targetUser.phone === '0546434001') {
+      return res.status(403).json({ error: 'לא ניתן למחוק את חשבון מנהל העל (Super Admin) של המערכת' });
+    }
+
+    // Terminate sessions
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+
+    // Delete user
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+
+    // Clear security lockouts
+    unlockUserPhone(targetUser.phone);
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'מחיקת משתמש',
+      'משתמש',
+      id,
+      `משתמש נמחק לצמיתות מהמערכת: ${targetUser.full_name} (${targetUser.phone})`
+    );
+
+    res.json({ success: true, message: 'המשתמש נמחק בהצלחה מהמערכת' });
+  } catch (err) {
+    console.error('Delete user error:', err);
+    res.status(500).json({ error: 'שגיאה במחיקת המשתמש' });
   }
 });
 

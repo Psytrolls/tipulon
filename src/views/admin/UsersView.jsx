@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff, Unlock, ShieldAlert } from 'lucide-react';
+import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff, Unlock, ShieldAlert, Trash2, Crown, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UsersView() {
@@ -33,6 +33,11 @@ export default function UsersView() {
   const [editPhone, setEditPhone] = useState('');
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+
+  // Delete user modal state
+  const [deleteModalUser, setDeleteModalUser] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const loadUsers = async () => {
     try {
@@ -226,6 +231,32 @@ export default function UsersView() {
     }
   };
 
+  const handleOpenDeleteModal = (u) => {
+    setDeleteModalUser(u);
+    setDeleteError('');
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteModalUser) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      const res = await fetch(`/api/users/${deleteModalUser.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'שגיאה במחיקת המשתמש');
+      }
+      setDeleteModalUser(null);
+      loadUsers();
+    } catch (err) {
+      setDeleteError(err.message);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       
@@ -382,11 +413,19 @@ export default function UsersView() {
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => {
                   const isSelf = u.id === currentUser?.id;
+                  const isSuperAdmin = Boolean(u.is_super_admin);
+
                   return (
-                    <tr key={u.id} className="hover:bg-slate-50 transition-colors">
+                    <tr key={u.id} className={`hover:bg-slate-50 transition-colors ${isSuperAdmin ? 'bg-amber-50/20' : ''}`}>
                       <td className="p-3.5 font-bold text-slate-900 flex items-center gap-2">
                         <span>{u.full_name}</span>
-                        {isSelf && (
+                        {isSuperAdmin && (
+                          <span className="inline-flex items-center gap-1 text-[10px] bg-gradient-to-r from-amber-100 to-amber-200 text-amber-900 border border-amber-300 font-black px-2 py-0.5 rounded-full shadow-sm">
+                            <Crown className="w-3 h-3 text-amber-600 fill-amber-500" />
+                            <span>מנהל על</span>
+                          </span>
+                        )}
+                        {isSelf && !isSuperAdmin && (
                           <span className="text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-normal">
                             (אתה)
                           </span>
@@ -394,19 +433,26 @@ export default function UsersView() {
                       </td>
                       <td className="p-3.5 font-mono text-slate-600" dir="ltr">{u.phone}</td>
                       <td className="p-3.5">
-                        <select
-                          value={u.role}
-                          disabled={isSelf}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          className={`px-2 py-1 rounded-lg text-xs font-bold border ${
-                            u.role === 'admin'
-                              ? 'bg-purple-50 text-purple-800 border-purple-200'
-                              : 'bg-blue-50 text-blue-800 border-blue-200'
-                          } disabled:opacity-75`}
-                        >
-                          <option value="technician">טכנאי</option>
-                          <option value="admin">מנהל</option>
-                        </select>
+                        {isSuperAdmin ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black bg-purple-50 text-purple-900 border border-purple-200">
+                            <Shield className="w-3.5 h-3.5 text-purple-600" />
+                            <span>מנהל על (Super Admin)</span>
+                          </span>
+                        ) : (
+                          <select
+                            value={u.role}
+                            disabled={isSelf}
+                            onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                            className={`px-2 py-1 rounded-lg text-xs font-bold border ${
+                              u.role === 'admin'
+                                ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                            } disabled:opacity-75`}
+                          >
+                            <option value="technician">טכנאי</option>
+                            <option value="admin">מנהל</option>
+                          </select>
+                        )}
                       </td>
                       <td className="p-3.5">
                         <div className="flex flex-wrap items-center gap-1.5">
@@ -465,18 +511,29 @@ export default function UsersView() {
                             <Edit2 className="w-4 h-4" />
                           </button>
 
-                          {!isSelf && (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleUser(u.id)}
-                              className={`px-3 py-1 rounded-xl text-xs font-bold transition-colors ${
-                                u.is_active 
-                                  ? 'text-rose-600 hover:bg-rose-50' 
-                                  : 'text-emerald-600 hover:bg-emerald-50'
-                              }`}
-                            >
-                              {u.is_active ? 'השבת' : 'הפעל'}
-                            </button>
+                          {!isSelf && !isSuperAdmin && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleUser(u.id)}
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-colors ${
+                                  u.is_active 
+                                    ? 'text-amber-600 hover:bg-amber-50' 
+                                    : 'text-emerald-600 hover:bg-emerald-50'
+                                }`}
+                              >
+                                {u.is_active ? 'השבת' : 'הפעל'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleOpenDeleteModal(u)}
+                                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                title="מחק משתמש לצמיתות מהמערכת"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>
@@ -688,6 +745,72 @@ export default function UsersView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete User Confirmation Modal */}
+      {deleteModalUser && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in duration-150">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">מחיקת משתמש לצמיתות</h3>
+                  <p className="text-xs text-slate-500">פעולה זו בלתי הפיכה</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteModalUser(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {deleteError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
+                ⚠️ {deleteError}
+              </div>
+            )}
+
+            <div className="p-4 bg-rose-50/50 border border-rose-200 rounded-2xl space-y-2">
+              <div className="flex items-center gap-2 text-rose-800 font-bold text-sm">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
+                <span>האם אתה בטוח שברצונך למחוק משתמש זה?</span>
+              </div>
+              <div className="text-xs text-slate-700 bg-white p-3 rounded-xl border border-rose-100 space-y-1">
+                <p><strong>שם מלא:</strong> {deleteModalUser.full_name}</p>
+                <p><strong>מספר טלפון:</strong> <span dir="ltr" className="font-mono">{deleteModalUser.phone}</span></p>
+                <p><strong>תפקיד:</strong> {deleteModalUser.role === 'admin' ? 'מנהל מערכת' : 'טכנאי שטח'}</p>
+              </div>
+              <p className="text-[11px] text-rose-600 font-semibold leading-relaxed">
+                * המשתמש יימחק לחלוטין ויינותק מיד מהמערכת. היסטוריית הדוחות שביצע בעבר תישמר במלואה.
+              </p>
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteModalUser(null)}
+                className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+              >
+                ביטול
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+                className="flex-1 py-3 px-4 bg-rose-600 hover:bg-rose-700 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-lg shadow-rose-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{deleting ? 'מוחק...' : 'מחק משתמש לצמיתות'}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

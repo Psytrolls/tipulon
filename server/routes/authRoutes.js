@@ -48,7 +48,7 @@ router.post('/login', (req, res) => {
     }
 
     const stmt = db.prepare(`
-      SELECT id, full_name, phone, pin_hash, pin_salt, role, is_active, must_change_pin
+      SELECT id, full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin
       FROM users
       WHERE phone = ?
     `);
@@ -131,6 +131,7 @@ router.post('/login', (req, res) => {
         fullName: user.full_name,
         phone: user.phone,
         role: user.role,
+        isSuperAdmin: Boolean(user.is_super_admin),
         mustChangePin: Boolean(user.must_change_pin)
       }
     });

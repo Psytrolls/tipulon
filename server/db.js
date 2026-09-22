@@ -59,6 +59,7 @@ export function initDatabase() {
       pin_salt TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('technician', 'admin')),
       is_active INTEGER DEFAULT 1,
+      is_super_admin INTEGER DEFAULT 0,
       must_change_pin INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
@@ -213,10 +214,19 @@ export function initDatabase() {
     }
   } catch (e) {}
 
-  // Migration: Add must_change_pin column to users table if missing and flag existing users to update password
+  // Migration: Add must_change_pin and is_super_admin columns to users table if missing
   try {
     db.exec(`ALTER TABLE users ADD COLUMN must_change_pin INTEGER DEFAULT 0`);
     db.exec(`UPDATE users SET must_change_pin = 1`);
+  } catch (e) {}
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
+  } catch (e) {}
+
+  // Set Super Admin flag for primary admin 0546434001
+  try {
+    db.exec(`UPDATE users SET is_super_admin = 1, role = 'admin', full_name = 'יבגני קבישר' WHERE phone = '0546434001'`);
   } catch (e) {}
 
   seedInitialData();
@@ -256,31 +266,41 @@ function seedInitialData() {
   // Seed Admin & Technician users
   const checkUser = db.prepare('SELECT id FROM users WHERE phone = ?');
   const insertUser = db.prepare(`
-    INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active)
-    VALUES (?, ?, ?, ?, ?, 1)
+    INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
+    VALUES (?, ?, ?, ?, ?, 1, ?, 0)
   `);
 
-  // 1. Admin
+  // 1. Primary Super Admin (0546434001 - יבגני קבישר)
+  const superAdminPhone = '0546434001';
+  const existingSuperAdmin = checkUser.get(superAdminPhone);
+  if (!existingSuperAdmin) {
+    const { hash, salt } = hashPin('1234');
+    insertUser.run('יבגני קבישר', superAdminPhone, hash, salt, 'admin', 1);
+  } else {
+    db.prepare(`UPDATE users SET is_super_admin = 1, role = 'admin', is_active = 1 WHERE phone = ?`).run(superAdminPhone);
+  }
+
+  // 2. Demo Admin (0501234567)
   const adminPhone = normalizePhone(process.env.ADMIN_PHONE || '0501234567');
   const envAdminPin = process.env.ADMIN_PIN;
   const existingAdmin = checkUser.get(adminPhone);
 
   if (!existingAdmin) {
     const { hash, salt } = hashPin(envAdminPin || '1234');
-    insertUser.run('מנהל מערכת', adminPhone, hash, salt, 'admin');
+    insertUser.run('מנהל מערכת', adminPhone, hash, salt, 'admin', 0);
   } else if (envAdminPin) {
     const { hash, salt } = hashPin(envAdminPin);
     db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, adminPhone);
   }
 
-  // 2. Technician
+  // 3. Technician (0521234567)
   const techPhone = normalizePhone(process.env.TECH_PHONE || '0521234567');
   const envTechPin = process.env.TECH_PIN;
   const existingTech = checkUser.get(techPhone);
 
   if (!existingTech) {
     const { hash, salt } = hashPin(envTechPin || '1234');
-    insertUser.run('ישראל ישראלי', techPhone, hash, salt, 'technician');
+    insertUser.run('ישראל ישראלי', techPhone, hash, salt, 'technician', 0);
   } else if (envTechPin) {
     const { hash, salt } = hashPin(envTechPin);
     db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, techPhone);
