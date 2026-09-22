@@ -8,6 +8,7 @@ import { initDatabase } from './db.js';
 import { authenticateUser } from './auth.js';
 import { startBackupScheduler } from './backupService.js';
 import { startWeeklyFleetSyncCron } from './services/fleetSyncService.js';
+import { securityHeadersMiddleware } from './securityService.js';
 
 import authRoutes from './routes/authRoutes.js';
 import busRoutes from './routes/busRoutes.js';
@@ -26,6 +27,13 @@ startWeeklyFleetSyncCron();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Trust reverse proxy (for TrueNAS Scale / Nginx reverse proxy SSL & IP forwarding)
+app.set('trust proxy', 1);
+
+// Security hardening
+app.disable('x-powered-by');
+app.use(securityHeadersMiddleware);
 
 // Body Parsers & Cookies
 app.use(express.json());

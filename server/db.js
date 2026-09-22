@@ -30,8 +30,17 @@ export function hashPin(pin, salt = null) {
 }
 
 export function verifyPin(pin, salt, expectedHash) {
-  const hash = crypto.pbkdf2Sync(pin, salt, 10000, 64, 'sha512').toString('hex');
-  return hash === expectedHash;
+  if (!pin || !salt || !expectedHash) return false;
+  try {
+    const hash = crypto.pbkdf2Sync(String(pin), salt, 10000, 64, 'sha512');
+    const expectedBuffer = Buffer.from(expectedHash, 'hex');
+    if (hash.length !== expectedBuffer.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(hash, expectedBuffer);
+  } catch {
+    return false;
+  }
 }
 
 export function normalizePhone(phone) {
