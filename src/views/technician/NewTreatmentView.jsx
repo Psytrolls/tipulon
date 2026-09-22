@@ -19,10 +19,12 @@ import {
   Navigation,
   Radio,
   Calendar,
-  Search
+  Search,
+  Copy
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
+import { generateEdiClosingText, copyTextToClipboard } from '../../utils/ediHelper';
 
 export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap, initialBusNumber }) {
   // Wizard Steps: 1 = Bus & Photo, 2 = Device Count, 3 = Fill Devices, 4 = Summary & Decision, 5 = Review, 6 = Success
@@ -63,6 +65,8 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
   const [submitError, setSubmitError] = useState('');
   const [submittedReport, setSubmittedReport] = useState(null);
   const [lastCompletedNotification, setLastCompletedNotification] = useState(null);
+  const [copiedNotifBus, setCopiedNotifBus] = useState(false);
+  const [copiedNotifEdi, setCopiedNotifEdi] = useState(false);
 
   // Fetch active products on mount
   useEffect(() => {
@@ -393,13 +397,19 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
         throw new Error(data.error || 'שגיאה בשמירת דוח הטיפול');
       }
 
-      setSubmittedReport(data);
-      setLastCompletedNotification({
+      const notifData = {
         reportId: data.reportId,
-        busNumber: data.busNumber,
+        busNumber: data.busNumber || busNumber.trim(),
+        operator,
         status: data.status,
-        createdAt: data.createdAt
-      });
+        createdAt: data.createdAt,
+        summary: summary.trim(),
+        result: decision,
+        devices: [...devices]
+      };
+
+      setSubmittedReport(notifData);
+      setLastCompletedNotification(notifData);
       resetForm();
       if (onTreatmentCompleted) onTreatmentCompleted();
     } catch (err) {
@@ -453,27 +463,59 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
       {step === 1 && (
         <div className="space-y-4">
           {lastCompletedNotification && (
-            <div className="p-4 bg-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-600/25 flex items-center justify-between animate-fadeIn">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-6 h-6 text-white" />
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-700 to-emerald-600 text-white rounded-2xl shadow-lg shadow-emerald-600/25 space-y-3 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <CheckCircle2 className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm sm:text-base">
+                      הדוח לאוטובוס {lastCompletedNotification.busNumber} נשמר בהצלחה!
+                    </h3>
+                    <p className="text-xs text-emerald-100 mt-0.5">
+                      דוח #{lastCompletedNotification.reportId} • מוכן לסגירה באדי 📋
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-sm sm:text-base">
-                    הדוח לאוטובוס {lastCompletedNotification.busNumber} נשמר בהצלחה!
-                  </h3>
-                  <p className="text-xs text-emerald-100 mt-0.5">
-                    דוח #{lastCompletedNotification.reportId} • המערכת מוכנה מיד לסריקת האוטובוס הבא 📸
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setLastCompletedNotification(null)}
+                  className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setLastCompletedNotification(null)}
-                className="p-1 rounded-lg hover:bg-white/10 text-white/80 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* Quick Copy Action Buttons for EDI */}
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-emerald-500/50">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await copyTextToClipboard(lastCompletedNotification.busNumber);
+                    setCopiedNotifBus(true);
+                    setTimeout(() => setCopiedNotifBus(false), 2000);
+                  }}
+                  className="py-1.5 px-3 bg-white/15 hover:bg-white/25 active:scale-95 text-white text-xs font-bold rounded-xl border border-white/20 inline-flex items-center gap-1.5 transition-all"
+                >
+                  {copiedNotifBus ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedNotifBus ? 'הועתק מספר אוטובוס! ✓' : `העתק מספר: ${lastCompletedNotification.busNumber}`}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const text = generateEdiClosingText(lastCompletedNotification);
+                    await copyTextToClipboard(text);
+                    setCopiedNotifEdi(true);
+                    setTimeout(() => setCopiedNotifEdi(false), 2000);
+                  }}
+                  className="py-1.5 px-3.5 bg-white text-emerald-950 hover:bg-emerald-50 active:scale-95 text-xs font-black rounded-xl shadow-sm inline-flex items-center gap-1.5 transition-all"
+                >
+                  {copiedNotifEdi ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5 text-emerald-700" />}
+                  <span>{copiedNotifEdi ? 'הועתק טקסט סגירה לאדי! ✓' : '📋 העתק טקסט סגירה לאדי (כולל ולידטורים)'}</span>
+                </button>
+              </div>
             </div>
           )}
 

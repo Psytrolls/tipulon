@@ -13,10 +13,13 @@ import {
   AlertTriangle,
   RefreshCw,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  Copy,
+  Check
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 import { useAuth } from '../../context/AuthContext';
+import { generateEdiClosingText, copyTextToClipboard } from '../../utils/ediHelper';
 
 export default function ReportsView({ initialReportId = null }) {
   const { user } = useAuth();
@@ -32,9 +35,13 @@ export default function ReportsView({ initialReportId = null }) {
   const [showExportModal, setShowExportModal] = useState(false);
   const [downloadingOp, setDownloadingOp] = useState(null);
 
-  // Sync fleet state
   const [syncingFleet, setSyncingFleet] = useState(false);
   const [syncNotice, setSyncNotice] = useState('');
+
+  // Copy states
+  const [copiedBusId, setCopiedBusId] = useState(null);
+  const [copiedModalBus, setCopiedModalBus] = useState(false);
+  const [copiedModalEdi, setCopiedModalEdi] = useState(false);
 
   const handleSyncFleet = async () => {
     try {
@@ -488,7 +495,28 @@ export default function ReportsView({ initialReportId = null }) {
                         {report.operator || 'דן באר שבע'}
                       </span>
                     </td>
-                    <td className="p-3.5 font-black text-slate-900">{report.bus_number}</td>
+                    <td className="p-3.5 font-black text-slate-900">
+                      <div className="flex items-center gap-1.5">
+                        <span>{report.bus_number}</span>
+                        <button
+                          type="button"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await copyTextToClipboard(report.bus_number);
+                            setCopiedBusId(report.id);
+                            setTimeout(() => setCopiedBusId(null), 2000);
+                          }}
+                          title="העתק מספר אוטובוס ללוח"
+                          className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors inline-flex items-center gap-1 active:scale-90"
+                        >
+                          {copiedBusId === report.id ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </div>
+                    </td>
                     <td className="p-3.5 text-slate-600 font-medium">
                       {report.location || report.cluster || 'מרכז תפעול'}
                     </td>
@@ -662,6 +690,55 @@ export default function ReportsView({ initialReportId = null }) {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* EDI Quick Copy Section */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-slate-700 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-700/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                    <Copy className="w-4 h-4" />
+                  </span>
+                  <div>
+                    <h4 className="text-xs font-black text-white">סגירה מהירה באפליקציית EDI</h4>
+                    <p className="text-[11px] text-slate-400">העתקת פרטי הדוח והולידטורים להדבקה מיידית באדי</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await copyTextToClipboard(selectedReport.bus_number);
+                      setCopiedModalBus(true);
+                      setTimeout(() => setCopiedModalBus(false), 2000);
+                    }}
+                    className="py-1.5 px-3 bg-white/10 hover:bg-white/20 active:scale-95 text-white text-xs font-bold rounded-xl border border-white/20 inline-flex items-center gap-1.5 transition-all"
+                  >
+                    {copiedModalBus ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedModalBus ? 'הועתק מספר אוטובוס! ✓' : `העתק מספר: ${selectedReport.bus_number}`}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ediText = generateEdiClosingText(selectedReport);
+                      await copyTextToClipboard(ediText);
+                      setCopiedModalEdi(true);
+                      setTimeout(() => setCopiedModalEdi(false), 2000);
+                    }}
+                    className="py-1.5 px-3.5 bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-slate-950 text-xs font-black rounded-xl shadow-md shadow-emerald-500/20 inline-flex items-center gap-1.5 transition-all"
+                  >
+                    {copiedModalEdi ? <Check className="w-3.5 h-3.5 text-slate-950" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedModalEdi ? 'הועתק טקסט מלא לאדי! ✓' : '📋 העתק טקסט סגירה לאדי'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Pre-formatted preview */}
+              <div className="bg-slate-950/70 p-3 rounded-xl border border-slate-700/60 font-mono text-[11px] text-slate-300 leading-relaxed whitespace-pre-wrap select-all">
+                {generateEdiClosingText(selectedReport)}
               </div>
             </div>
 

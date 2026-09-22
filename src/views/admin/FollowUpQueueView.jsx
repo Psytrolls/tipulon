@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, Clock, Bus, RefreshCw, Eye, Check } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Bus, RefreshCw, Eye, Check, Copy } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import { copyTextToClipboard } from '../../utils/ediHelper';
 
 export default function FollowUpQueueView({ onViewReport }) {
   const [queue, setQueue] = useState([]);
   const [loading, setLoading] = useState(true);
   const [resolvingBus, setResolvingBus] = useState(null);
+  const [copiedBusNumber, setCopiedBusNumber] = useState(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [nextTreatmentDate, setNextTreatmentDate] = useState(() => {
     const d = new Date();
@@ -103,6 +105,23 @@ export default function FollowUpQueueView({ onViewReport }) {
                   <div className="flex items-center gap-2">
                     <Bus className="w-5 h-5 text-rose-600" />
                     <span className="text-lg font-black text-slate-900">{item.bus_number}</span>
+                    <button
+                      type="button"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await copyTextToClipboard(item.bus_number);
+                        setCopiedBusNumber(item.bus_number);
+                        setTimeout(() => setCopiedBusNumber(null), 2000);
+                      }}
+                      title="העתק מספר אוטובוס"
+                      className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors inline-flex items-center"
+                    >
+                      {copiedBusNumber === item.bus_number ? (
+                        <Check className="w-4 h-4 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-4 h-4" />
+                      )}
+                    </button>
                   </div>
                   <StatusBadge status="הועבר להמשך טיפול" />
                 </div>
