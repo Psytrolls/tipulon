@@ -13,22 +13,21 @@ export function generateEdiClosingText(report) {
   const techName = report.technician_name || report.technicianName || '';
 
   // Format validator devices list
-  let devicesList = '';
+  let devicesSection = '';
   if (report.devices && report.devices.length > 0) {
-    devicesList = report.devices
-      .map((d, i) => {
-        const name = d.product_name || d.productName || `מכשיר ${i + 1}`;
-        const sn = d.serial_number || d.serialNumber || 'ללא סריאלי';
-        const st = d.status || 'תקין';
-        const notes = d.notes ? ` [${d.notes}]` : '';
-        return `${name}: ${sn} (${st}${notes})`;
-      })
-      .join(', ');
+    const deviceLines = report.devices.map((d, i) => {
+      const name = d.product_name || d.productName || `מכשיר ${i + 1}`;
+      const sn = d.serial_number || d.serialNumber || 'ללא סריאלי';
+      const st = d.status || 'תקין';
+      const notes = d.notes ? ` [${d.notes}]` : '';
+      return `${name}: ${sn} (${st}${notes})`;
+    });
+    devicesSection = `מכשירים:\n${deviceLines.join('\n')}`;
   }
 
   let text = `אוטובוס: ${busNum} (${operator})\nתאריך: ${dateStr}${techName ? ` | טכנאי: ${techName}` : ''}\nתוצאה: ${result}`;
-  if (devicesList) {
-    text += `\nמכשירי ולידטור: ${devicesList}`;
+  if (devicesSection) {
+    text += `\n${devicesSection}`;
   }
   if (summary) {
     text += `\nסיכום: ${summary}`;
