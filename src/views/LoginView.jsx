@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bus, Lock, Phone, ArrowLeft, CheckCircle2, Sparkles } from 'lucide-react';
+import { Bus, Lock, Phone, ArrowLeft, CheckCircle2, Sparkles, Eye, EyeOff } from 'lucide-react';
 import InstallPwaBanner from '../components/InstallPwaBanner';
 
 export default function LoginView() {
   const { setAuthUser } = useAuth();
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
@@ -17,7 +18,7 @@ export default function LoginView() {
     setError('');
 
     if (!phone || !pin) {
-      setError('נא להזין מספר טלפון וקוד PIN');
+      setError('נא להזין מספר טלפון וקוד PIN / סיסמה');
       return;
     }
 
@@ -100,7 +101,7 @@ export default function LoginView() {
           <>
             <div className="mb-6">
               <h2 className="text-xl font-black text-slate-900">כניסה למערכת</h2>
-              <p className="text-xs text-slate-500 mt-0.5">הזן מספר טלפון וקוד PIN סודי</p>
+              <p className="text-xs text-slate-500 mt-0.5">הזן מספר טלפון וסיסמה / קוד PIN</p>
             </div>
 
             {error && (
@@ -133,23 +134,29 @@ export default function LoginView() {
 
               <div>
                 <label className="block text-xs font-black text-slate-700 mb-1.5">
-                  קוד PIN סודי
+                  קוד PIN / סיסמה
                 </label>
                 <div className="relative">
                   <input
-                    type="password"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    maxLength={8}
+                    type={showPassword ? 'text' : 'password'}
+                    maxLength={32}
                     dir="ltr"
-                    placeholder="••••"
+                    placeholder="הזן סיסמה או PIN"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-black tracking-widest focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left"
+                    className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left"
                     autoComplete="current-password"
                     required
                   />
                   <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    tabIndex="-1"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
                 </div>
               </div>
 

@@ -59,6 +59,7 @@ export function initDatabase() {
       pin_salt TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('technician', 'admin')),
       is_active INTEGER DEFAULT 1,
+      must_change_pin INTEGER DEFAULT 0,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -210,6 +211,12 @@ export function initDatabase() {
 
       updateReportRes.run(notes, log.created_at, log.user_name || 'מנהל מערכת', log.bus_number);
     }
+  } catch (e) {}
+
+  // Migration: Add must_change_pin column to users table if missing and flag existing users to update password
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN must_change_pin INTEGER DEFAULT 0`);
+    db.exec(`UPDATE users SET must_change_pin = 1`);
   } catch (e) {}
 
   seedInitialData();

@@ -29,8 +29,8 @@ router.post('/login', (req, res) => {
     }
 
     const cleanPin = String(pin).trim();
-    if (cleanPin.length < 4 || cleanPin.length > 8 || !/^\d+$/.test(cleanPin)) {
-      return res.status(400).json({ error: 'קוד PIN חייב להכיל 4 עד 8 ספרות' });
+    if (cleanPin.length < 4 || cleanPin.length > 32) {
+      return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל 4 עד 32 תווים' });
     }
 
     // 1. Check Rate Limit / Account Lockout
@@ -48,7 +48,7 @@ router.post('/login', (req, res) => {
     }
 
     const stmt = db.prepare(`
-      SELECT id, full_name, phone, pin_hash, pin_salt, role, is_active
+      SELECT id, full_name, phone, pin_hash, pin_salt, role, is_active, must_change_pin
       FROM users
       WHERE phone = ?
     `);
@@ -102,7 +102,7 @@ router.post('/login', (req, res) => {
       }
 
       return res.status(401).json({
-        error: `קוד PIN שגוי. נותרו ${attemptsLeft} ניסיונות לפני נעילת החשבון.`
+        error: `קוד PIN / סיסמה שגויים. נותרו ${attemptsLeft} ניסיונות לפני נעילת החשבון.`
       });
     }
 
@@ -130,7 +130,8 @@ router.post('/login', (req, res) => {
         id: user.id,
         fullName: user.full_name,
         phone: user.phone,
-        role: user.role
+        role: user.role,
+        mustChangePin: Boolean(user.must_change_pin)
       }
     });
   } catch (err) {
@@ -148,6 +149,76 @@ router.get('/me', (req, res) => {
     authenticated: true,
     user: req.user
   });
+});
+
+// POST /api/auth/change-password
+router.post('/change-password', (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'משתמש אינו מחובר למערכת' });
+  }
+
+  try {
+    const { currentPin, newPin } = req.body;
+
+    if (!currentPin || !newPin) {
+      return res.status(400).json({ error: 'נא להזין סיסמה נוכחית וסיסמה חדשה' });
+    }
+
+    const cleanNewPin = String(newPin).trim();
+    if (cleanNewPin.length < 6 || cleanNewPin.length > 32) {
+      return res.status(400).json({ error: 'הסיסמה החדשה חייבת להכיל לפחות 6 תווים (ועד 32 תווים)' });
+    }
+
+    const hasLetter = /[a-zA-Z]/.test(cleanNewPin);
+    const hasDigit = /[0-9]/.test(cleanNewPin);
+    if (!hasLetter || !hasDigit) {
+      return res.status(400).json({ error: 'הסיסמה החדשה חייבת לכלול שילוב של אותיות באנגלית ומספרים (לדוגמה: Tipul123)' });
+    }
+
+    const stmt = db.prepare(`
+      SELECT id, full_name, phone, pin_hash, pin_salt
+      FROM users
+      WHERE id = ?
+    `);
+    const user = stmt.get(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    const isValidCurrent = verifyPin(String(currentPin).trim(), user.pin_salt, user.pin_hash);
+    if (!isValidCurrent) {
+      return res.status(400).json({ error: 'הסיסמה הנוכחית שהוזנה אינה נכונה' });
+    }
+
+    if (String(currentPin).trim() === cleanNewPin) {
+      return res.status(400).json({ error: 'הסיסמה החדשה אינה יכולה להיות זהה לסיסמה הישנה' });
+    }
+
+    const { hash, salt } = hashPin(cleanNewPin);
+    const updateStmt = db.prepare(`
+      UPDATE users 
+      SET pin_hash = ?, pin_salt = ?, must_change_pin = 0 
+      WHERE id = ?
+    `);
+    updateStmt.run(hash, salt, req.user.id);
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'החלפת סיסמה',
+      'משתמש',
+      req.user.id,
+      'הסיסמה עודכנה בהצלחה (סיסמה מורכבת בתוקף)'
+    );
+
+    res.json({
+      success: true,
+      message: 'הסיסמה עודכנה בהצלחה!'
+    });
+  } catch (err) {
+    console.error('Change password error:', err);
+    res.status(500).json({ error: 'שגיאה בעדכון הסיסמה' });
+  }
 });
 
 // POST /api/auth/logout

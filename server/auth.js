@@ -30,7 +30,7 @@ export function authenticateUser(req, res, next) {
   }
 
   const stmt = db.prepare(`
-    SELECT u.id, u.full_name, u.phone, u.role, u.is_active, s.expires_at
+    SELECT u.id, u.full_name, u.phone, u.role, u.is_active, u.must_change_pin, s.expires_at
     FROM sessions s
     JOIN users u ON s.user_id = u.id
     WHERE s.token = ? AND datetime(s.expires_at) > datetime('now')
@@ -45,7 +45,8 @@ export function authenticateUser(req, res, next) {
       id: user.id,
       fullName: user.full_name,
       phone: user.phone,
-      role: user.role
+      role: user.role,
+      mustChangePin: Boolean(user.must_change_pin)
     };
   }
 

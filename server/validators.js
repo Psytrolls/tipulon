@@ -57,3 +57,20 @@ export function validateDeviceSerialNumber(serialNumber) {
 
   return null;
 }
+
+export function validatePasswordStrength(password) {
+  if (!password || typeof password !== 'string') {
+    return 'חובה להזין סיסמה';
+  }
+  const clean = password.trim();
+  if (clean.length < 6 || clean.length > 32) {
+    return 'הסיסמה חייבת להכיל לפחות 6 תווים (ועד 32 תווים)';
+  }
+  // Must contain letters and numbers
+  const hasLetter = /[a-zA-Z]/.test(clean);
+  const hasDigit = /[0-9]/.test(clean);
+  if (!hasLetter || !hasDigit) {
+    return 'הסיסמה חייבת לכלול שילוב של אותיות ומספרים (לדוגמה: Tipul123)';
+  }
+  return null;
+}

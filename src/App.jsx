@@ -13,6 +13,7 @@ import FleetView from './views/admin/FleetView';
 import DepotMapView from './views/technician/DepotMapView';
 import ErrorBoundary from './components/ErrorBoundary';
 import InstallPwaBanner from './components/InstallPwaBanner';
+import MustChangePasswordModal from './components/MustChangePasswordModal';
 
 export default function App() {
   const { user, loading } = useAuth();
@@ -61,6 +62,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <InstallPwaBanner />
+      {user?.mustChangePin && <MustChangePasswordModal />}
       <Navbar currentView={viewToRender} setCurrentView={(v) => { setActiveReportId(null); setCurrentView(v); }} />
 
       <main className="flex-1 pb-12">

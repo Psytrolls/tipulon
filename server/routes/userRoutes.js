@@ -9,14 +9,15 @@ const router = express.Router();
 router.get('/', requireAdmin, (req, res) => {
   try {
     const stmt = db.prepare(`
-      SELECT id, full_name, phone, role, is_active, created_at
+      SELECT id, full_name, phone, role, is_active, must_change_pin, created_at
       FROM users
       ORDER BY id ASC
     `);
     const users = stmt.all();
     const enrichedUsers = users.map(u => ({
       ...u,
-      is_locked: isUserPhoneLocked(u.phone)
+      is_locked: isUserPhoneLocked(u.phone),
+      must_change_pin: Boolean(u.must_change_pin)
     }));
     res.json(enrichedUsers);
   } catch (err) {
@@ -28,7 +29,7 @@ router.get('/', requireAdmin, (req, res) => {
 // POST /api/users - Add user (Admin only)
 router.post('/', requireAdmin, (req, res) => {
   try {
-    const { fullName, phone, pin, role } = req.body;
+    const { fullName, phone, pin, role, mustChangePin } = req.body;
 
     const cleanName = String(fullName || '').trim();
     if (!cleanName) {
@@ -41,8 +42,8 @@ router.post('/', requireAdmin, (req, res) => {
     }
 
     const cleanPin = String(pin || '').trim();
-    if (cleanPin.length < 4 || cleanPin.length > 8 || !/^\d+$/.test(cleanPin)) {
-      return res.status(400).json({ error: 'קוד PIN חייב להכיל בין 4 ל-8 ספרות' });
+    if (cleanPin.length < 4 || cleanPin.length > 32) {
+      return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל בין 4 ל-32 תווים' });
     }
 
     const validRoles = ['technician', 'admin'];
@@ -59,12 +60,13 @@ router.post('/', requireAdmin, (req, res) => {
     }
 
     const { hash, salt } = hashPin(cleanPin);
+    const forceChange = mustChangePin !== undefined ? (mustChangePin ? 1 : 0) : 1;
 
     const insertStmt = db.prepare(`
-      INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active)
-      VALUES (?, ?, ?, ?, ?, 1)
+      INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, must_change_pin)
+      VALUES (?, ?, ?, ?, ?, 1, ?)
     `);
-    const result = insertStmt.run(cleanName, cleanPhone, hash, salt, chosenRole);
+    const result = insertStmt.run(cleanName, cleanPhone, hash, salt, chosenRole, forceChange);
 
     const newUserId = Number(result.lastInsertRowid);
     const roleHebrew = chosenRole === 'admin' ? 'מנהל' : 'טכנאי';
@@ -75,7 +77,8 @@ router.post('/', requireAdmin, (req, res) => {
       full_name: cleanName,
       phone: cleanPhone,
       role: chosenRole,
-      is_active: 1
+      is_active: 1,
+      must_change_pin: forceChange === 1
     });
   } catch (err) {
     console.error('Create user error:', err);
@@ -141,15 +144,15 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
   }
 });
 
-// PATCH /api/users/:id/pin - Change user PIN (Admin can change any user's PIN)
+// PATCH /api/users/:id/pin - Change user PIN / Password (Admin can change any user's PIN)
 router.patch('/:id/pin', requireAdmin, (req, res) => {
   try {
     const { id } = req.params;
-    const { newPin } = req.body;
+    const { newPin, mustChangePin } = req.body;
 
     const cleanPin = String(newPin || '').trim();
-    if (cleanPin.length < 4 || cleanPin.length > 8 || !/^\d+$/.test(cleanPin)) {
-      return res.status(400).json({ error: 'קוד PIN חייב להכיל בין 4 ל-8 ספרות' });
+    if (cleanPin.length < 4 || cleanPin.length > 32) {
+      return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל בין 4 ל-32 תווים' });
     }
 
     const checkStmt = db.prepare('SELECT id, full_name, phone FROM users WHERE id = ?');
@@ -159,8 +162,10 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
     }
 
     const { hash, salt } = hashPin(cleanPin);
-    const updateStmt = db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE id = ?');
-    updateStmt.run(hash, salt, id);
+    const forceChange = mustChangePin !== undefined ? (mustChangePin ? 1 : 0) : 1;
+
+    const updateStmt = db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ?, must_change_pin = ? WHERE id = ?');
+    updateStmt.run(hash, salt, forceChange, id);
 
     // Auto-unlock user so technician can log in immediately with new PIN
     unlockUserPhone(targetUser.phone);
@@ -168,13 +173,13 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
     logAudit(
       req.user.id,
       req.user.fullName,
-      'שינוי קוד PIN ושחרור נעילה',
+      'שינוי סיסמה ושחרור נעילה',
       'משתמש',
       id,
-      `עודכן קוד PIN ושוחררה חסימת אבטחה עבור: ${targetUser.full_name} (${targetUser.phone})`
+      `עודכנה סיסמה ושוחררה חסימת אבטחה עבור: ${targetUser.full_name} (${targetUser.phone})`
     );
 
-    res.json({ success: true, message: 'קוד ה-PIN עודכן והנעילה שוחררה בהצלחה' });
+    res.json({ success: true, message: 'הסיסמה עודכנה והנעילה שוחררה בהצלחה' });
   } catch (err) {
     console.error('Update PIN error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון קוד PIN' });

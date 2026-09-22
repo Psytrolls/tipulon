@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff } from 'lucide-react';
+import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff, Unlock, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function UsersView() {
@@ -12,6 +12,8 @@ export default function UsersView() {
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [role, setRole] = useState('technician');
+  const [forceChangeOnAdd, setForceChangeOnAdd] = useState(true);
+  const [showAddPinText, setShowAddPinText] = useState(false);
   const [addError, setAddError] = useState('');
   const [addSuccess, setAddSuccess] = useState('');
   const [adding, setAdding] = useState(false);
@@ -20,6 +22,7 @@ export default function UsersView() {
   const [pinModalUser, setPinModalUser] = useState(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
+  const [forceChangeOnReset, setForceChangeOnReset] = useState(true);
   const [showPinText, setShowPinText] = useState(false);
   const [pinError, setPinError] = useState('');
   const [pinSaving, setPinSaving] = useState(false);
@@ -60,19 +63,30 @@ export default function UsersView() {
       return;
     }
 
+    if (pin.trim().length < 4 || pin.trim().length > 32) {
+      setAddError('הסיסמה / PIN חייבים להכיל בין 4 ל-32 תווים');
+      return;
+    }
+
     setAdding(true);
     try {
       const res = await fetch('/api/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, phone, pin, role })
+        body: JSON.stringify({
+          fullName,
+          phone,
+          pin: pin.trim(),
+          role,
+          mustChangePin: forceChangeOnAdd
+        })
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'שגיאה ביצירת משתמש');
       }
 
-      setAddSuccess(`המשתמש ${data.full_name} נוצר בהצלחה עם PIN זמני!`);
+      setAddSuccess(`המשתמש ${data.full_name} נוצר בהצלחה!`);
       setFullName('');
       setPhone('');
       setPin('');
@@ -100,6 +114,21 @@ export default function UsersView() {
     }
   };
 
+  const handleUnlockUser = async (id) => {
+    try {
+      const res = await fetch(`/api/users/${id}/unlock`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'שגיאה בשחרור נעילת משתמש');
+      } else {
+        alert('נעילת האבטחה שוחררה בהצלחה!');
+        loadUsers();
+      }
+    } catch (err) {
+      console.error('Unlock user error:', err);
+    }
+  };
+
   const handleToggleUser = async (id) => {
     try {
       const res = await fetch(`/api/users/${id}/toggle`, {
@@ -120,6 +149,7 @@ export default function UsersView() {
     setPinModalUser(u);
     setNewPin('');
     setConfirmPin('');
+    setForceChangeOnReset(true);
     setPinError('');
   };
 
@@ -127,12 +157,12 @@ export default function UsersView() {
     e.preventDefault();
     setPinError('');
 
-    if (newPin.length < 4 || newPin.length > 8 || !/^\d+$/.test(newPin)) {
-      setPinError('קוד PIN חייב להכיל בין 4 ל-8 ספרות בלבד');
+    if (newPin.trim().length < 4 || newPin.trim().length > 32) {
+      setPinError('קוד PIN / סיסמה חייבים להכיל לפחות 4 תווים (ועד 32 תווים)');
       return;
     }
-    if (newPin !== confirmPin) {
-      setPinError('קודי ה-PIN אינם תואמים');
+    if (newPin.trim() !== confirmPin.trim()) {
+      setPinError('הסיסמאות / קודי ה-PIN אינם תואמים');
       return;
     }
 
@@ -141,14 +171,18 @@ export default function UsersView() {
       const res = await fetch(`/api/users/${pinModalUser.id}/pin`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPin })
+        body: JSON.stringify({
+          newPin: newPin.trim(),
+          mustChangePin: forceChangeOnReset
+        })
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'שגיאה בעדכון קוד PIN');
+        throw new Error(data.error || 'שגיאה בעדכון הסיסמה');
       }
-      alert(`קוד ה-PIN עבור ${pinModalUser.full_name} עודכן בהצלחה!`);
+      alert(`הסיסמה עבור ${pinModalUser.full_name} עודכנה והנעילה שוחררה בהצלחה!`);
       setPinModalUser(null);
+      loadUsers();
     } catch (err) {
       setPinError(err.message);
     } finally {
@@ -260,14 +294,24 @@ export default function UsersView() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">PIN זמני (4-8 ספרות)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-bold text-slate-700">סיסמה / PIN ראשוני</label>
+              <button
+                type="button"
+                onClick={() => setShowAddPinText(!showAddPinText)}
+                className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                tabIndex="-1"
+              >
+                {showAddPinText ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                <span>{showAddPinText ? 'הסתר' : 'הצג'}</span>
+              </button>
+            </div>
             <div className="relative">
               <input
-                type="password"
-                inputMode="numeric"
-                maxLength={8}
+                type={showAddPinText ? 'text' : 'password'}
+                maxLength={32}
                 dir="ltr"
-                placeholder="••••"
+                placeholder="לפחות 4 תווים"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
                 className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left"
@@ -289,11 +333,21 @@ export default function UsersView() {
             </select>
           </div>
 
-          <div className="sm:col-span-2 lg:col-span-4 pt-1">
+          <div className="sm:col-span-2 lg:col-span-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+              <input
+                type="checkbox"
+                checked={forceChangeOnAdd}
+                onChange={(e) => setForceChangeOnAdd(e.target.checked)}
+                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
+              />
+              <span>חייב את המשתמש להחליף סיסמה בהתחברות הראשונה</span>
+            </label>
+
             <button
               type="submit"
               disabled={adding}
-              className="py-3 px-6 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+              className="py-2.5 px-6 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
             >
               <UserPlus className="w-4 h-4" />
               <span>{adding ? 'יוצר משתמש...' : 'צור משתמש חדש'}</span>
@@ -320,7 +374,7 @@ export default function UsersView() {
                   <th className="p-3.5">שם מלא</th>
                   <th className="p-3.5">מספר טלפון</th>
                   <th className="p-3.5">תפקיד</th>
-                  <th className="p-3.5">סטטוס</th>
+                  <th className="p-3.5">סטטוס ואבטחה</th>
                   <th className="p-3.5">תאריך הצטרפות</th>
                   <th className="p-3.5 text-center">פעולות</th>
                 </tr>
@@ -355,22 +409,49 @@ export default function UsersView() {
                         </select>
                       </td>
                       <td className="p-3.5">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                          u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
-                        }`}>
-                          {u.is_active ? 'פעיל' : 'מושבת'}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                            u.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'
+                          }`}>
+                            {u.is_active ? 'פעיל' : 'מושבת'}
+                          </span>
+
+                          {u.is_locked && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-300 animate-pulse">
+                              <ShieldAlert className="w-3 h-3" />
+                              <span>נעול זמנית</span>
+                            </span>
+                          )}
+
+                          {u.must_change_pin && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                              <KeyRound className="w-3 h-3" />
+                              <span>נדרש עדכון סיסמה</span>
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-3.5 text-slate-500">
                         {new Date(u.created_at).toLocaleDateString('he-IL')}
                       </td>
                       <td className="p-3.5 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          {u.is_locked && (
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockUser(u.id)}
+                              className="p-2 rounded-xl text-rose-600 hover:text-rose-800 hover:bg-rose-50 transition-colors"
+                              title="שחרר נעילת אבטחה של המשתמש"
+                            >
+                              <Unlock className="w-4 h-4" />
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => handleOpenPinModal(u)}
                             className="p-2 rounded-xl text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
-                            title="שנה קוד PIN למשתמש"
+                            title="שנה קוד PIN / סיסמה למשתמש"
                           >
                             <KeyRound className="w-4 h-4" />
                           </button>
@@ -408,7 +489,7 @@ export default function UsersView() {
         )}
       </div>
 
-      {/* Change PIN Modal */}
+      {/* Change PIN / Password Modal */}
       {pinModalUser && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl border border-slate-200 space-y-5">
@@ -419,7 +500,7 @@ export default function UsersView() {
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-slate-900">
-                    {pinModalUser.id === currentUser?.id ? 'שינוי קוד ה-PIN האישי שלך' : 'איפוס / שינוי קוד PIN'}
+                    {pinModalUser.id === currentUser?.id ? 'שינוי הסיסמה האישית שלך' : 'איפוס / שינוי סיסמה'}
                   </h3>
                   <p className="text-xs text-slate-500">עבור {pinModalUser.full_name} ({pinModalUser.phone})</p>
                 </div>
@@ -450,6 +531,7 @@ export default function UsersView() {
                 onClick={() => {
                   setNewPin('1234');
                   setConfirmPin('1234');
+                  setForceChangeOnReset(true);
                 }}
                 className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-lg border border-amber-300 flex items-center gap-1.5 transition-colors shrink-0"
               >
@@ -461,41 +543,54 @@ export default function UsersView() {
             <form onSubmit={handleSavePin} className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">קוד PIN חדש (4-8 ספרות):</label>
+                  <label className="text-xs font-bold text-slate-700">סיסמה / PIN חדש:</label>
                   <button
                     type="button"
                     onClick={() => setShowPinText(!showPinText)}
                     className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                    tabIndex="-1"
                   >
                     {showPinText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    <span>{showPinText ? 'הסתר' : 'הצג קוד'}</span>
+                    <span>{showPinText ? 'הסתר' : 'הצג סיסמה'}</span>
                   </button>
                 </div>
                 <input
                   type={showPinText ? 'text' : 'password'}
-                  inputMode="numeric"
-                  maxLength={8}
-                  placeholder="הזן קוד PIN חדש..."
+                  maxLength={32}
+                  dir="ltr"
+                  placeholder="הזן סיסמה חדשה (לפחות 4 תווים)..."
                   value={newPin}
                   onChange={(e) => setNewPin(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono tracking-wider"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left"
                   required
                   autoFocus
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">אימות קוד PIN חדש:</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">אימות סיסמה חדשה:</label>
                 <input
                   type={showPinText ? 'text' : 'password'}
-                  inputMode="numeric"
-                  maxLength={8}
+                  maxLength={32}
+                  dir="ltr"
                   placeholder="הזן שוב לאימות..."
                   value={confirmPin}
                   onChange={(e) => setConfirmPin(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none font-mono tracking-wider"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left"
                   required
                 />
+              </div>
+
+              <div className="pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={forceChangeOnReset}
+                    onChange={(e) => setForceChangeOnReset(e.target.checked)}
+                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300"
+                  />
+                  <span>חייב את המשתמש להחליף סיסמה בהתחברות הבאה</span>
+                </label>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -512,7 +607,7 @@ export default function UsersView() {
                   className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   <KeyRound className="w-4 h-4" />
-                  <span>{pinSaving ? 'מעדכן...' : 'שמור ואפס קוד PIN'}</span>
+                  <span>{pinSaving ? 'מעדכן...' : 'שמור סיסמה ושחרר נעילה'}</span>
                 </button>
               </div>
             </form>
