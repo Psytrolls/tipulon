@@ -266,6 +266,12 @@ router.get('/', requireAuth, (req, res) => {
       query += ' AND (r.is_edi_closed = 0 OR r.is_edi_closed IS NULL)';
     }
 
+    // Technicians see only their own completed/submitted reports; Admins see all
+    if (req.user.role !== 'admin' && !req.user.isSuperAdmin) {
+      query += ' AND r.technician_id = ?';
+      params.push(req.user.id);
+    }
+
     query += ' ORDER BY r.created_at DESC LIMIT 150';
 
     const stmt = db.prepare(query);
@@ -293,6 +299,11 @@ router.get('/:id', requireAuth, (req, res) => {
 
     if (!report) {
       return res.status(404).json({ error: 'דוח טיפול לא נמצא' });
+    }
+
+    // Non-admin technicians can only view their own reports
+    if (req.user.role !== 'admin' && !req.user.isSuperAdmin && report.technician_id !== req.user.id) {
+      return res.status(403).json({ error: 'אין לך הרשאה לצפות בדוח זה' });
     }
 
     const devicesStmt = db.prepare(`

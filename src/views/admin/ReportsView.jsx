@@ -236,10 +236,12 @@ export default function ReportsView({ initialReportId = null }) {
             <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
               <FileText className="w-6 h-6" />
             </span>
-            <span>דוחות והיסטוריית טיפולים</span>
+            <span>{isAdmin ? 'דוחות והיסטוריית טיפולים' : 'היסטוריית הטיפולים שלי'}</span>
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            מעקב אחר כל דוחות הטיפול המונע שבוצעו על ידי טכנאי השטח
+            {isAdmin 
+              ? 'מעקב אחר כל דוחות הטיפול המונע שבוצעו על ידי כלל טכנאי השטח' 
+              : 'מעקב וצפייה בכל דוחות הטיפול שביצעת במערכת'}
           </p>
         </div>
 
@@ -282,7 +284,9 @@ export default function ReportsView({ initialReportId = null }) {
           className="bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-slate-400 transition-all group"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">סה"כ דוחות שנפתחו</span>
+            <span className="text-xs font-bold text-slate-500">
+              {isAdmin ? 'סה"כ דוחות שנפתחו' : 'סה"כ דוחות שביצעתי'}
+            </span>
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 group-hover:scale-110 transition-transform" />
           </div>
           <div className="text-2xl font-black text-slate-900 mt-1">
@@ -305,7 +309,9 @@ export default function ReportsView({ initialReportId = null }) {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-blue-900">דן בדרום</span>
+            <span className="text-xs font-black text-blue-900">
+              {isAdmin ? 'דן בדרום' : 'דן בדרום (שלי)'}
+            </span>
             <span className="text-[10px] px-1.5 py-0.2 bg-blue-200 text-blue-800 rounded font-bold">סנן</span>
           </div>
           <div className="text-2xl font-black text-blue-800 mt-1">
@@ -323,7 +329,9 @@ export default function ReportsView({ initialReportId = null }) {
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-emerald-900">דן באר שבע</span>
+            <span className="text-xs font-black text-emerald-900">
+              {isAdmin ? 'דן באר שבע' : 'דן באר שבע (שלי)'}
+            </span>
             <span className="text-[10px] px-1.5 py-0.2 bg-emerald-200 text-emerald-800 rounded font-bold">סנן</span>
           </div>
           <div className="text-2xl font-black text-emerald-800 mt-1">
