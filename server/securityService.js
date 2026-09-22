@@ -137,6 +137,24 @@ export function recordSuccessfulLogin(phone, ip) {
 }
 
 /**
+ * Manually unlocks a user's phone number (called by admin when resetting PIN or unlocking user).
+ */
+export function unlockUserPhone(phone) {
+  if (phone) {
+    phoneAttempts.delete(phone);
+  }
+}
+
+/**
+ * Checks if a specific phone number is currently locked out.
+ */
+export function isUserPhoneLocked(phone) {
+  if (!phone) return false;
+  const pData = phoneAttempts.get(phone);
+  return Boolean(pData?.lockUntil && pData.lockUntil > Date.now());
+}
+
+/**
  * Security HTTP headers middleware
  */
 export function securityHeadersMiddleware(req, res, next) {

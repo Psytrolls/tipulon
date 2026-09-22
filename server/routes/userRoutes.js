@@ -1,6 +1,7 @@
 import express from 'express';
 import { db, normalizePhone, hashPin, logAudit } from '../db.js';
 import { requireAdmin } from '../auth.js';
+import { unlockUserPhone, isUserPhoneLocked } from '../securityService.js';
 
 const router = express.Router();
 
@@ -13,7 +14,11 @@ router.get('/', requireAdmin, (req, res) => {
       ORDER BY id ASC
     `);
     const users = stmt.all();
-    res.json(users);
+    const enrichedUsers = users.map(u => ({
+      ...u,
+      is_locked: isUserPhoneLocked(u.phone)
+    }));
+    res.json(enrichedUsers);
   } catch (err) {
     console.error('Fetch users error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת משתמשים' });
@@ -157,19 +162,50 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
     const updateStmt = db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE id = ?');
     updateStmt.run(hash, salt, id);
 
+    // Auto-unlock user so technician can log in immediately with new PIN
+    unlockUserPhone(targetUser.phone);
+
     logAudit(
       req.user.id,
       req.user.fullName,
-      'שינוי קוד PIN',
+      'שינוי קוד PIN ושחרור נעילה',
       'משתמש',
       id,
-      `עודכן קוד PIN עבור: ${targetUser.full_name} (${targetUser.phone})`
+      `עודכן קוד PIN ושוחררה חסימת אבטחה עבור: ${targetUser.full_name} (${targetUser.phone})`
     );
 
-    res.json({ success: true, message: 'קוד ה-PIN עודכן בהצלחה' });
+    res.json({ success: true, message: 'קוד ה-PIN עודכן והנעילה שוחררה בהצלחה' });
   } catch (err) {
     console.error('Update PIN error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון קוד PIN' });
+  }
+});
+
+// POST /api/users/:id/unlock - Manually unlock user account (Admin only)
+router.post('/:id/unlock', requireAdmin, (req, res) => {
+  try {
+    const { id } = req.params;
+    const checkStmt = db.prepare('SELECT id, full_name, phone FROM users WHERE id = ?');
+    const targetUser = checkStmt.get(id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    unlockUserPhone(targetUser.phone);
+
+    logAudit(
+      req.user.id,
+      req.user.fullName,
+      'ביטול נעילת חשבון',
+      'משתמש',
+      id,
+      `שוחררה חסימת אבטחה עבור: ${targetUser.full_name} (${targetUser.phone})`
+    );
+
+    res.json({ success: true, message: 'נעילת החשבון שוחררה בהצלחה' });
+  } catch (err) {
+    console.error('Unlock user error:', err);
+    res.status(500).json({ error: 'שגיאה בשחרור נעילת המשתמש' });
   }
 });
 
