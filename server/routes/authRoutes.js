@@ -1,6 +1,6 @@
 import express from 'express';
 import crypto from 'node:crypto';
-import { db, normalizePhone, verifyPin, logAudit } from '../db.js';
+import { db, normalizePhone, hashPin, verifyPin, logAudit } from '../db.js';
 import { createSession, deleteSession } from '../auth.js';
 import {
   getClientIp,
