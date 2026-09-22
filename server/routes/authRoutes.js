@@ -161,8 +161,8 @@ router.post('/change-password', (req, res) => {
   try {
     const { currentPin, newPin } = req.body;
 
-    if (!currentPin || !newPin) {
-      return res.status(400).json({ error: 'נא להזין סיסמה נוכחית וסיסמה חדשה' });
+    if (!newPin) {
+      return res.status(400).json({ error: 'נא להזין סיסמה חדשה' });
     }
 
     const cleanNewPin = String(newPin).trim();
@@ -177,7 +177,7 @@ router.post('/change-password', (req, res) => {
     }
 
     const stmt = db.prepare(`
-      SELECT id, full_name, phone, pin_hash, pin_salt
+      SELECT id, full_name, phone, pin_hash, pin_salt, must_change_pin
       FROM users
       WHERE id = ?
     `);
@@ -186,13 +186,12 @@ router.post('/change-password', (req, res) => {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
     }
 
-    const isValidCurrent = verifyPin(String(currentPin).trim(), user.pin_salt, user.pin_hash);
-    if (!isValidCurrent) {
-      return res.status(400).json({ error: 'הסיסמה הנוכחית שהוזנה אינה נכונה' });
-    }
-
-    if (String(currentPin).trim() === cleanNewPin) {
-      return res.status(400).json({ error: 'הסיסמה החדשה אינה יכולה להיות זהה לסיסמה הישנה' });
+    // If currentPin is provided and user is not in forced change mode, verify it
+    if (currentPin && !user.must_change_pin) {
+      const isValidCurrent = verifyPin(String(currentPin).trim(), user.pin_salt, user.pin_hash);
+      if (!isValidCurrent) {
+        return res.status(400).json({ error: 'הסיסמה הנוכחית שהוזנה אינה נכונה' });
+      }
     }
 
     const { hash, salt } = hashPin(cleanNewPin);
@@ -218,7 +217,7 @@ router.post('/change-password', (req, res) => {
     });
   } catch (err) {
     console.error('Change password error:', err);
-    res.status(500).json({ error: 'שגיאה בעדכון הסיסמה' });
+    res.status(500).json({ error: 'שגיאה פנימית בעדכון הסיסמה: ' + (err.message || '') });
   }
 });
 

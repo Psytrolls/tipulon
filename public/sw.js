@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tipulon-cache-v3';
+const CACHE_NAME = 'tipulon-cache-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',

@@ -5,11 +5,9 @@ import { useAuth } from '../context/AuthContext';
 export default function MustChangePasswordModal() {
   const { user, setAuthUser, logout } = useAuth();
 
-  const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
 
-  const [showCurrent, setShowCurrent] = useState(false);
   const [showNew, setShowNew] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -21,23 +19,19 @@ export default function MustChangePasswordModal() {
   const hasLetter = /[a-zA-Z]/.test(newPin);
   const hasDigit = /[0-9]/.test(newPin);
   const isMatching = newPin.trim().length > 0 && newPin === confirmPin;
-  const isValid = hasMinLength && hasLetter && hasDigit && isMatching && currentPin.trim().length > 0;
+  const isValid = hasMinLength && hasLetter && hasDigit && isMatching;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
     if (!isValid) {
-      if (!currentPin.trim()) {
-        setError('נא להזין את הסיסמה הנוכחית / הזמנית');
-        return;
-      }
       if (!hasMinLength) {
         setError('הסיסמה החדשה חייבת להכיל לפחות 6 תווים');
         return;
       }
       if (!hasLetter || !hasDigit) {
-        setError('הסיסמה חייבת לכלול שילוב של אותיות באנגלית ומספרים');
+        setError('הסיסמה חייבת לכלול שילוב של אותיות באנגלית ומספרים (לדוגמה: Tipul2026)');
         return;
       }
       if (!isMatching) {
@@ -52,7 +46,6 @@ export default function MustChangePasswordModal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentPin: currentPin.trim(),
           newPin: newPin.trim()
         })
       });
@@ -96,33 +89,6 @@ export default function MustChangePasswordModal() {
               <span>{error}</span>
             </div>
           )}
-
-          {/* Current Temporary Password */}
-          <div>
-            <label className="block text-xs font-black text-slate-700 mb-1">
-              סיסמה נוכחית / קוד PIN זמני
-            </label>
-            <div className="relative">
-              <input
-                type={showCurrent ? 'text' : 'password'}
-                dir="ltr"
-                required
-                value={currentPin}
-                onChange={(e) => setCurrentPin(e.target.value)}
-                placeholder="הזן סיסמה נוכחית"
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left text-sm"
-              />
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
-              <button
-                type="button"
-                onClick={() => setShowCurrent(!showCurrent)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
-                tabIndex="-1"
-              >
-                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
 
           {/* New Password */}
           <div>
