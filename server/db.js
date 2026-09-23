@@ -151,6 +151,9 @@ export function initDatabase() {
   // Cleanup old test/mock buses from initial setup
   try { db.exec("DELETE FROM buses WHERE bus_number IN ('1234567', '9876543', '5544332')"); } catch (e) {}
 
+  // Cleanup old demo/test users (0501234567, 0521234567) so they don't reappear on deploy
+  try { db.exec("DELETE FROM users WHERE phone IN ('0501234567', '0521234567')"); } catch (e) {}
+
   // Fix previously resolved follow-up reports where bus was marked completed or valid
   try {
     db.exec(`
@@ -278,32 +281,6 @@ function seedInitialData() {
     insertUser.run('יבגני קבישר', superAdminPhone, hash, salt, 'admin', 1);
   } else {
     db.prepare(`UPDATE users SET is_super_admin = 1, role = 'admin', is_active = 1 WHERE phone = ?`).run(superAdminPhone);
-  }
-
-  // 2. Demo Admin (0501234567)
-  const adminPhone = normalizePhone(process.env.ADMIN_PHONE || '0501234567');
-  const envAdminPin = process.env.ADMIN_PIN;
-  const existingAdmin = checkUser.get(adminPhone);
-
-  if (!existingAdmin) {
-    const { hash, salt } = hashPin(envAdminPin || '1234');
-    insertUser.run('מנהל מערכת', adminPhone, hash, salt, 'admin', 0);
-  } else if (envAdminPin) {
-    const { hash, salt } = hashPin(envAdminPin);
-    db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, adminPhone);
-  }
-
-  // 3. Technician (0521234567)
-  const techPhone = normalizePhone(process.env.TECH_PHONE || '0521234567');
-  const envTechPin = process.env.TECH_PIN;
-  const existingTech = checkUser.get(techPhone);
-
-  if (!existingTech) {
-    const { hash, salt } = hashPin(envTechPin || '1234');
-    insertUser.run('ישראל ישראלי', techPhone, hash, salt, 'technician', 0);
-  } else if (envTechPin) {
-    const { hash, salt } = hashPin(envTechPin);
-    db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ? WHERE phone = ?').run(hash, salt, techPhone);
   }
 }
 
