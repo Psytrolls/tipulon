@@ -493,23 +493,32 @@ export default function UsersView() {
                             </button>
                           )}
 
-                          <button
-                            type="button"
-                            onClick={() => handleOpenPinModal(u)}
-                            className="p-2 rounded-xl text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
-                            title="שנה קוד PIN / סיסמה למשתמש"
-                          >
-                            <KeyRound className="w-4 h-4" />
-                          </button>
+                          {isSuperAdmin && !currentUser?.isSuperAdmin ? (
+                            <span className="text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-xl inline-flex items-center gap-1 shadow-sm">
+                              <Shield className="w-3.5 h-3.5 text-amber-600" />
+                              <span>מוגן (מנהל על)</span>
+                            </span>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPinModal(u)}
+                                className="p-2 rounded-xl text-slate-500 hover:text-purple-700 hover:bg-purple-50 transition-colors"
+                                title="שנה קוד PIN / סיסמה למשתמש"
+                              >
+                                <KeyRound className="w-4 h-4" />
+                              </button>
 
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEditModal(u)}
-                            className="p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
-                            title="ערוך שם ומספר טלפון"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditModal(u)}
+                                className="p-2 rounded-xl text-slate-500 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                                title="ערוך שם ומספר טלפון"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
 
                           {!isSelf && !isSuperAdmin && (
                             <>

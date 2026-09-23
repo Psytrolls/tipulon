@@ -198,7 +198,7 @@ router.delete('/:id', requireAdmin, (req, res) => {
   }
 });
 
-// PATCH /api/users/:id/pin - Change user PIN / Password (Admin can change any user's PIN)
+// PATCH /api/users/:id/pin - Change user PIN / Password (Admin can change technician PIN, only Super Admin can change Super Admin PIN)
 router.patch('/:id/pin', requireAdmin, (req, res) => {
   try {
     const { id } = req.params;
@@ -209,10 +209,15 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל בין 4 ל-32 תווים' });
     }
 
-    const checkStmt = db.prepare('SELECT id, full_name, phone FROM users WHERE id = ?');
+    const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin FROM users WHERE id = ?');
     const targetUser = checkStmt.get(id);
     if (!targetUser) {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    // Super Admin password protection: regular admins CANNOT change Super Admin's password!
+    if ((targetUser.is_super_admin || targetUser.phone === '0546434001') && !req.user.isSuperAdmin) {
+      return res.status(403).json({ error: 'רק מנהל העל (Super Admin) רשאי לשנות את הסיסמה של חשבון מנהל העל' });
     }
 
     const { hash, salt } = hashPin(cleanPin);
@@ -282,6 +287,17 @@ router.patch('/:id/details', requireAdmin, (req, res) => {
     const cleanPhone = normalizePhone(phone);
     if (cleanPhone.length < 9 || cleanPhone.length > 15) {
       return res.status(400).json({ error: 'מספר טלפון חייב להכיל בין 9 ל-15 ספרות' });
+    }
+
+    const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin FROM users WHERE id = ?');
+    const targetUser = checkStmt.get(id);
+    if (!targetUser) {
+      return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    // Super Admin details protection: regular admins CANNOT edit Super Admin's details!
+    if ((targetUser.is_super_admin || targetUser.phone === '0546434001') && !req.user.isSuperAdmin) {
+      return res.status(403).json({ error: 'רק מנהל העל (Super Admin) רשאי לערוך את פרטי חשבון מנהל העל' });
     }
 
     // Check if phone already taken by someone else
