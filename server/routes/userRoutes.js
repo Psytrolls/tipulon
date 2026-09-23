@@ -104,7 +104,7 @@ router.patch('/:id/role', requireAdmin, (req, res) => {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
     }
 
-    if (user.is_super_admin || user.phone === '0546434001') {
+    if (user.is_super_admin && !req.user.isSuperAdmin) {
       return res.status(403).json({ error: 'לא ניתן לשנות את תפקידו של מנהל העל (Super Admin)' });
     }
 
@@ -136,13 +136,18 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
     }
 
-    if (user.is_super_admin || user.phone === '0546434001') {
+    if (user.is_super_admin) {
       return res.status(403).json({ error: 'לא ניתן להשבית את חשבון מנהל העל (Super Admin)' });
     }
 
     const newActive = user.is_active ? 0 : 1;
     const updateStmt = db.prepare('UPDATE users SET is_active = ? WHERE id = ?');
     updateStmt.run(newActive, id);
+
+    // If deactivated, immediately revoke all sessions
+    if (newActive === 0) {
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
+    }
 
     const statusText = newActive ? 'הופעל' : 'הושבת';
     logAudit(req.user.id, req.user.fullName, 'שינוי סטטוס פעילות', 'משתמש', id, `משתמש ${statusText}`);
@@ -169,7 +174,7 @@ router.delete('/:id', requireAdmin, (req, res) => {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
     }
 
-    if (targetUser.is_super_admin || targetUser.phone === '0546434001') {
+    if (targetUser.is_super_admin) {
       return res.status(403).json({ error: 'לא ניתן למחוק את חשבון מנהל העל (Super Admin) של המערכת' });
     }
 
@@ -216,7 +221,7 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
     }
 
     // Super Admin password protection: regular admins CANNOT change Super Admin's password!
-    if ((targetUser.is_super_admin || targetUser.phone === '0546434001') && !req.user.isSuperAdmin) {
+    if (targetUser.is_super_admin && !req.user.isSuperAdmin) {
       return res.status(403).json({ error: 'רק מנהל העל (Super Admin) רשאי לשנות את הסיסמה של חשבון מנהל העל' });
     }
 
@@ -225,6 +230,9 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
 
     const updateStmt = db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ?, must_change_pin = ? WHERE id = ?');
     updateStmt.run(hash, salt, forceChange, id);
+
+    // Revoke all active sessions for this user across all devices
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(id);
 
     // Auto-unlock user so technician can log in immediately with new PIN
     unlockUserPhone(targetUser.phone);
@@ -235,7 +243,7 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
       'שינוי סיסמה ושחרור נעילה',
       'משתמש',
       id,
-      `עודכנה סיסמה ושוחררה חסימת אבטחה עבור: ${targetUser.full_name} (${targetUser.phone})`
+      `עודכנה סיסמה ובוטלו כל ההתחברויות הפעילות עבור: ${targetUser.full_name} (${targetUser.phone})`
     );
 
     res.json({ success: true, message: 'הסיסמה עודכנה והנעילה שוחררה בהצלחה' });
@@ -296,7 +304,7 @@ router.patch('/:id/details', requireAdmin, (req, res) => {
     }
 
     // Super Admin details protection: regular admins CANNOT edit Super Admin's details!
-    if ((targetUser.is_super_admin || targetUser.phone === '0546434001') && !req.user.isSuperAdmin) {
+    if (targetUser.is_super_admin && !req.user.isSuperAdmin) {
       return res.status(403).json({ error: 'רק מנהל העל (Super Admin) רשאי לערוך את פרטי חשבון מנהל העל' });
     }
 

@@ -12,34 +12,52 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+export const db = new DatabaseSync(path.join(dataDir, 'tipulon.db'));
 
-const dbPath = path.join(dataDir, 'tipulon.db');
-export const db = new DatabaseSync(dbPath);
+// Crypto helpers for PBKDF2 (220,000 iterations, SHA-512)
+const PBKDF2_ITERATIONS = 220000;
+const PBKDF2_KEYLEN = 64;
+const PBKDF2_DIGEST = 'sha512';
+const LEGACY_ITERATIONS = 10000;
 
-// Crypto helpers for PBKDF2
-export function hashPin(pin, salt = null) {
+export function hashPin(pin, salt = null, iterations = PBKDF2_ITERATIONS) {
   if (!salt) {
-    salt = crypto.randomBytes(16).toString('hex');
+    salt = crypto.randomBytes(32).toString('hex');
   }
-  const hash = crypto.pbkdf2Sync(pin, salt, 10000, 64, 'sha512').toString('hex');
-  return { hash, salt };
+  const hash = crypto.pbkdf2Sync(String(pin), salt, iterations, PBKDF2_KEYLEN, PBKDF2_DIGEST).toString('hex');
+  const storedHash = `pbkdf2$${iterations}$${hash}`;
+  return { hash: storedHash, salt };
 }
 
-export function verifyPin(pin, salt, expectedHash) {
-  if (!pin || !salt || !expectedHash) return false;
+export function verifyPin(pin, salt, storedHash) {
+  if (!pin || !salt || !storedHash) return { valid: false, needsRehash: false };
   try {
-    const hash = crypto.pbkdf2Sync(String(pin), salt, 10000, 64, 'sha512');
-    const expectedBuffer = Buffer.from(expectedHash, 'hex');
-    if (hash.length !== expectedBuffer.length) {
-      return false;
+    const cleanPin = String(pin);
+
+    // Format: pbkdf2$<iterations>$<hashHex>
+    if (storedHash.startsWith('pbkdf2$')) {
+      const parts = storedHash.split('$');
+      const iterations = parseInt(parts[1], 10) || PBKDF2_ITERATIONS;
+      const hashHex = parts[2];
+      const computed = crypto.pbkdf2Sync(cleanPin, salt, iterations, PBKDF2_KEYLEN, PBKDF2_DIGEST);
+      const expectedBuffer = Buffer.from(hashHex, 'hex');
+      if (computed.length !== expectedBuffer.length) {
+        return { valid: false, needsRehash: false };
+      }
+      const valid = crypto.timingSafeEqual(computed, expectedBuffer);
+      return { valid, needsRehash: iterations < PBKDF2_ITERATIONS };
     }
-    return crypto.timingSafeEqual(hash, expectedBuffer);
+
+    // Legacy fallback (10,000 iterations without prefix)
+    const legacyComputed = crypto.pbkdf2Sync(cleanPin, salt, LEGACY_ITERATIONS, PBKDF2_KEYLEN, PBKDF2_DIGEST);
+    const legacyExpected = Buffer.from(storedHash, 'hex');
+    if (legacyComputed.length !== legacyExpected.length) {
+      return { valid: false, needsRehash: false };
+    }
+    const valid = crypto.timingSafeEqual(legacyComputed, legacyExpected);
+    return { valid, needsRehash: valid };
   } catch {
-    return false;
+    return { valid: false, needsRehash: false };
   }
 }
 
@@ -220,16 +238,10 @@ export function initDatabase() {
   // Migration: Add must_change_pin and is_super_admin columns to users table if missing
   try {
     db.exec(`ALTER TABLE users ADD COLUMN must_change_pin INTEGER DEFAULT 0`);
-    db.exec(`UPDATE users SET must_change_pin = 1`);
   } catch (e) {}
 
   try {
     db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
-  } catch (e) {}
-
-  // Set Super Admin flag for primary admin 0546434001
-  try {
-    db.exec(`UPDATE users SET is_super_admin = 1, role = 'admin', full_name = 'יבגני קבישר' WHERE phone = '0546434001'`);
   } catch (e) {}
 
   seedInitialData();
@@ -266,21 +278,21 @@ function seedInitialData() {
     `);
   } catch (e) {}
 
-  // Seed Admin & Technician users
-  const checkUser = db.prepare('SELECT id FROM users WHERE phone = ?');
-  const insertUser = db.prepare(`
-    INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
-    VALUES (?, ?, ?, ?, ?, 1, ?, 0)
-  `);
+  // Optional: Create initial super-admin ONLY if configured via environment variables and no admin exists
+  const envAdminPhone = process.env.INIT_ADMIN_PHONE ? normalizePhone(process.env.INIT_ADMIN_PHONE) : null;
+  const envAdminPin = process.env.INIT_ADMIN_PIN || null;
+  const envAdminName = process.env.INIT_ADMIN_NAME || 'מנהל מערכת';
 
-  // 1. Primary Super Admin (0546434001 - יבגני קבישר)
-  const superAdminPhone = '0546434001';
-  const existingSuperAdmin = checkUser.get(superAdminPhone);
-  if (!existingSuperAdmin) {
-    const { hash, salt } = hashPin('1234');
-    insertUser.run('יבגני קבישר', superAdminPhone, hash, salt, 'admin', 1);
-  } else {
-    db.prepare(`UPDATE users SET is_super_admin = 1, role = 'admin', is_active = 1 WHERE phone = ?`).run(superAdminPhone);
+  if (envAdminPhone && envAdminPin) {
+    const adminCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get().count;
+    if (adminCount === 0) {
+      const { hash, salt } = hashPin(envAdminPin);
+      db.prepare(`
+        INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
+        VALUES (?, ?, ?, ?, 'admin', 1, 1, 1)
+      `).run(envAdminName, envAdminPhone, hash, salt);
+      console.log(`[SECURITY] Initial Super Admin account created for ${envAdminPhone}`);
+    }
   }
 }
 

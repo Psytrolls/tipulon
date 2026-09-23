@@ -1,35 +1,10 @@
 import express from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
-import { extractBusNumberFromImage } from '../ocr.js';
 import { validateBusNumber } from '../validators.js';
 import { getBusLiveDispatch } from '../services/dispatchService.js';
 import { syncFleetFromGov } from '../services/fleetSyncService.js';
 import { getLiveDepotsSnapshot } from '../services/depotService.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '../../uploads');
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'scan-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 4 * 1024 * 1024 }
-});
 
 const router = express.Router();
 
@@ -385,63 +360,6 @@ router.get('/search/:busNumber', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Bus search error:', err);
     res.status(500).json({ error: 'שגיאה בחיפוש אוטובוס' });
-  }
-});
-
-// POST /api/buses/scan-photo - OCR scan bus / license plate from photo
-router.post('/scan-photo', requireAuth, upload.single('photo'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'לא התקבלה תמונה לסריקה' });
-    }
-
-    const photoPath = req.file.path;
-    const photoUrl = `/uploads/${req.file.filename}`;
-
-    // Run OCR
-    const ocrResult = await extractBusNumberFromImage(photoPath);
-
-    const detectedNumber = ocrResult.detectedNumber;
-    let busInfo = null;
-
-    if (detectedNumber) {
-      const busStmt = db.prepare(`
-        SELECT b.bus_number, b.status, b.last_treatment_date, b.next_treatment_date,
-               r.technician_name as last_technician_name, r.result as last_result, r.id as last_report_id,
-               r.created_at as report_created_at
-        FROM buses b
-        LEFT JOIN reports r ON r.bus_number = b.bus_number
-        WHERE b.bus_number = ?
-        ORDER BY r.created_at DESC
-        LIMIT 1
-      `);
-      const bus = busStmt.get(detectedNumber);
-      const evalStatus = evaluateBusStatus(bus);
-
-      busInfo = {
-        exists: !!bus,
-        busNumber: detectedNumber,
-        status: evalStatus.status,
-        lastTreatmentDate: bus?.last_treatment_date || bus?.report_created_at || null,
-        nextTreatmentDate: bus?.next_treatment_date || null,
-        lastTechnicianName: bus?.last_technician_name || null,
-        canStartTreatment: evalStatus.canStartTreatment,
-        blockReason: evalStatus.blockReason,
-        message: evalStatus.message
-      };
-    }
-
-    res.json({
-      success: true,
-      photoUrl,
-      rawText: ocrResult.rawText,
-      detectedNumber,
-      candidates: ocrResult.candidates || [],
-      busInfo
-    });
-  } catch (err) {
-    console.error('Photo scan error:', err);
-    res.status(500).json({ error: 'שגיאה בסריקת התמונה' });
   }
 });
 

@@ -80,8 +80,8 @@ router.post('/login', (req, res) => {
       });
     }
 
-    const isValid = verifyPin(cleanPin, user.pin_salt, user.pin_hash);
-    if (!isValid) {
+    const verifyResult = verifyPin(cleanPin, user.pin_salt, user.pin_hash);
+    if (!verifyResult.valid) {
       const { isLocked, attemptsLeft, lockMinutes } = recordFailedLogin(cleanPhone, clientIp);
 
       logAudit(
@@ -102,8 +102,18 @@ router.post('/login', (req, res) => {
       }
 
       return res.status(401).json({
-        error: `קוד PIN / סיסמה שגויים. נותרו ${attemptsLeft} ניסיונות לפני נעילת החשבון.`
+        error: `פרטי התחברות שגויים (טלפון או סיסמה). נותרו ${attemptsLeft} ניסיונות לפני נעילת החשבון.`
       });
+    }
+
+    // Smooth upgrade / rehash legacy hashes to PBKDF2 220,000 iterations upon login
+    if (verifyResult.needsRehash) {
+      try {
+        const upgraded = hashPin(cleanPin, user.pin_salt);
+        db.prepare('UPDATE users SET pin_hash = ? WHERE id = ?').run(upgraded.hash, user.id);
+      } catch (err) {
+        console.warn('Failed to upgrade hash:', err);
+      }
     }
 
     // Reset failed attempts upon successful login
@@ -186,10 +196,13 @@ router.post('/change-password', (req, res) => {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
     }
 
-    // If currentPin is provided and user is not in forced change mode, verify it
-    if (currentPin && !user.must_change_pin) {
-      const isValidCurrent = verifyPin(String(currentPin).trim(), user.pin_salt, user.pin_hash);
-      if (!isValidCurrent) {
+    // If user is not in forced change mode, verify currentPin
+    if (!user.must_change_pin) {
+      if (!currentPin) {
+        return res.status(400).json({ error: 'נא להזין את הסיסמה הנוכחית' });
+      }
+      const verifyCurrent = verifyPin(String(currentPin).trim(), user.pin_salt, user.pin_hash);
+      if (!verifyCurrent.valid) {
         return res.status(400).json({ error: 'הסיסמה הנוכחית שהוזנה אינה נכונה' });
       }
     }
@@ -202,13 +215,27 @@ router.post('/change-password', (req, res) => {
     `);
     updateStmt.run(hash, salt, req.user.id);
 
+    // Revoke all existing sessions for this user across all devices
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').run(req.user.id);
+
+    // Issue a fresh new session
+    const newSession = createSession(req.user.id, 30);
+    const isSecure = process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https';
+
+    res.cookie('tipulon_session', newSession.token, {
+      httpOnly: true,
+      secure: isSecure,
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
     logAudit(
       req.user.id,
       req.user.fullName,
       'החלפת סיסמה',
       'משתמש',
       req.user.id,
-      'הסיסמה עודכנה בהצלחה (סיסמה מורכבת בתוקף)'
+      'הסיסמה עודכנה בהצלחה (כל שאר ההתחברויות נותקו לצורכי אבטחה)'
     );
 
     res.json({

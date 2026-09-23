@@ -70,3 +70,26 @@ export function requireAdmin(req, res, next) {
   }
   next();
 }
+
+/**
+ * Enforces server-side mandatory password change.
+ * If user has mustChangePin = true, only allow /api/auth/me, /api/auth/change-password, /api/auth/logout.
+ */
+export function mustChangePinGuard(req, res, next) {
+  if (req.user && req.user.mustChangePin) {
+    const url = req.originalUrl || req.url || '';
+    const isAllowedAuthEndpoint = (
+      url.startsWith('/api/auth/me') ||
+      url.startsWith('/api/auth/change-password') ||
+      url.startsWith('/api/auth/logout')
+    );
+
+    if (url.startsWith('/api/') && !isAllowedAuthEndpoint) {
+      return res.status(403).json({
+        error: 'חובה לעדכן סיסמה לפני המשך שימוש במערכת',
+        mustChangePin: true
+      });
+    }
+  }
+  next();
+}

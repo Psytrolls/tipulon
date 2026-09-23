@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tipulon-cache-v8';
+const CACHE_NAME = 'tipulon-cache-v9';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -29,8 +29,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   
-  // API and upload requests should always go to network directly
-  if (request.url.includes('/api/') || request.url.includes('/uploads/')) {
+  // API requests should always go to network directly
+  if (request.url.includes('/api/')) {
     return;
   }
 

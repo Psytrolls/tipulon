@@ -1,67 +1,14 @@
 import express from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import ExcelJS from 'exceljs';
 import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { evaluateBusStatus } from './busRoutes.js';
 import { validateBusNumber, validateDeviceSerialNumber } from '../validators.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const uploadsDir = path.join(__dirname, '../../uploads');
-
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Multer storage configuration
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname) || '.jpg';
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    cb(null, 'bus-' + uniqueSuffix + ext);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 4 * 1024 * 1024 // 4MB limit according to spec
-  },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('רק קובצי תמונה מורשים להעלאה'));
-    }
-  }
-});
-
 const router = express.Router();
 
-// Middleware to handle multer file size error nicely
-const handleUpload = (req, res, next) => {
-  upload.single('photo')(req, res, (err) => {
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ error: 'גודל הקובץ עולה על 4MB, נא לבחור תמונה קטנה יותר' });
-      }
-      return res.status(400).json({ error: `שגיאה בהעלאת קובץ: ${err.message}` });
-    } else if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-    next();
-  });
-};
-
 // POST /api/treatments - Submit a new treatment report
-router.post('/', requireAuth, handleUpload, (req, res) => {
+router.post('/', requireAuth, (req, res) => {
   try {
     const { busNumber, summary, result } = req.body;
     const operator = req.body.operator === 'דן בדרום' ? 'דן בדרום' : 'דן באר שבע';
@@ -136,7 +83,7 @@ router.post('/', requireAuth, handleUpload, (req, res) => {
     }
 
     const reportStatus = result === 'נדרש המשך טיפול של הלקוח' ? 'הועבר להמשך טיפול' : 'הטיפול הושלם';
-    const photoPath = req.file ? `/uploads/${req.file.filename}` : null;
+    const photoPath = null;
     // Treatment date: strictly date without time ('YYYY-MM-DD')
     const now = new Date().toISOString().slice(0, 10);
     const busLoc = existingBus?.last_known_location || existingBus?.cluster || null;

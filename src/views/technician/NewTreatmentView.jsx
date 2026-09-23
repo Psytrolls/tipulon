@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Bus, 
-  Camera, 
   CheckCircle2, 
   AlertCircle, 
   ArrowLeft, 
@@ -27,23 +26,16 @@ import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/valid
 import { generateEdiClosingText, copyTextToClipboard } from '../../utils/ediHelper';
 
 export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap, initialBusNumber }) {
-  // Wizard Steps: 1 = Bus & Photo, 2 = Device Count, 3 = Fill Devices, 4 = Summary & Decision, 5 = Review, 6 = Success
+  // Wizard Steps: 1 = Bus Selection, 2 = Device Count, 3 = Fill Devices, 4 = Summary & Decision, 5 = Review, 6 = Success
   const [step, setStep] = useState(1);
 
-  // Step 1 State: Bus & Photo & Operator
+  // Step 1 State: Bus & Operator
   const [operator, setOperator] = useState('דן באר שבע'); // 'דן באר שבע' or 'דן בדרום'
   const [busNumber, setBusNumber] = useState('');
   const [busInfo, setBusInfo] = useState(null);
   const [searchingBus, setSearchingBus] = useState(false);
-  const [scanningPhoto, setScanningPhoto] = useState(false);
   const [busError, setBusError] = useState('');
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
-  const [photoError, setPhotoError] = useState('');
-  const [detectedCandidates, setDetectedCandidates] = useState([]);
-  const [ocrSuccessMsg, setOcrSuccessMsg] = useState('');
 
-  const cameraInputRef = useRef(null);
   const [showLiveMap, setShowLiveMap] = useState(false);
   const [showSchedule, setShowSchedule] = useState(false);
 
@@ -122,102 +114,6 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
       setBusError(err.message);
     } finally {
       setSearchingBus(false);
-    }
-  };
-
-  // Fast client-side resize to 1200px before upload (speeds up scan from 20s to ~1s!)
-  const compressImageClientSide = (file) => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 1200;
-          let w = img.width;
-          let h = img.height;
-          if (w > maxDim || h > maxDim) {
-            if (w > h) {
-              h = Math.round((h * maxDim) / w);
-              w = maxDim;
-            } else {
-              w = Math.round((w * maxDim) / h);
-              h = maxDim;
-            }
-          }
-          const canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, w, h);
-          canvas.toBlob((blob) => {
-            if (blob) {
-              const compressedFile = new File([blob], file.name || 'plate.jpg', { type: 'image/jpeg' });
-              resolve(compressedFile);
-            } else {
-              resolve(file);
-            }
-          }, 'image/jpeg', 0.85);
-        };
-        img.onerror = () => resolve(file);
-        img.src = event.target.result;
-      };
-      reader.onerror = () => resolve(file);
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Handle Photo Capture + Automatic OCR Recognition
-  const handlePhotoCapture = async (e) => {
-    const file = e.target.files?.[0];
-    setPhotoError('');
-    setOcrSuccessMsg('');
-    if (!file) return;
-
-    setPhotoFile(file);
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhotoPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-
-    // Send to OCR Scan
-    setScanningPhoto(true);
-    setBusError('');
-
-    try {
-      // Compress client side: shrinks 10MB phone camera photo to ~100KB for instant response
-      const uploadFile = await compressImageClientSide(file);
-
-      const formData = new FormData();
-      formData.append('photo', uploadFile);
-
-      const res = await fetch('/api/buses/scan-photo', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'שגיאה בסריקת התמונה');
-      }
-
-      if (data.detectedNumber) {
-        setBusNumber(data.detectedNumber);
-        setDetectedCandidates(data.candidates || []);
-        setOcrSuccessMsg(`זוהה בהצלחה מספר אוטובוס: ${data.detectedNumber}`);
-        if (data.busInfo) {
-          setBusInfo(data.busInfo);
-        } else {
-          handleSearchBus(data.detectedNumber);
-        }
-      } else {
-        setOcrSuccessMsg('התמונה נקלטה, אך לא זוהה מספר ברור. ניתן להקליד את המספר ידנית למטה.');
-      }
-    } catch (err) {
-      console.error('Scan error:', err);
-      setPhotoError('לא הצלחנו לפענח את המספר מהתמונה, אנא הזן ידנית');
-    } finally {
-      setScanningPhoto(false);
     }
   };
 
@@ -376,20 +272,18 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
     setSubmitError('');
 
     try {
-      const formData = new FormData();
-      formData.append('busNumber', busNumber.trim());
-      formData.append('operator', operator);
-      formData.append('summary', summary.trim());
-      formData.append('result', decision);
-      formData.append('devices', JSON.stringify(devices));
-
-      if (photoFile) {
-        formData.append('photo', photoFile);
-      }
-
       const res = await fetch('/api/treatments', {
         method: 'POST',
-        body: formData
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          busNumber: busNumber.trim(),
+          operator,
+          summary: summary.trim(),
+          result: decision,
+          devices
+        })
       });
 
       const data = await res.json();
@@ -423,14 +317,10 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
     setStep(1);
     setBusNumber('');
     setBusInfo(null);
-    setPhotoFile(null);
-    setPhotoPreview(null);
     setDevices([]);
     setSummary('');
     setDecision('הכול תקין באוטובוס');
     setSubmittedReport(null);
-    setDetectedCandidates([]);
-    setOcrSuccessMsg('');
     setCurrentDeviceIndex(0);
   };
 
@@ -1319,13 +1209,6 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
               <span className="text-sm font-bold text-slate-600">החלטת סגירה:</span>
               <StatusBadge status={decision === 'הכול תקין באוטובוס' ? 'הטיפול הושלם' : 'הועבר להמשך טיפול'} />
             </div>
-
-            {photoPreview && (
-              <div className="pt-2">
-                <span className="text-xs font-bold text-slate-500 block mb-1">צילום שצורף / נסרק:</span>
-                <img src={photoPreview} alt="תמונה שצורפה" className="w-28 h-20 object-cover rounded-lg border border-slate-300" />
-              </div>
-            )}
           </div>
 
           <div>

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 
 import { initDatabase } from './db.js';
-import { authenticateUser } from './auth.js';
+import { authenticateUser, mustChangePinGuard } from './auth.js';
 import { startBackupScheduler } from './backupService.js';
 import { startWeeklyFleetSyncCron } from './services/fleetSyncService.js';
 import { securityHeadersMiddleware } from './securityService.js';
@@ -40,15 +40,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Static folder for uploaded photos
-const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-app.use('/uploads', express.static(uploadsDir));
-
 // Authentication session middleware
 app.use(authenticateUser);
+
+// Server-side guard: block all non-auth API calls if must_change_pin is required
+app.use(mustChangePinGuard);
 
 // API Routes
 app.use('/api/auth', authRoutes);
