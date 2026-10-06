@@ -50,15 +50,17 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
   const [currentDeviceIndex, setCurrentDeviceIndex] = useState(0);
   const [devices, setDevices] = useState([]);
 
-  // Step 4 State: Summary & Decision
+  // Step 4 State: Summary, Decision & EDI
   const [summary, setSummary] = useState('');
   const [decision, setDecision] = useState('הכול תקין באוטובוס');
+  const [isEdiClosed, setIsEdiClosed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submittedReport, setSubmittedReport] = useState(null);
   const [lastCompletedNotification, setLastCompletedNotification] = useState(null);
   const [copiedNotifBus, setCopiedNotifBus] = useState(false);
   const [copiedNotifEdi, setCopiedNotifEdi] = useState(false);
+  const [updatingNotifEdi, setUpdatingNotifEdi] = useState(false);
 
   // Fetch active products on mount
   useEffect(() => {
@@ -282,7 +284,8 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
           operator,
           summary: summary.trim(),
           result: decision,
-          devices
+          devices,
+          isEdiClosed
         })
       });
 
@@ -299,6 +302,7 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
         createdAt: data.createdAt,
         summary: summary.trim(),
         result: decision,
+        isEdiClosed: data.isEdiClosed !== undefined ? data.isEdiClosed : isEdiClosed,
         devices: [...devices]
       };
 
@@ -320,6 +324,7 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
     setDevices([]);
     setSummary('');
     setDecision('הכול תקין באוטובוס');
+    setIsEdiClosed(false);
     setSubmittedReport(null);
     setCurrentDeviceIndex(0);
   };
@@ -403,7 +408,44 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
                   className="py-1.5 px-3.5 bg-white text-emerald-950 hover:bg-emerald-50 active:scale-95 text-xs font-black rounded-xl shadow-sm inline-flex items-center gap-1.5 transition-all"
                 >
                   {copiedNotifEdi ? <Check className="w-3.5 h-3.5 text-emerald-700" /> : <Copy className="w-3.5 h-3.5 text-emerald-700" />}
-                  <span>{copiedNotifEdi ? 'הועתק טקסט סגירה לאדי! ✓' : '📋 העתק טקסט סגירה לאדי (כולל ולידטורים)'}</span>
+                  <span>{copiedNotifEdi ? 'הועתק טקסט סגירה לאדי! ✓' : '📋 העתק טקסט סגירה לאדי'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={updatingNotifEdi}
+                  onClick={async () => {
+                    try {
+                      setUpdatingNotifEdi(true);
+                      const newStatus = !lastCompletedNotification.isEdiClosed;
+                      const res = await fetch(`/api/treatments/${lastCompletedNotification.reportId}/edi`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isEdiClosed: newStatus })
+                      });
+                      if (res.ok) {
+                        setLastCompletedNotification(prev => ({ ...prev, isEdiClosed: newStatus }));
+                      }
+                    } catch (e) {
+                      console.error('Failed to toggle EDI from banner:', e);
+                    } finally {
+                      setUpdatingNotifEdi(false);
+                    }
+                  }}
+                  className={`py-1.5 px-3 rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 border ${
+                    lastCompletedNotification.isEdiClosed
+                      ? 'bg-emerald-950 text-emerald-300 border-emerald-400 hover:bg-emerald-900'
+                      : 'bg-amber-400 text-amber-950 border-amber-300 hover:bg-amber-300'
+                  } ${updatingNotifEdi ? 'opacity-50 cursor-wait' : ''}`}
+                >
+                  {updatingNotifEdi ? (
+                    <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                  ) : lastCompletedNotification.isEdiClosed ? (
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full bg-amber-900"></span>
+                  )}
+                  <span>{lastCompletedNotification.isEdiClosed ? '✓ סגור באדי' : '⚡ סמן כסגור באדי'}</span>
                 </button>
               </div>
             </div>
@@ -1149,6 +1191,27 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
             </div>
           </div>
 
+          {/* EDI Status Selection */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isEdiClosed}
+                onChange={(e) => setIsEdiClosed(e.target.checked)}
+                className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 mt-0.5"
+              />
+              <div>
+                <div className="font-extrabold text-sm text-slate-900 flex items-center gap-1.5">
+                  <span>סמן דוח זה כסגור באדי (EDI)</span>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">אופציונלי</span>
+                </div>
+                <div className="text-xs text-slate-500 mt-0.5">
+                  אם כבר סגרת או מעוניין לסמן את הדוח כסגור במערכת אדי מיד עם השמירה (ניתן לשנות בכל עת גם מדף ההיסטוריה).
+                </div>
+              </div>
+            </label>
+          </div>
+
           <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
             <button
               type="button"
@@ -1208,6 +1271,17 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
             <div className="flex items-center justify-between">
               <span className="text-sm font-bold text-slate-600">החלטת סגירה:</span>
               <StatusBadge status={decision === 'הכול תקין באוטובוס' ? 'הטיפול הושלם' : 'הועבר להמשך טיפול'} />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-slate-600">סטטוס באדי (EDI):</span>
+              <span className={`text-xs font-black px-2.5 py-1 rounded-lg border ${
+                isEdiClosed 
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
+                  : 'bg-amber-100 text-amber-800 border-amber-300'
+              }`}>
+                {isEdiClosed ? '✓ סגור באדי' : 'פתוח באדי (טרם נסגר)'}
+              </span>
             </div>
           </div>
 

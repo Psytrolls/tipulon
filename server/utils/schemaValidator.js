@@ -251,7 +251,8 @@ export function validateSubmitTreatmentSchema(body = {}) {
       operator,
       summary: summary.trim(),
       result,
-      devices: cleanedDevices
+      devices: cleanedDevices,
+      isEdiClosed: body.isEdiClosed !== undefined ? Boolean(body.isEdiClosed) : false
     }
   };
 }

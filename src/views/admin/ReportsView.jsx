@@ -528,36 +528,26 @@ export default function ReportsView({ initialReportId = null }) {
                       <StatusBadge status={report.status} />
                     </td>
                     <td className="p-3.5 text-center">
-                      {isAdmin ? (
-                        <button
-                          type="button"
-                          disabled={updatingEdiId === report.id}
-                          onClick={() => handleToggleEdi(report.id, report.is_edi_closed)}
-                          title="לחץ לשינוי סטטוס סגור באדי"
-                          className={`py-1 px-2.5 rounded-lg text-xs font-black border inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
-                            report.is_edi_closed
-                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                              : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                          } ${updatingEdiId === report.id ? 'opacity-50 cursor-wait' : ''}`}
-                        >
-                          {updatingEdiId === report.id ? (
-                            <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                          ) : report.is_edi_closed ? (
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                          )}
-                          <span>{report.is_edi_closed ? 'סגור באדי' : 'פתוח באדי'}</span>
-                        </button>
-                      ) : (
-                        <span className={`inline-flex items-center gap-1.5 py-1 px-2.5 rounded-lg text-xs font-bold border ${
+                      <button
+                        type="button"
+                        disabled={updatingEdiId === report.id}
+                        onClick={() => handleToggleEdi(report.id, report.is_edi_closed)}
+                        title="לחץ לשינוי סטטוס סגור באדי"
+                        className={`py-1 px-2.5 rounded-lg text-xs font-black border inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                           report.is_edi_closed
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
-                            : 'bg-slate-100 text-slate-600 border-slate-200'
-                        }`}>
-                          {report.is_edi_closed ? '✓ סגור באדי' : 'פתוח באדי'}
-                        </span>
-                      )}
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                        } ${updatingEdiId === report.id ? 'opacity-50 cursor-wait' : ''}`}
+                      >
+                        {updatingEdiId === report.id ? (
+                          <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                        ) : report.is_edi_closed ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        ) : (
+                          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        )}
+                        <span>{report.is_edi_closed ? 'סגור באדי' : 'פתוח באדי'}</span>
+                      </button>
                     </td>
                     <td className="p-3.5 text-slate-600">
                       {report.next_treatment_date 
@@ -627,24 +617,24 @@ export default function ReportsView({ initialReportId = null }) {
               </div>
               <div className="flex flex-col justify-center">
                 <span className="text-slate-400 block mb-1">סגור באדי</span>
-                {isAdmin ? (
-                  <button
-                    type="button"
-                    disabled={updatingEdiId === selectedReport.id}
-                    onClick={() => handleToggleEdi(selectedReport.id, selectedReport.is_edi_closed)}
-                    className={`py-1 px-2 rounded-lg text-xs font-black border transition-all text-center ${
-                      selectedReport.is_edi_closed
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
-                        : 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
-                    }`}
-                  >
-                    {selectedReport.is_edi_closed ? '✓ סגור באדי' : '✕ סמן כסגור'}
-                  </button>
-                ) : (
-                  <span className="font-bold text-slate-800">
-                    {selectedReport.is_edi_closed ? 'סגור באדי' : 'פתוח באדי'}
-                  </span>
-                )}
+                <button
+                  type="button"
+                  disabled={updatingEdiId === selectedReport.id}
+                  onClick={() => handleToggleEdi(selectedReport.id, selectedReport.is_edi_closed)}
+                  className={`py-1 px-2.5 rounded-lg text-xs font-black border transition-all text-center inline-flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
+                    selectedReport.is_edi_closed
+                      ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
+                      : 'bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200'
+                  } ${updatingEdiId === selectedReport.id ? 'opacity-50 cursor-wait' : ''}`}
+                >
+                  {updatingEdiId === selectedReport.id ? (
+                    <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                  ) : selectedReport.is_edi_closed ? (
+                    '✓ סגור באדי'
+                  ) : (
+                    '✕ סמן כסגור באדי'
+                  )}
+                </button>
               </div>
             </div>
 

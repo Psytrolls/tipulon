@@ -23,8 +23,10 @@ const exportRateLimit = createHeavyOperationRateLimit({
 // POST /api/treatments - Submit a new treatment report
 router.post('/', requireAuth, validateBody(validateSubmitTreatmentSchema), (req, res) => {
   try {
-    const { busNumber, summary, result, operator, devices } = req.body;
+    const { busNumber, summary, result, operator, devices, isEdiClosed } = req.body;
     const cleanBusNumber = busNumber;
+    const isClosedInEdi = isEdiClosed ? 1 : 0;
+    const ediClosedAt = isClosedInEdi ? new Date().toISOString() : null;
 
     // Check business rule: does this bus have an active future treatment?
     const busCheckStmt = db.prepare('SELECT bus_number, status, next_treatment_date FROM buses WHERE bus_number = ?');
@@ -45,8 +47,8 @@ router.post('/', requireAuth, validateBody(validateSubmitTreatmentSchema), (req,
 
     // Begin saving report
     const insertReportStmt = db.prepare(`
-      INSERT INTO reports (bus_number, operator, location, technician_id, technician_name, photo_path, summary, result, status, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO reports (bus_number, operator, location, technician_id, technician_name, photo_path, summary, result, status, is_edi_closed, edi_closed_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const reportResult = insertReportStmt.run(
@@ -59,6 +61,8 @@ router.post('/', requireAuth, validateBody(validateSubmitTreatmentSchema), (req,
       String(summary).trim(),
       result,
       reportStatus,
+      isClosedInEdi,
+      ediClosedAt,
       now
     );
 
@@ -226,8 +230,8 @@ router.get('/:id', requireAuth, (req, res) => {
   }
 });
 
-// PATCH /api/treatments/:id/edi - Toggle or set EDI closed status (Admin only)
-router.patch('/:id/edi', requireAdmin, validateBody(validateEdiStatusSchema), (req, res) => {
+// PATCH /api/treatments/:id/edi - Toggle or set EDI closed status (Technicians and Admins)
+router.patch('/:id/edi', requireAuth, validateBody(validateEdiStatusSchema), (req, res) => {
   try {
     const reportId = Number(req.params.id);
     const { isEdiClosed } = req.body;
