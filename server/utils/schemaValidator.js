@@ -48,6 +48,22 @@ export function validateCreateUserSchema(body = {}) {
   };
 }
 
+export function validateChangePasswordSchema(body = {}) {
+  const { currentPin, newPin } = body;
+
+  if (!newPin || typeof newPin !== 'string' || newPin.trim().length < 6) {
+    return { valid: false, error: 'הסיסמה החדשה חייבת להכיל לפחות 6 תווים' };
+  }
+
+  return {
+    valid: true,
+    data: {
+      currentPin: currentPin ? String(currentPin).trim() : '',
+      newPin: String(newPin).trim()
+    }
+  };
+}
+
 export function validateCreateProductSchema(body = {}) {
   const { name } = body;
   if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 60) {
@@ -133,5 +149,27 @@ export function validateSubmitTreatmentSchema(body = {}) {
       status,
       devices
     }
+  };
+}
+
+export function validateEdiStatusSchema(body = {}) {
+  const { is_edi_closed } = body;
+  if (typeof is_edi_closed !== 'boolean' && is_edi_closed !== 0 && is_edi_closed !== 1) {
+    return { valid: false, error: 'ערך סטטוס אדי אינו תקין (חייב להיות boolean)' };
+  }
+  return {
+    valid: true,
+    data: { is_edi_closed: Boolean(is_edi_closed) }
+  };
+}
+
+export function validateResolutionNotesSchema(body = {}) {
+  const { resolution_notes } = body;
+  if (resolution_notes && (typeof resolution_notes !== 'string' || resolution_notes.length > 500)) {
+    return { valid: false, error: 'הערות סגירה ארוכות מדי (מקסימום 500 תווים)' };
+  }
+  return {
+    valid: true,
+    data: { resolution_notes: resolution_notes ? String(resolution_notes).trim() : '' }
   };
 }

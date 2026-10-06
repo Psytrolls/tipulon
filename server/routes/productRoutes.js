@@ -1,6 +1,7 @@
 import express from 'express';
 import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
+import { validateBody, validateCreateProductSchema } from '../utils/schemaValidator.js';
 
 const router = express.Router();
 
@@ -25,14 +26,10 @@ router.get('/', requireAuth, (req, res) => {
 });
 
 // POST /api/products - Create new product (Admin only)
-router.post('/', requireAdmin, (req, res) => {
+router.post('/', requireAdmin, validateBody(validateCreateProductSchema), (req, res) => {
   try {
     const { name } = req.body;
     const cleanName = (name || '').trim();
-
-    if (!cleanName) {
-      return res.status(400).json({ error: 'נא להזין שם מוצר' });
-    }
 
     const checkStmt = db.prepare('SELECT id FROM products WHERE LOWER(name) = LOWER(?)');
     const existing = checkStmt.get(cleanName);
@@ -57,7 +54,7 @@ router.post('/', requireAdmin, (req, res) => {
 });
 
 // PUT /api/products/:id - Edit product name (Admin only)
-router.put('/:id', requireAdmin, (req, res) => {
+router.put('/:id', requireAdmin, validateBody(validateCreateProductSchema), (req, res) => {
   try {
     const { id } = req.params;
     const { name } = req.body;

@@ -9,6 +9,7 @@ import {
   recordSuccessfulLogin
 } from '../securityService.js';
 import { validatePasswordStrength } from '../utils/passwordPolicy.js';
+import { validateBody, validateChangePasswordSchema } from '../utils/schemaValidator.js';
 
 const router = express.Router();
 
@@ -164,7 +165,7 @@ router.get('/me', (req, res) => {
 });
 
 // POST /api/auth/change-password
-router.post('/change-password', (req, res) => {
+router.post('/change-password', validateBody(validateChangePasswordSchema), (req, res) => {
   if (!req.user) {
     return res.status(401).json({ error: 'משתמש אינו מחובר למערכת' });
   }

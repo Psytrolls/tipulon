@@ -35,9 +35,9 @@ app.set('trust proxy', 1);
 app.disable('x-powered-by');
 app.use(securityHeadersMiddleware);
 
-// Body Parsers & Cookies
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body Parsers & Cookies (strict 256kb limit to mitigate memory exhaustion)
+app.use(express.json({ limit: '256kb' }));
+app.use(express.urlencoded({ extended: true, limit: '256kb', parameterLimit: 100 }));
 app.use(cookieParser());
 
 // CSRF Origin verification for all mutating requests (POST, PUT, PATCH, DELETE)

@@ -38,8 +38,8 @@ export function createSession(userId, role = 'technician') {
 export function deleteSession(rawToken) {
   if (!rawToken) return;
   const tokenHash = hashSessionToken(rawToken);
-  const stmt = db.prepare('DELETE FROM sessions WHERE token_hash = ? OR token_hash = ?');
-  stmt.run(tokenHash, rawToken);
+  const stmt = db.prepare('DELETE FROM sessions WHERE token_hash = ?');
+  stmt.run(tokenHash);
 }
 
 // Periodic cleanup of expired sessions (runs every hour)
@@ -65,10 +65,10 @@ export function authenticateUser(req, res, next) {
     SELECT u.id, u.full_name, u.phone, u.role, u.is_active, u.is_super_admin, u.must_change_pin, s.expires_at
     FROM sessions s
     JOIN users u ON s.user_id = u.id
-    WHERE (s.token_hash = ? OR s.token_hash = ?) AND datetime(s.expires_at) > datetime('now')
+    WHERE s.token_hash = ? AND datetime(s.expires_at) > datetime('now')
   `);
 
-  const user = stmt.get(tokenHash, rawToken);
+  const user = stmt.get(tokenHash);
 
   if (!user || !user.is_active) {
     req.user = null;

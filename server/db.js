@@ -198,18 +198,21 @@ export function initDatabase() {
     db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
   } catch (e) {}
 
-  // Session Security Migration: Rename token to token_hash and purge expired sessions
+  // Session Security Migration: One-time purge using PRAGMA user_version
   try {
-    const tableInfo = db.prepare("PRAGMA table_info(sessions)").all();
-    const hasTokenCol = tableInfo.some(c => c.name === 'token');
-    const hasTokenHashCol = tableInfo.some(c => c.name === 'token_hash');
-    if (hasTokenCol && !hasTokenHashCol) {
-      db.exec(`ALTER TABLE sessions RENAME COLUMN token TO token_hash`);
+    const userVersion = db.prepare('PRAGMA user_version').get()?.user_version || 0;
+    if (userVersion < 2) {
+      db.exec('DELETE FROM sessions');
+      db.exec('PRAGMA user_version = 2');
+      console.log('🛡️ [Migration] Successfully executed one-time session migration (user_version = 2)');
     }
-  } catch (e) {}
+  } catch (e) {
+    console.warn('[Migration Warning]:', e.message);
+  }
 
+  // Periodic expiration purge
   try {
-    db.exec(`DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now') OR length(token_hash) != 64`);
+    db.exec(`DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')`);
   } catch (e) {}
   try {
     db.exec(`

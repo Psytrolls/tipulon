@@ -5,6 +5,12 @@ import { requireAuth, requireAdmin } from '../auth.js';
 import { evaluateBusStatus } from './busRoutes.js';
 import { validateBusNumber, validateDeviceSerialNumber } from '../validators.js';
 import { createHeavyOperationRateLimit } from '../securityService.js';
+import {
+  validateBody,
+  validateSubmitTreatmentSchema,
+  validateEdiStatusSchema,
+  validateResolutionNotesSchema
+} from '../utils/schemaValidator.js';
 
 const router = express.Router();
 const exportRateLimit = createHeavyOperationRateLimit({
@@ -278,11 +284,11 @@ router.get('/:id', requireAuth, (req, res) => {
 });
 
 // PATCH /api/treatments/:id/edi - Toggle or set EDI closed status (Admin only)
-router.patch('/:id/edi', requireAdmin, (req, res) => {
+router.patch('/:id/edi', requireAdmin, validateBody(validateEdiStatusSchema), (req, res) => {
   try {
     const reportId = Number(req.params.id);
-    const { isEdiClosed } = req.body;
-    const closed = isEdiClosed ? 1 : 0;
+    const { is_edi_closed } = req.body;
+    const closed = is_edi_closed ? 1 : 0;
     const now = closed ? new Date().toISOString() : null;
 
     const stmt = db.prepare(`
@@ -318,7 +324,7 @@ router.patch('/:id/edi', requireAdmin, (req, res) => {
 });
 
 // PATCH /api/treatments/:id/resolution - Update resolution notes (Admin only)
-router.patch('/:id/resolution', requireAdmin, (req, res) => {
+router.patch('/:id/resolution', requireAdmin, validateBody(validateResolutionNotesSchema), (req, res) => {
   try {
     const reportId = Number(req.params.id);
     const { resolutionNotes } = req.body;

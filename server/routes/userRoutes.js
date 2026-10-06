@@ -3,6 +3,7 @@ import { db, normalizePhone, hashPin, logAudit } from '../db.js';
 import { requireAdmin } from '../auth.js';
 import { unlockUserPhone, isUserPhoneLocked } from '../securityService.js';
 import { validatePasswordStrength, generateSecureTempPassword } from '../utils/passwordPolicy.js';
+import { validateBody, validateCreateUserSchema } from '../utils/schemaValidator.js';
 
 const router = express.Router();
 
@@ -29,7 +30,7 @@ router.get('/', requireAdmin, (req, res) => {
 });
 
 // POST /api/users - Add user (Admin only)
-router.post('/', requireAdmin, (req, res) => {
+router.post('/', requireAdmin, validateBody(validateCreateUserSchema), (req, res) => {
   try {
     const { fullName, phone, pin, role } = req.body;
 

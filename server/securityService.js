@@ -260,7 +260,7 @@ export function securityHeadersMiddleware(req, res, next) {
     "object-src 'none'",
     "frame-ancestors 'self'",
     "frame-src 'self' https://www.openstreetmap.org https://maps.google.com https://embed.waze.com",
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https: *.tile.openstreetmap.org",
     "font-src 'self' data:",
@@ -282,7 +282,7 @@ export function securityHeadersMiddleware(req, res, next) {
 }
 
 /**
- * CSRF & Origin Verification Guard for all state-changing HTTP methods (POST, PUT, PATCH, DELETE)
+ * Robust CSRF & Origin Verification Guard for all state-changing HTTP methods (POST, PUT, PATCH, DELETE)
  */
 export function csrfOriginGuard(req, res, next) {
   const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
@@ -290,12 +290,22 @@ export function csrfOriginGuard(req, res, next) {
     return next();
   }
 
-  const origin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
-  const host = req.headers.host;
+  let origin = req.headers.origin;
 
-  // Allow internal server-side requests or development if Origin is omitted
+  // If Origin header is absent, attempt safe extraction from Referer
+  if (!origin && req.headers.referer) {
+    try {
+      origin = new URL(req.headers.referer).origin;
+    } catch (err) {
+      return res.status(403).json({ error: 'מקור הבקשה (Referer) אינו תקין' });
+    }
+  }
+
+  const isProd = process.env.NODE_ENV === 'production';
+
+  // In production, an Origin/Referer is strictly required on mutating requests
   if (!origin) {
-    if (process.env.NODE_ENV !== 'production' || host?.includes('localhost') || host?.includes('127.0.0.1')) {
+    if (!isProd) {
       return next();
     }
     return res.status(403).json({ error: 'חסרה הגדרת Origin לבקשה מאובטחת' });
@@ -304,17 +314,11 @@ export function csrfOriginGuard(req, res, next) {
   // Define allowed origins
   const allowedOrigins = new Set([
     'https://bus.magavnegev.co.il',
-    'http://bus.magavnegev.co.il',
-    ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : [])
+    ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN.trim()] : [])
   ]);
 
-  if (host) {
-    allowedOrigins.add(`https://${host}`);
-    allowedOrigins.add(`http://${host}`);
-  }
-
-  // Dev & Localhost origins
-  if (process.env.NODE_ENV !== 'production' || host?.includes('localhost') || host?.includes('127.0.0.1')) {
+  // Allow localhost & quick trycloudflare tunnels strictly in non-production environments
+  if (!isProd) {
     allowedOrigins.add('http://localhost:3000');
     allowedOrigins.add('http://127.0.0.1:3000');
     allowedOrigins.add('http://localhost:5173');
@@ -325,15 +329,17 @@ export function csrfOriginGuard(req, res, next) {
     return next();
   }
 
-  // Cloudflare quick tunnel subdomains in dev/test
-  try {
-    const originUrl = new URL(origin);
-    if (originUrl.hostname.endsWith('.trycloudflare.com') || originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1') {
-      return next();
-    }
-  } catch (e) {}
+  // Check trycloudflare subdomain only in non-production mode
+  if (!isProd) {
+    try {
+      const parsed = new URL(origin);
+      if (parsed.hostname.endsWith('.trycloudflare.com') || parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        return next();
+      }
+    } catch (e) {}
+  }
 
-  console.warn(`⚠️ [CSRF] Blocked request from untrusted origin: ${origin} on ${req.method} ${req.path}`);
+  console.warn(`⚠️ [CSRF] Blocked mutating request from untrusted origin: ${origin} on ${req.method} ${req.path}`);
   return res.status(403).json({ error: 'מקור הבקשה (Origin) אינו מורשה לביצוע פעולה זו' });
 }
 

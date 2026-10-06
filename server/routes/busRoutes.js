@@ -5,8 +5,15 @@ import { validateBusNumber } from '../validators.js';
 import { getBusLiveDispatch } from '../services/dispatchService.js';
 import { syncFleetFromGov } from '../services/fleetSyncService.js';
 import { getLiveDepotsSnapshot } from '../services/depotService.js';
+import { createHeavyOperationRateLimit } from '../securityService.js';
+import { validateBody, validateScheduleNextTreatmentSchema } from '../utils/schemaValidator.js';
 
 const router = express.Router();
+const fleetSyncRateLimit = createHeavyOperationRateLimit({
+  windowMs: 10 * 60 * 1000,
+  maxRequests: 5,
+  message: 'בוצעו יותר מדי בקשות לסנכרון צי. נא להמתין 10 דקות.'
+});
 
 // Helper to evaluate and update bus status based on dates and intervals
 export function evaluateBusStatus(bus) {
@@ -143,7 +150,7 @@ router.get('/:busNumber/live-dispatch', requireAuth, async (req, res) => {
 });
 
 // POST /api/buses/sync-fleet - Trigger admin sync from data.gov.il
-router.post('/sync-fleet', requireAdmin, async (req, res) => {
+router.post('/sync-fleet', requireAdmin, fleetSyncRateLimit, async (req, res) => {
   try {
     const result = await syncFleetFromGov();
     logAudit(
