@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
+import { validatePasswordStrength } from './utils/passwordPolicy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -326,6 +327,17 @@ function seedInitialData() {
   if (envAdminPhone && envAdminPin) {
     const adminCount = db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'admin'").get().count;
     if (adminCount === 0) {
+      const policy = validatePasswordStrength(envAdminPin, {
+        phone: envAdminPhone,
+        fullName: envAdminName,
+        role: 'admin'
+      });
+
+      if (!policy.valid) {
+        console.error(`❌ [SECURITY] Cannot bootstrap initial admin: ${policy.error}. Please provide a strong password for INIT_ADMIN_PIN.`);
+        return;
+      }
+
       const { hash, salt } = hashPin(envAdminPin);
       db.prepare(`
         INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
