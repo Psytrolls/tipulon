@@ -19,12 +19,19 @@ if (!fs.existsSync(backupsDir)) {
 
 let lastBackupDate = null;
 
+function isWeakOrTemplateSecret(secret) {
+  if (!secret || typeof secret !== 'string') return true;
+  const lower = secret.toLowerCase().trim();
+  const blockedPrefixes = ['replace_with_', 'your_secret_', 'changeme', 'example_', 'default_'];
+  return blockedPrefixes.some(prefix => lower.startsWith(prefix));
+}
+
 // Derive a deterministic 32-byte AES-256 key strictly from BACKUP_ENCRYPTION_KEY environment variable
 function getBackupKey() {
   const secret = process.env.BACKUP_ENCRYPTION_KEY;
 
-  if (!secret || Buffer.byteLength(secret, 'utf8') < 32) {
-    throw new Error('BACKUP_ENCRYPTION_KEY must be configured and contain at least 32 bytes');
+  if (!secret || Buffer.byteLength(secret, 'utf8') < 32 || isWeakOrTemplateSecret(secret)) {
+    throw new Error('BACKUP_ENCRYPTION_KEY must be configured, contain at least 32 bytes, and not use placeholder values');
   }
 
   return crypto.createHash('sha256').update(secret).digest();
@@ -224,8 +231,9 @@ async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
  * Start the daily backup scheduler
  */
 export function startBackupScheduler() {
-  if (!process.env.BACKUP_ENCRYPTION_KEY || Buffer.byteLength(process.env.BACKUP_ENCRYPTION_KEY, 'utf8') < 32) {
-    console.warn('⚠️ [Backup] BACKUP_ENCRYPTION_KEY is not configured or shorter than 32 bytes. Backup encryption is disabled until configured.');
+  const key = process.env.BACKUP_ENCRYPTION_KEY;
+  if (!key || Buffer.byteLength(key, 'utf8') < 32 || isWeakOrTemplateSecret(key)) {
+    console.warn('⚠️ [Backup] BACKUP_ENCRYPTION_KEY is not configured, shorter than 32 bytes, or using a placeholder value. Backup encryption is disabled until configured.');
     return;
   }
 

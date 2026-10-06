@@ -12,7 +12,7 @@ Usage:
   node server/initSuperAdmin.js <phone> [pin] [fullName]
 
 Example:
-  node server/initSuperAdmin.js 0501234567 "AdminSecurePass#2026" "מנהל מערכת"
+  node server/initSuperAdmin.js 0500000000 "AdminSecurePass#2026" "System Administrator"
 `);
   process.exit(1);
 }

@@ -19,12 +19,12 @@ export function validatePasswordStrength(password, context = {}) {
 
   const clean = password.trim();
 
-  // Minimum length check
-  const minLen = context.role === 'admin' ? 8 : 6;
+  // Minimum length check (12 for admins, 6 for technicians)
+  const minLen = context.role === 'admin' ? 12 : 6;
   if (clean.length < minLen) {
     return {
       valid: false,
-      error: `הסיסמה חייבת להכיל לפחות ${minLen} תווים`
+      error: `הסיסמה חייבת להכיל לפחות ${minLen} תווים עבור תפקיד זה`
     };
   }
 
