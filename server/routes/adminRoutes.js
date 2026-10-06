@@ -2,6 +2,7 @@ import express from 'express';
 import { db, logAudit } from '../db.js';
 import { requireAdmin, requireSuperAdmin } from '../auth.js';
 import { createHeavyOperationRateLimit } from '../securityService.js';
+import { safeError, safeLog, safeWarn } from '../utils/logger.js';
 
 const router = express.Router();
 const backupRateLimit = createHeavyOperationRateLimit({
@@ -122,7 +123,7 @@ router.get('/dashboard', requireAdmin, (req, res) => {
       recentReports
     });
   } catch (err) {
-    console.error('Dashboard metrics error:', err);
+    safeError('Dashboard metrics error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת מדדי לוח בקרה' });
   }
 });
@@ -141,7 +142,7 @@ router.get('/follow-up-queue', requireAdmin, (req, res) => {
     const queue = stmt.all();
     res.json(queue);
   } catch (err) {
-    console.error('Follow-up queue error:', err);
+    safeError('Follow-up queue error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת תור המשך טיפול' });
   }
 });
@@ -200,7 +201,7 @@ router.post('/resolve-follow-up', requireAdmin, (req, res) => {
 
     res.json({ success: true, busNumber });
   } catch (err) {
-    console.error('Resolve follow-up error:', err);
+    safeError('Resolve follow-up error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון סטטוס' });
   }
 });
@@ -217,7 +218,7 @@ router.get('/audit-logs', requireAdmin, (req, res) => {
     const logs = stmt.all();
     res.json(logs);
   } catch (err) {
-    console.error('Audit logs error:', err);
+    safeError('Audit logs error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת יומן פעולות' });
   }
 });
@@ -235,6 +236,7 @@ router.get('/backups', requireSuperAdmin, (req, res) => {
     const backups = listBackups();
     res.json(backups);
   } catch (err) {
+    safeError('List backups error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת רשימת הגיבויים' });
   }
 });
@@ -253,7 +255,7 @@ router.post('/backups/create', requireSuperAdmin, backupRateLimit, async (req, r
     );
     res.json(result);
   } catch (err) {
-    console.error('Manual backup error:', err);
+    safeError('Manual backup error:', err);
     res.status(500).json({ error: 'שגיאה ביצירת גיבוי' });
   }
 });

@@ -1,4 +1,5 @@
 import { db } from '../db.js';
+import { safeLog, safeWarn, safeError } from '../utils/logger.js';
 
 const DATA_GOV_RESOURCE_ID = '91d298ed-a260-4f93-9d50-d5e3c5b82ce1';
 const DATA_GOV_API_URL = 'https://data.gov.il/api/3/action/datastore_search';
@@ -7,7 +8,7 @@ const DATA_GOV_API_URL = 'https://data.gov.il/api/3/action/datastore_search';
  * Synchronizes the bus fleet registry from the Israeli Ministry of Transport (data.gov.il)
  */
 export async function syncFleetFromGov() {
-  console.log('🔄 [FleetSync] Starting fleet synchronization from data.gov.il...');
+  safeLog('🔄 [FleetSync] Starting fleet synchronization from data.gov.il...');
   const operators = [
     { query: 'דן באר שבע', canonicalName: 'דן באר שבע' },
     { query: 'דן בדרום', canonicalName: 'דן בדרום' }
@@ -96,23 +97,23 @@ export async function syncFleetFromGov() {
         }
         db.exec('COMMIT');
         results[op.canonicalName] = opCount;
-        console.log(`✅ [FleetSync] Synced ${opCount} buses for ${op.canonicalName}`);
+        safeLog(`✅ [FleetSync] Synced ${opCount} buses for ${op.canonicalName}`);
       } catch (err) {
         db.exec('ROLLBACK');
         throw err;
       }
     } catch (err) {
-      console.error(`❌ [FleetSync] Failed syncing for ${op.canonicalName}:`, err.message);
+      safeError(`❌ [FleetSync] Failed syncing for ${op.canonicalName}:`, err);
       results[op.canonicalName] = { error: err.message };
     }
   }
 
   const totalBuses = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
-  console.log(`🚌 [FleetSync] Sync complete. Total buses in database now: ${totalBuses} (Added: ${totalAdded}, Updated: ${totalUpdated})`);
+  safeLog(`🚌 [FleetSync] Sync complete. Total buses in database now: ${totalBuses} (Added: ${totalAdded}, Updated: ${totalUpdated})`);
 
   // Asynchronously harvest real short numbers from Dan Ops API in background
   setTimeout(() => {
-    harvestShortNumbersFromOps().catch(err => console.warn('Harvest notice:', err.message));
+    harvestShortNumbersFromOps().catch(err => safeWarn('Harvest notice:', err.message));
   }, 1000);
 
   return {
@@ -128,7 +129,7 @@ export async function syncFleetFromGov() {
  * Automatically harvests real internal short numbers and locations from the Dan Ops API
  */
 export async function harvestShortNumbersFromOps() {
-  console.log('🔍 [FleetSync] Harvesting real short numbers and locations from Dan Ops API...');
+  safeLog('🔍 [FleetSync] Harvesting real short numbers and locations from Dan Ops API...');
   const buses = db.prepare('SELECT bus_number, operator FROM buses').all();
   let updatedCount = 0;
 
@@ -165,7 +166,7 @@ export async function harvestShortNumbersFromOps() {
     }));
   }
 
-  console.log(`✅ [FleetSync] Successfully harvested real short numbers for ${updatedCount} buses from Dan live system.`);
+  safeLog(`✅ [FleetSync] Successfully harvested real short numbers for ${updatedCount} buses from Dan live system.`);
   return updatedCount;
 }
 
@@ -174,21 +175,21 @@ export async function harvestShortNumbersFromOps() {
  * Runs every Sunday at 03:00 AM
  */
 export function startWeeklyFleetSyncCron() {
-  console.log('⏰ [FleetSync] Initialized weekly fleet synchronization scheduler.');
+  safeLog('⏰ [FleetSync] Initialized weekly fleet synchronization scheduler.');
 
   // Run automatically on first launch
   setTimeout(async () => {
     try {
       const busCount = db.prepare('SELECT COUNT(*) as count FROM buses').get().count;
       if (busCount < 200) {
-        console.log(`🚌 [FleetSync] Initial database has only ${busCount} buses. Running initial full fleet import from data.gov.il...`);
+        safeLog(`🚌 [FleetSync] Initial database has only ${busCount} buses. Running initial full fleet import from data.gov.il...`);
         await syncFleetFromGov();
       } else {
-        console.log(`🚌 [FleetSync] Database has ${busCount} buses. Refreshing live short numbers from Dan Ops API...`);
+        safeLog(`🚌 [FleetSync] Database has ${busCount} buses. Refreshing live short numbers from Dan Ops API...`);
         await harvestShortNumbersFromOps();
       }
     } catch (e) {
-      console.warn('Initial fleet sync notice:', e.message);
+      safeWarn('Initial fleet sync notice:', e.message);
     }
   }, 4000);
 
@@ -199,11 +200,11 @@ export function startWeeklyFleetSyncCron() {
       const now = new Date();
       // 0 = Sunday, 3 = 03:00 AM
       if (now.getDay() === 0 && now.getHours() === 3) {
-        console.log('⏰ [FleetSync] Sunday 03:00 AM triggered: Running weekly fleet sync...');
+        safeLog('⏰ [FleetSync] Sunday 03:00 AM triggered: Running weekly fleet sync...');
         await syncFleetFromGov();
       }
     } catch (e) {
-      console.error('Weekly fleet sync error:', e);
+      safeError('Weekly fleet sync error:', e);
     }
   }, ONE_HOUR);
 }

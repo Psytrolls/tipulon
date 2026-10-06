@@ -6,7 +6,7 @@
 const SENSITIVE_KEYS = new Set([
   'password', 'pin', 'token', 'token_hash', 'secret', 'session_secret',
   'backup_encryption_key', 'cookie', 'tipulon_session', 'pass', 'smtp_pass',
-  'authorization', 'auth'
+  'authorization', 'auth', 'init_admin_pin', 'init_admin_phone', 'newpin', 'currentpin'
 ]);
 
 function sanitizeData(data, depth = 0) {
@@ -22,7 +22,14 @@ function sanitizeData(data, depth = 0) {
   const clean = {};
   for (const [key, value] of Object.entries(data)) {
     const lowerKey = key.toLowerCase();
-    if (SENSITIVE_KEYS.has(lowerKey) || lowerKey.includes('pass') || lowerKey.includes('secret') || lowerKey.includes('token') || lowerKey.includes('cookie')) {
+    if (
+      SENSITIVE_KEYS.has(lowerKey) || 
+      lowerKey.includes('pass') || 
+      lowerKey.includes('secret') || 
+      lowerKey.includes('token') || 
+      lowerKey.includes('cookie') || 
+      lowerKey.includes('pin')
+    ) {
       clean[key] = '***REDACTED***';
     } else if (typeof value === 'object' && value !== null) {
       clean[key] = sanitizeData(value, depth + 1);
@@ -57,7 +64,10 @@ export function safeError(message, err = null) {
 
   if (err instanceof Error) {
     if (process.env.NODE_ENV === 'production') {
-      console.error(`${message} | Error: ${err.message}`);
+      console.error(message, {
+        name: err.name || 'Error',
+        code: err.code || 'INTERNAL_ERROR'
+      });
     } else {
       console.error(`${message}:`, err.stack || err.message);
     }

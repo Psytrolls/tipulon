@@ -10,6 +10,7 @@ import {
 } from '../securityService.js';
 import { validatePasswordStrength } from '../utils/passwordPolicy.js';
 import { validateBody, validateChangePasswordSchema } from '../utils/schemaValidator.js';
+import { safeError, safeWarn } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -114,7 +115,7 @@ router.post('/login', (req, res) => {
         const upgraded = hashPin(cleanPin, user.pin_salt);
         db.prepare('UPDATE users SET pin_hash = ? WHERE id = ?').run(upgraded.hash, user.id);
       } catch (err) {
-        console.warn('Failed to upgrade hash:', err);
+        safeWarn('Failed to upgrade hash:', err);
       }
     }
 
@@ -148,7 +149,7 @@ router.post('/login', (req, res) => {
       }
     });
   } catch (err) {
-    console.error('Login error:', err);
+    safeError('Login error:', err);
     res.status(500).json({ error: 'שגיאה פנימית בהתחברות' });
   }
 });
@@ -241,7 +242,7 @@ router.post('/change-password', validateBody(validateChangePasswordSchema), (req
       message: 'הסיסמה עודכנה בהצלחה!'
     });
   } catch (err) {
-    console.error('Change password error:', err);
+    safeError('Change password error:', err);
     res.status(500).json({ error: 'שגיאה פנימית בעדכון הסיסמה' });
   }
 });

@@ -4,6 +4,7 @@ import zlib from 'node:zlib';
 import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'node:url';
+import { safeLog, safeWarn, safeError } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -102,7 +103,7 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
     lastBackupDate = dateStr;
     const sizeKb = (encryptedPayload.length / 1024).toFixed(1);
 
-    console.log(`🛡️ [Backup] Created AES-256-GCM encrypted backup: ${filename} (${sizeKb} KB) [Reason: ${reason}]`);
+    safeLog(`🛡️ [Backup] Created AES-256-GCM encrypted backup: ${filename} (${sizeKb} KB) [Reason: ${reason}]`);
 
     // Clean up old backups (keep last 30)
     pruneOldBackups(30);
@@ -125,7 +126,7 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
       reason
     };
   } catch (err) {
-    console.error('❌ [Backup] Failed to create encrypted database backup:', err);
+    safeError('❌ [Backup] Failed to create encrypted database backup:', err);
     throw err;
   }
 }
@@ -148,11 +149,11 @@ function pruneOldBackups(maxKeep = 30) {
       const toDelete = files.slice(maxKeep);
       for (const item of toDelete) {
         fs.unlinkSync(item.path);
-        console.log(`🧹 [Backup] Pruned old backup: ${item.name}`);
+        safeLog(`🧹 [Backup] Pruned old backup: ${item.name}`);
       }
     }
   } catch (e) {
-    console.warn('⚠️ [Backup] Error pruning old backups:', e.message);
+    safeWarn('⚠️ [Backup] Error pruning old backups:', e.message);
   }
 }
 
@@ -221,9 +222,9 @@ async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
       ]
     });
 
-    console.log(`📧 [Backup] Encrypted backup email successfully sent to ${process.env.BACKUP_EMAIL}`);
+    safeLog(`📧 [Backup] Encrypted backup email successfully sent to ${process.env.BACKUP_EMAIL}`);
   } catch (err) {
-    console.warn('⚠️ [Backup] Could not send backup email (check SMTP settings):', err.message);
+    safeWarn('⚠️ [Backup] Could not send backup email (check SMTP settings):', err.message);
   }
 }
 
@@ -239,12 +240,12 @@ export function purgeLegacyUnencryptedBackups() {
         const fullPath = path.join(backupsDir, f);
         try {
           fs.unlinkSync(fullPath);
-          console.log(`🛡️ [Backup] Safely purged unencrypted legacy backup: ${f}`);
+          safeLog(`🛡️ [Backup] Safely purged unencrypted legacy backup: ${f}`);
         } catch (e) {}
       }
     }
   } catch (err) {
-    console.warn('⚠️ [Backup] Notice during backup purge:', err.message);
+    safeWarn('⚠️ [Backup] Notice during backup purge:', err.message);
   }
 }
 
@@ -256,11 +257,11 @@ export function startBackupScheduler() {
 
   const key = process.env.BACKUP_ENCRYPTION_KEY;
   if (!key || Buffer.byteLength(key, 'utf8') < 32 || isWeakOrTemplateSecret(key)) {
-    console.warn('⚠️ [Backup] BACKUP_ENCRYPTION_KEY is not configured, shorter than 32 bytes, or using a placeholder value. Backup encryption is disabled until configured.');
+    safeWarn('⚠️ [Backup] BACKUP_ENCRYPTION_KEY is not configured, shorter than 32 bytes, or using a placeholder value. Backup encryption is disabled until configured.');
     return;
   }
 
-  console.log('⏰ [Backup] Backup service initialized with AES-256-GCM encryption.');
+  safeLog('⏰ [Backup] Backup service initialized with AES-256-GCM encryption.');
 
   // Run on startup if no backup exists for today
   setTimeout(async () => {
@@ -268,13 +269,13 @@ export function startBackupScheduler() {
       const today = new Date().toISOString().slice(0, 10);
       const existingToday = listBackups().some(b => b.filename.includes(today));
       if (!existingToday) {
-        console.log('🛡️ [Backup] No backup found for today, running initial startup backup...');
+        safeLog('🛡️ [Backup] No backup found for today, running initial startup backup...');
         await createBackup({ reason: 'startup' });
       } else {
-        console.log('🛡️ [Backup] Today\'s backup already exists.');
+        safeLog('🛡️ [Backup] Today\'s backup already exists.');
       }
     } catch (e) {
-      console.warn('Startup backup notice:', e.message);
+      safeWarn('Startup backup notice:', e.message);
     }
   }, 3000);
 
@@ -290,11 +291,11 @@ export function startBackupScheduler() {
       const targetHour = Number(process.env.BACKUP_HOUR) || 2;
 
       if (currentHour === targetHour && lastBackupDate !== today) {
-        console.log(`⏰ [Backup] Running nightly scheduled backup at ${currentHour}:00...`);
+        safeLog(`⏰ [Backup] Running nightly scheduled backup at ${currentHour}:00...`);
         await createBackup({ reason: 'nightly_cron' });
       }
     } catch (e) {
-      console.error('Scheduled backup error:', e);
+      safeError('Scheduled backup error:', e);
     }
   }, CHECK_INTERVAL);
 }

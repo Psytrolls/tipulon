@@ -9,6 +9,7 @@ import { authenticateUser, mustChangePinGuard } from './auth.js';
 import { startBackupScheduler } from './backupService.js';
 import { startWeeklyFleetSyncCron } from './services/fleetSyncService.js';
 import { securityHeadersMiddleware, csrfOriginGuard, generalApiRateLimit } from './securityService.js';
+import { safeError } from './utils/logger.js';
 
 import authRoutes from './routes/authRoutes.js';
 import busRoutes from './routes/busRoutes.js';
@@ -93,6 +94,6 @@ async function startServer() {
 }
 
 startServer().catch((err) => {
-  console.error('Failed to start server:', err);
+  safeError('Failed to start server:', err);
   process.exit(1);
 });

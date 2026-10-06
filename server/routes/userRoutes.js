@@ -3,7 +3,14 @@ import { db, normalizePhone, hashPin, logAudit } from '../db.js';
 import { requireAdmin } from '../auth.js';
 import { unlockUserPhone, isUserPhoneLocked } from '../securityService.js';
 import { validatePasswordStrength, generateSecureTempPassword } from '../utils/passwordPolicy.js';
-import { validateBody, validateCreateUserSchema } from '../utils/schemaValidator.js';
+import {
+  validateBody,
+  validateCreateUserSchema,
+  validateUpdateUserRoleSchema,
+  validateUpdateUserPinSchema,
+  validateUpdateUserDetailsSchema
+} from '../utils/schemaValidator.js';
+import { safeError, safeLog, safeWarn } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -24,7 +31,7 @@ router.get('/', requireAdmin, (req, res) => {
     }));
     res.json(enrichedUsers);
   } catch (err) {
-    console.error('Fetch users error:', err);
+    safeError('Fetch users error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת משתמשים' });
   }
 });
@@ -35,20 +42,9 @@ router.post('/', requireAdmin, validateBody(validateCreateUserSchema), (req, res
     const { fullName, phone, pin, role } = req.body;
 
     const cleanName = String(fullName || '').trim();
-    if (!cleanName) {
-      return res.status(400).json({ error: 'נא להזין שם מלא' });
-    }
-
     const cleanPhone = normalizePhone(phone);
-    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
-      return res.status(400).json({ error: 'מספר טלפון חייב להכיל בין 9 ל-15 ספרות' });
-    }
-
     const validRoles = ['technician', 'admin'];
     const chosenRole = role || 'technician';
-    if (!validRoles.includes(chosenRole)) {
-      return res.status(400).json({ error: 'תפקיד לא חוקי (בחר טכנאי או מנהל)' });
-    }
 
     // Use provided PIN or auto-generate secure 12-char temp password
     let finalPin = String(pin || '').trim();
@@ -97,20 +93,16 @@ router.post('/', requireAdmin, validateBody(validateCreateUserSchema), (req, res
       tempPassword: finalPin
     });
   } catch (err) {
-    console.error('Create user error:', err);
+    safeError('Create user error:', err);
     res.status(500).json({ error: 'שגיאה ביצירת משתמש חדש' });
   }
 });
 
 // PATCH /api/users/:id/role - Change user role (Admin only)
-router.patch('/:id/role', requireAdmin, (req, res) => {
+router.patch('/:id/role', requireAdmin, validateBody(validateUpdateUserRoleSchema), (req, res) => {
   try {
     const { id } = req.params;
     const { role } = req.body;
-
-    if (role !== 'technician' && role !== 'admin') {
-      return res.status(400).json({ error: 'תפקיד לא חוקי' });
-    }
 
     const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin, role FROM users WHERE id = ?');
     const user = checkStmt.get(id);
@@ -130,7 +122,7 @@ router.patch('/:id/role', requireAdmin, (req, res) => {
 
     res.json({ success: true, id: Number(id), role });
   } catch (err) {
-    console.error('Update user role error:', err);
+    safeError('Update user role error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון תפקיד משתמש' });
   }
 });
@@ -168,7 +160,7 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
 
     res.json({ success: true, id: Number(id), is_active: newActive });
   } catch (err) {
-    console.error('Toggle user active error:', err);
+    safeError('Toggle user active error:', err);
     res.status(500).json({ error: 'שגיאה בשינוי סטטוס משתמש' });
   }
 });
@@ -212,13 +204,13 @@ router.delete('/:id', requireAdmin, (req, res) => {
 
     res.json({ success: true, message: 'המשתמש נמחק בהצלחה מהמערכת' });
   } catch (err) {
-    console.error('Delete user error:', err);
+    safeError('Delete user error:', err);
     res.status(500).json({ error: 'שגיאה במחיקת המשתמש' });
   }
 });
 
 // PATCH /api/users/:id/pin - Change user PIN / Password (Admin can change technician PIN, only Super Admin can change Super Admin PIN)
-router.patch('/:id/pin', requireAdmin, (req, res) => {
+router.patch('/:id/pin', requireAdmin, validateBody(validateUpdateUserPinSchema), (req, res) => {
   try {
     const { id } = req.params;
     const { newPin } = req.body;
@@ -277,7 +269,7 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
       tempPassword: finalPin
     });
   } catch (err) {
-    console.error('Update PIN error:', err);
+    safeError('Update PIN error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון קוד PIN' });
   }
 });
@@ -305,26 +297,19 @@ router.post('/:id/unlock', requireAdmin, (req, res) => {
 
     res.json({ success: true, message: 'נעילת החשבון שוחררה בהצלחה' });
   } catch (err) {
-    console.error('Unlock user error:', err);
+    safeError('Unlock user error:', err);
     res.status(500).json({ error: 'שגיאה בשחרור נעילת המשתמש' });
   }
 });
 
 // PATCH /api/users/:id/details - Update full name or phone number
-router.patch('/:id/details', requireAdmin, (req, res) => {
+router.patch('/:id/details', requireAdmin, validateBody(validateUpdateUserDetailsSchema), (req, res) => {
   try {
     const { id } = req.params;
     const { fullName, phone } = req.body;
 
     const cleanName = String(fullName || '').trim();
-    if (!cleanName) {
-      return res.status(400).json({ error: 'שם מלא הוא שדה חובה' });
-    }
-
     const cleanPhone = normalizePhone(phone);
-    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
-      return res.status(400).json({ error: 'מספר טלפון חייב להכיל בין 9 ל-15 ספרות' });
-    }
 
     const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin FROM users WHERE id = ?');
     const targetUser = checkStmt.get(id);
@@ -358,7 +343,7 @@ router.patch('/:id/details', requireAdmin, (req, res) => {
 
     res.json({ success: true, id: Number(id), full_name: cleanName, phone: cleanPhone });
   } catch (err) {
-    console.error('Update user details error:', err);
+    safeError('Update user details error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון פרטי משתמש' });
   }
 });

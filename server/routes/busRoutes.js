@@ -7,6 +7,7 @@ import { syncFleetFromGov } from '../services/fleetSyncService.js';
 import { getLiveDepotsSnapshot } from '../services/depotService.js';
 import { createHeavyOperationRateLimit } from '../securityService.js';
 import { validateBody, validateScheduleNextTreatmentSchema } from '../utils/schemaValidator.js';
+import { safeError, safeLog, safeWarn } from '../utils/logger.js';
 
 const router = express.Router();
 const fleetSyncRateLimit = createHeavyOperationRateLimit({
@@ -131,7 +132,7 @@ router.get('/autocomplete', requireAuth, (req, res) => {
     const matches = db.prepare(sql).all(...params);
     res.json({ matches });
   } catch (err) {
-    console.error('Bus autocomplete error:', err);
+    safeError('Bus autocomplete error:', err);
     res.status(500).json({ error: 'שגיאה בהשלמה אוטומטית' });
   }
 });
@@ -144,7 +145,7 @@ router.get('/:busNumber/live-dispatch', requireAuth, async (req, res) => {
     const dispatch = await getBusLiveDispatch(busNumber, operator);
     res.json(dispatch);
   } catch (err) {
-    console.error('Live dispatch error:', err);
+    safeError('Live dispatch error:', err);
     res.status(500).json({ error: 'שגיאה בשליפת סידור עבודה' });
   }
 });
@@ -163,7 +164,7 @@ router.post('/sync-fleet', requireAdmin, fleetSyncRateLimit, async (req, res) =>
     );
     res.json(result);
   } catch (err) {
-    console.error('Fleet sync error:', err);
+    safeError('Fleet sync error:', err);
     res.status(500).json({ error: 'שגיאה בסנכרון צי מול משרד התחבורה' });
   }
 });
@@ -174,7 +175,7 @@ router.get('/depots-live', requireAuth, async (req, res) => {
     const snapshot = await getLiveDepotsSnapshot();
     res.json(snapshot);
   } catch (err) {
-    console.error('Depots live error:', err);
+    safeError('Depots live error:', err);
     res.status(500).json({ error: 'שגיאה בשליפת מפת חניונים חיה' });
   }
 });
@@ -296,7 +297,7 @@ router.get('/', requireAuth, (req, res) => {
       buses
     });
   } catch (err) {
-    console.error('Fleet list error:', err);
+    safeError('Fleet list error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת צי האוטובוסים' });
   }
 });
@@ -365,26 +366,18 @@ router.get('/search/:busNumber', requireAuth, async (req, res) => {
       liveDispatch
     });
   } catch (err) {
-    console.error('Bus search error:', err);
+    safeError('Bus search error:', err);
     res.status(500).json({ error: 'שגיאה בחיפוש אוטובוס' });
   }
 });
 
 // POST /api/buses/next-treatment (Manager only)
-router.post('/next-treatment', requireAdmin, (req, res) => {
+router.post('/next-treatment', requireAdmin, validateBody(validateScheduleNextTreatmentSchema), (req, res) => {
   try {
     const { busNumber, nextTreatmentDate } = req.body;
 
-    if (!busNumber || !nextTreatmentDate) {
-      return res.status(400).json({ error: 'נא להזין מספר אוטובוס ותאריך טיפול הבא' });
-    }
-
     const cleanBusNumber = String(busNumber).replace(/[^0-9]/g, '').trim();
     const dateObj = new Date(nextTreatmentDate);
-    if (isNaN(dateObj.getTime())) {
-      return res.status(400).json({ error: 'תאריך טיפול הבא אינו תקין' });
-    }
-
     const now = new Date();
     const status = dateObj > now ? 'טיפול בתוקף' : 'נדרש טיפול';
 
@@ -423,7 +416,7 @@ router.post('/next-treatment', requireAdmin, (req, res) => {
       status
     });
   } catch (err) {
-    console.error('Update next treatment error:', err);
+    safeError('Update next treatment error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון מועד טיפול הבא' });
   }
 });

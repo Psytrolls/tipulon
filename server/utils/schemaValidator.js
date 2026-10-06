@@ -2,6 +2,8 @@
  * Centralized Schema Validation for Mutating API Routes
  */
 
+import { validateBusNumber, validateDeviceSerialNumber } from '../validators.js';
+
 export function validateBody(validatorFn) {
   return (req, res, next) => {
     try {
@@ -9,9 +11,9 @@ export function validateBody(validatorFn) {
       if (!result.valid) {
         return res.status(400).json({ error: result.error });
       }
-      req.validatedBody = result.data;
+      req.body = result.data;
       next();
-    } catch (err) {
+    } catch {
       return res.status(400).json({ error: 'מבנה הבקשה אינו תקין' });
     }
   };
@@ -44,6 +46,62 @@ export function validateCreateUserSchema(body = {}) {
       fullName: fullName.trim(),
       role: role || 'technician',
       pin: pin ? String(pin).trim() : null
+    }
+  };
+}
+
+export function validateUpdateUserRoleSchema(body = {}) {
+  const { role } = body;
+  const validRoles = ['admin', 'technician'];
+  if (!role || !validRoles.includes(role)) {
+    return { valid: false, error: 'תפקיד משתמש אינו מורשה (בחר מנהל או טכנאי)' };
+  }
+  return {
+    valid: true,
+    data: { role }
+  };
+}
+
+export function validateUpdateUserPinSchema(body = {}) {
+  const { newPin, pin } = body;
+  const targetPin = newPin !== undefined ? newPin : pin;
+
+  if (targetPin !== undefined && targetPin !== null && targetPin !== '') {
+    if (typeof targetPin !== 'string') {
+      return { valid: false, error: 'קוד PIN אינו תקין' };
+    }
+    const cleanPin = targetPin.trim();
+    if (cleanPin.length < 6) {
+      return { valid: false, error: 'הסיסמה החדשה חייבת להכיל לפחות 6 תווים' };
+    }
+    return {
+      valid: true,
+      data: { newPin: cleanPin }
+    };
+  }
+
+  return {
+    valid: true,
+    data: { newPin: '' }
+  };
+}
+
+export function validateUpdateUserDetailsSchema(body = {}) {
+  const { fullName, phone } = body;
+
+  if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2 || fullName.trim().length > 60) {
+    return { valid: false, error: 'שם מלא חייב להכיל בין 2 ל-60 תווים' };
+  }
+
+  if (!phone || typeof phone !== 'string' || phone.trim().length < 9 || phone.trim().length > 15) {
+    return { valid: false, error: 'מספר טלפון אינו תקין' };
+  }
+
+  return {
+    valid: true,
+    data: {
+      fullName: fullName.trim(),
+      phone: phone.trim()
     }
   };
 }
@@ -102,10 +160,16 @@ export function validateScheduleNextTreatmentSchema(body = {}) {
 }
 
 export function validateSubmitTreatmentSchema(body = {}) {
-  const { bus_number, operator, technician_name, summary, status, devices } = body;
+  const { busNumber, operator, summary, result, devices } = body;
 
-  if (!bus_number || typeof bus_number !== 'string' || bus_number.trim().length < 3 || bus_number.trim().length > 10) {
-    return { valid: false, error: 'מספר אוטובוס אינו תקין' };
+  if (!busNumber || typeof busNumber !== 'string') {
+    return { valid: false, error: 'מספר אוטובוס הוא שדה חובה' };
+  }
+
+  const cleanBusNumber = String(busNumber).replace(/[^0-9]/g, '').trim();
+  const busError = validateBusNumber(cleanBusNumber);
+  if (busError) {
+    return { valid: false, error: busError };
   }
 
   const validOperators = ['דן בדרום', 'דן באר שבע'];
@@ -113,63 +177,134 @@ export function validateSubmitTreatmentSchema(body = {}) {
     return { valid: false, error: 'מפעיל חייב להיות דן בדרום או דן באר שבע' };
   }
 
-  if (!technician_name || typeof technician_name !== 'string' || technician_name.trim().length < 2) {
-    return { valid: false, error: 'שם הטכנאי אינו תקין' };
+  if (!summary || typeof summary !== 'string' || !summary.trim()) {
+    return { valid: false, error: 'סיכום הטיפול והערות הטכנאי הוא שדה חובה' };
   }
 
-  const validStatuses = ['הטיפול הושלם', 'הועבר להמשך טיפול'];
-  if (!status || !validStatuses.includes(status)) {
-    return { valid: false, error: 'סטטוס טיפול אינו תקין' };
+  if (summary.trim().length > 1000) {
+    return { valid: false, error: 'סיכום הטיפול ארוך מדי (מקסימום 1000 תווים)' };
   }
 
-  if (!Array.isArray(devices) || devices.length < 3 || devices.length > 12) {
-    return { valid: false, error: 'דוח טיפול חייב להכיל בין 3 ל-12 מכשירים' };
+  const validResults = ['הכול תקין באוטובוס', 'נדרש המשך טיפול של הלקוח'];
+  if (!result || !validResults.includes(result)) {
+    return { valid: false, error: 'תוצאת טיפול אינה תקינה' };
   }
 
-  for (let i = 0; i < devices.length; i++) {
-    const d = devices[i];
+  let parsedDevices = devices;
+  if (typeof parsedDevices === 'string') {
+    try {
+      parsedDevices = JSON.parse(parsedDevices);
+    } catch {
+      return { valid: false, error: 'מבנה נתוני מכשירים אינו תקין' };
+    }
+  }
+
+  const minDevices = operator === 'דן בדרום' ? 1 : 3;
+  if (!Array.isArray(parsedDevices) || parsedDevices.length < minDevices) {
+    return { 
+      valid: false, 
+      error: `חובה לבדוק לפחות ${minDevices} ${minDevices === 1 ? 'מכשיר' : 'מכשירים'} עבור ${operator}` 
+    };
+  }
+
+  if (parsedDevices.length > 12) {
+    return { valid: false, error: 'ניתן לבדוק עד 12 מכשירים לכל היותר' };
+  }
+
+  const cleanedDevices = [];
+  for (let i = 0; i < parsedDevices.length; i++) {
+    const d = parsedDevices[i];
     if (!d || typeof d !== 'object') {
       return { valid: false, error: `פרטי מכשיר #${i + 1} אינם תקינים` };
     }
-    if (!d.product_name || typeof d.product_name !== 'string') {
-      return { valid: false, error: `שם מוצר במכשיר #${i + 1} חסר` };
+
+    const prodName = d.productName || d.product_name;
+    const prodId = d.productId || d.product_id || null;
+
+    if (!prodName && !prodId) {
+      return { valid: false, error: `מכשיר #${i + 1}: חובה לבחור סוג מוצר` };
     }
-    if (!d.serial_number || typeof d.serial_number !== 'string' || d.serial_number.trim().length < 3 || d.serial_number.trim().length > 4) {
-      return { valid: false, error: `מספר סידורי במכשיר #${i + 1} חייב להכיל 3 או 4 ספרות` };
+
+    const serial = d.serialNumber || d.serial_number;
+    const serialError = validateDeviceSerialNumber(serial);
+    if (serialError) {
+      return { valid: false, error: `מכשיר #${i + 1}: ${serialError}` };
     }
+
+    if (!d.status || (d.status !== 'תקין' && d.status !== 'לא תקין')) {
+      return { valid: false, error: `מכשיר #${i + 1}: חובה לבחור מצב (תקין / לא תקין)` };
+    }
+
+    cleanedDevices.push({
+      productId: prodId ? Number(prodId) : null,
+      productName: String(prodName || '').trim(),
+      serialNumber: String(serial || '').trim(),
+      status: d.status,
+      notes: d.notes ? String(d.notes).trim() : ''
+    });
   }
 
   return {
     valid: true,
     data: {
-      bus_number: bus_number.trim(),
+      busNumber: cleanBusNumber,
       operator,
-      technician_name: technician_name.trim(),
-      summary: summary ? String(summary).trim() : '',
-      status,
-      devices
+      summary: summary.trim(),
+      result,
+      devices: cleanedDevices
     }
   };
 }
 
 export function validateEdiStatusSchema(body = {}) {
-  const { is_edi_closed } = body;
-  if (typeof is_edi_closed !== 'boolean' && is_edi_closed !== 0 && is_edi_closed !== 1) {
-    return { valid: false, error: 'ערך סטטוס אדי אינו תקין (חייב להיות boolean)' };
+  const { isEdiClosed } = body;
+
+  if (
+    typeof isEdiClosed !== 'boolean' &&
+    isEdiClosed !== 0 &&
+    isEdiClosed !== 1
+  ) {
+    return {
+      valid: false,
+      error: 'ערך סטטוס אדי אינו תקין'
+    };
   }
+
   return {
     valid: true,
-    data: { is_edi_closed: Boolean(is_edi_closed) }
+    data: {
+      isEdiClosed: Boolean(isEdiClosed)
+    }
   };
 }
 
 export function validateResolutionNotesSchema(body = {}) {
-  const { resolution_notes } = body;
-  if (resolution_notes && (typeof resolution_notes !== 'string' || resolution_notes.length > 500)) {
-    return { valid: false, error: 'הערות סגירה ארוכות מדי (מקסימום 500 תווים)' };
+  const { resolutionNotes } = body;
+
+  if (
+    resolutionNotes !== undefined &&
+    resolutionNotes !== null &&
+    typeof resolutionNotes !== 'string'
+  ) {
+    return {
+      valid: false,
+      error: 'הערות סגירה אינן תקינות'
+    };
   }
+
+  const clean = String(resolutionNotes || '').trim();
+
+  if (clean.length > 500) {
+    return {
+      valid: false,
+      error: 'הערות סגירה ארוכות מדי'
+    };
+  }
+
   return {
     valid: true,
-    data: { resolution_notes: resolution_notes ? String(resolution_notes).trim() : '' }
+    data: {
+      resolutionNotes: clean
+    }
   };
 }

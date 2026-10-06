@@ -1,4 +1,5 @@
 import { db } from './db.js';
+import { safeError, safeWarn } from './utils/logger.js';
 
 // Configuration
 const MAX_FAILED_PER_PHONE = 5;              // Lockout after 5 consecutive failed attempts per phone
@@ -63,7 +64,7 @@ setInterval(() => {
     db.prepare('DELETE FROM security_lockouts WHERE locked_until < ?').run(now);
     db.prepare('DELETE FROM login_attempts WHERE attempted_at < ?').run(purgeBefore);
   } catch (err) {
-    console.error('[SECURITY] Cleanup error:', err);
+    safeError('[SECURITY] Cleanup error:', err);
   }
 }, 10 * 60 * 1000).unref();
 
@@ -122,7 +123,7 @@ export function checkLoginRateLimit(phone, ip) {
       }
     }
   } catch (err) {
-    console.error('[SECURITY] checkLoginRateLimit error:', err);
+    safeError('[SECURITY] checkLoginRateLimit error:', err);
   }
 
   return { allowed: true };
@@ -174,7 +175,7 @@ export function recordFailedLogin(phone, ip) {
       }
     }
   } catch (err) {
-    console.error('[SECURITY] recordFailedLogin error:', err);
+    safeError('[SECURITY] recordFailedLogin error:', err);
   }
 
   return {
@@ -199,7 +200,7 @@ export function recordSuccessfulLogin(phone, ip) {
       }
     }
   } catch (err) {
-    console.error('[SECURITY] recordSuccessfulLogin error:', err);
+    safeError('[SECURITY] recordSuccessfulLogin error:', err);
   }
 }
 
@@ -213,7 +214,7 @@ export function unlockUserPhone(phone) {
       db.prepare("DELETE FROM security_lockouts WHERE target_type = 'ip_phone' AND target_value LIKE '%:' || ?").run(phone);
       db.prepare('DELETE FROM login_attempts WHERE phone = ?').run(phone);
     } catch (err) {
-      console.error('[SECURITY] unlockUserPhone error:', err);
+      safeError('[SECURITY] unlockUserPhone error:', err);
     }
   }
 }
@@ -340,7 +341,7 @@ export function csrfOriginGuard(req, res, next) {
     } catch (e) {}
   }
 
-  console.warn(`⚠️ [CSRF] Blocked mutating request from untrusted origin: ${origin} on ${req.method} ${req.path}`);
+  safeWarn(`⚠️ [CSRF] Blocked mutating request from untrusted origin: ${origin} on ${req.method} ${req.path}`);
   return res.status(403).json({ error: 'מקור הבקשה (Origin) אינו מורשה לביצוע פעולה זו' });
 }
 

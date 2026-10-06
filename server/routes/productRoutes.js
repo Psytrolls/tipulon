@@ -2,6 +2,7 @@ import express from 'express';
 import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { validateBody, validateCreateProductSchema } from '../utils/schemaValidator.js';
+import { safeError } from '../utils/logger.js';
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get('/', requireAuth, (req, res) => {
     const products = stmt.all();
     res.json(products);
   } catch (err) {
-    console.error('Fetch products error:', err);
+    safeError('Fetch products error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת רשימת מוצרים' });
   }
 });
@@ -48,7 +49,7 @@ router.post('/', requireAdmin, validateBody(validateCreateProductSchema), (req, 
       is_active: 1
     });
   } catch (err) {
-    console.error('Create product error:', err);
+    safeError('Create product error:', err);
     res.status(500).json({ error: 'שגיאה ביצירת מוצר' });
   }
 });
@@ -77,7 +78,7 @@ router.put('/:id', requireAdmin, validateBody(validateCreateProductSchema), (req
 
     res.json({ success: true, id: Number(id), name: cleanName });
   } catch (err) {
-    console.error('Update product error:', err);
+    safeError('Update product error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון מוצר' });
   }
 });
@@ -102,7 +103,7 @@ router.patch('/:id/toggle', requireAdmin, (req, res) => {
 
     res.json({ success: true, id: Number(id), is_active: newStatus });
   } catch (err) {
-    console.error('Toggle product error:', err);
+    safeError('Toggle product error:', err);
     res.status(500).json({ error: 'שגיאה בשינוי סטטוס מוצר' });
   }
 });
@@ -125,7 +126,7 @@ router.delete('/:id', requireAdmin, (req, res) => {
 
     res.json({ success: true, id: Number(id), name: prod.name });
   } catch (err) {
-    console.error('Delete product error:', err);
+    safeError('Delete product error:', err);
     res.status(500).json({ error: 'שגיאה במחיקת מוצר' });
   }
 });

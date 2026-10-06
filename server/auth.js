@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { db } from './db.js';
+import { safeError } from './utils/logger.js';
 
 /**
  * Computes SHA-256 hash of a session token for secure database storage.
@@ -47,7 +48,7 @@ setInterval(() => {
   try {
     db.prepare("DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')").run();
   } catch (err) {
-    console.error('[AUTH] Expired sessions cleanup error:', err);
+    safeError('[AUTH] Expired sessions cleanup error:', err);
   }
 }, 60 * 60 * 1000).unref();
 

@@ -11,6 +11,7 @@ import {
   validateEdiStatusSchema,
   validateResolutionNotesSchema
 } from '../utils/schemaValidator.js';
+import { safeError, safeLog, safeWarn } from '../utils/logger.js';
 
 const router = express.Router();
 const exportRateLimit = createHeavyOperationRateLimit({
@@ -20,29 +21,10 @@ const exportRateLimit = createHeavyOperationRateLimit({
 });
 
 // POST /api/treatments - Submit a new treatment report
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, validateBody(validateSubmitTreatmentSchema), (req, res) => {
   try {
-    const { busNumber, summary, result } = req.body;
-    const operator = req.body.operator === 'דן בדרום' ? 'דן בדרום' : 'דן באר שבע';
-    let devices = req.body.devices;
-
-    if (typeof devices === 'string') {
-      try {
-        devices = JSON.parse(devices);
-      } catch (e) {
-        return res.status(400).json({ error: 'מבנה נתוני מכשירים אינו תקין' });
-      }
-    }
-
-    if (!busNumber || !String(busNumber).trim()) {
-      return res.status(400).json({ error: 'מספר אוטובוס הוא שדה חובה' });
-    }
-
-    const cleanBusNumber = String(busNumber).replace(/[^0-9]/g, '').trim();
-    const busValidationError = validateBusNumber(cleanBusNumber);
-    if (busValidationError) {
-      return res.status(400).json({ error: busValidationError });
-    }
+    const { busNumber, summary, result, operator, devices } = req.body;
+    const cleanBusNumber = busNumber;
 
     // Check business rule: does this bus have an active future treatment?
     const busCheckStmt = db.prepare('SELECT bus_number, status, next_treatment_date FROM buses WHERE bus_number = ?');
@@ -53,45 +35,6 @@ router.post('/', requireAuth, (req, res) => {
       if (!evaluation.canStartTreatment) {
         return res.status(400).json({ error: evaluation.blockReason || 'אין צורך בביצוע טיפול מונע לאוטובוס זה' });
       }
-    }
-
-    // Devices count validation based on operator
-    // דן בדרום: מינימום 1 מכשיר
-    // דן באר שבע: מינימום 3 מכשירים
-    const minDevices = operator === 'דן בדרום' ? 1 : 3;
-    if (!Array.isArray(devices) || devices.length < minDevices) {
-      return res.status(400).json({ 
-        error: `חובה לבדוק לפחות ${minDevices} ${minDevices === 1 ? 'מכשיר' : 'מכשירים'} עבור ${operator}` 
-      });
-    }
-    if (devices.length > 12) {
-      return res.status(400).json({ error: 'ניתן לבדוק עד 12 מכשירים לכל היותר' });
-    }
-
-    // Validate each device
-    for (let i = 0; i < devices.length; i++) {
-      const dev = devices[i];
-      if (!dev.productName && !dev.productId) {
-        return res.status(400).json({ error: `מכשיר #${i + 1}: חובה לבחור סוג מוצר` });
-      }
-      const serialError = validateDeviceSerialNumber(dev.serialNumber);
-      if (serialError) {
-        return res.status(400).json({ error: `מכשיר #${i + 1}: ${serialError}` });
-      }
-      if (!dev.status || (dev.status !== 'תקין' && dev.status !== 'לא תקין')) {
-        return res.status(400).json({ error: `מכשיר #${i + 1}: חובה לבחור מצב (תקין / לא תקין)` });
-      }
-    }
-
-    // Summary validation (mandatory)
-    if (!summary || !String(summary).trim()) {
-      return res.status(400).json({ error: 'סיכום הטיפול והערות הטכנאי הוא שדה חובה' });
-    }
-
-    // Result validation
-    const validResults = ['הכול תקין באוטובוס', 'נדרש המשך טיפול של הלקוח'];
-    if (!result || !validResults.includes(result)) {
-      return res.status(400).json({ error: 'תוצאת טיפול אינה תקינה' });
     }
 
     const reportStatus = result === 'נדרש המשך טיפול של הלקוח' ? 'הועבר להמשך טיפול' : 'הטיפול הושלם';
@@ -182,7 +125,7 @@ router.post('/', requireAuth, (req, res) => {
       createdAt: now
     });
   } catch (err) {
-    console.error('Submit treatment error:', err);
+    safeError('Submit treatment error:', err);
     res.status(500).json({ error: 'שגיאה בשמירת דוח הטיפול' });
   }
 });
@@ -238,7 +181,7 @@ router.get('/', requireAuth, (req, res) => {
 
     res.json(reports);
   } catch (err) {
-    console.error('Fetch treatments error:', err);
+    safeError('Fetch treatments error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת היסטוריית טיפולים' });
   }
 });
@@ -278,7 +221,7 @@ router.get('/:id', requireAuth, (req, res) => {
       devices
     });
   } catch (err) {
-    console.error('Fetch report details error:', err);
+    safeError('Fetch report details error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת פרטי דוח' });
   }
 });
@@ -287,8 +230,8 @@ router.get('/:id', requireAuth, (req, res) => {
 router.patch('/:id/edi', requireAdmin, validateBody(validateEdiStatusSchema), (req, res) => {
   try {
     const reportId = Number(req.params.id);
-    const { is_edi_closed } = req.body;
-    const closed = is_edi_closed ? 1 : 0;
+    const { isEdiClosed } = req.body;
+    const closed = isEdiClosed ? 1 : 0;
     const now = closed ? new Date().toISOString() : null;
 
     const stmt = db.prepare(`
@@ -318,7 +261,7 @@ router.patch('/:id/edi', requireAdmin, validateBody(validateEdiStatusSchema), (r
       ediClosedAt: now
     });
   } catch (err) {
-    console.error('Update EDI status error:', err);
+    safeError('Update EDI status error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון סטטוס אדי' });
   }
 });
@@ -360,7 +303,7 @@ router.patch('/:id/resolution', requireAdmin, validateBody(validateResolutionNot
       resolvedBy: req.user.fullName
     });
   } catch (err) {
-    console.error('Update resolution notes error:', err);
+    safeError('Update resolution notes error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון הערות סגירה' });
   }
 });
@@ -554,7 +497,7 @@ router.get('/export/excel', requireAdmin, exportRateLimit, async (req, res) => {
 
     logAudit(req.user.id, req.user.fullName, 'ייצוא לאקסל (XLSX RTL)', 'דוחות', null, `יוצאו ${reports.length} דוחות לאקסל מעוצב בעברית`);
   } catch (err) {
-    console.error('Export Excel XLSX error:', err);
+    safeError('Export Excel XLSX error:', err);
     res.status(500).json({ error: 'שגיאה בהפקת קובץ Excel' });
   }
 });

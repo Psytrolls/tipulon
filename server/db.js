@@ -4,6 +4,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { validatePasswordStrength } from './utils/passwordPolicy.js';
+import { safeLog, safeError, safeWarn } from './utils/logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -198,16 +199,37 @@ export function initDatabase() {
     db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
   } catch (e) {}
 
-  // Session Security Migration: One-time purge using PRAGMA user_version
+  // Session Security Migration (v3): Rename token to token_hash, purge old sessions, set user_version = 3
   try {
     const userVersion = db.prepare('PRAGMA user_version').get()?.user_version || 0;
-    if (userVersion < 2) {
-      db.exec('DELETE FROM sessions');
-      db.exec('PRAGMA user_version = 2');
-      console.log('🛡️ [Migration] Successfully executed one-time session migration (user_version = 2)');
+    if (userVersion < 3) {
+      db.exec('BEGIN TRANSACTION');
+      try {
+        const columns = db.prepare('PRAGMA table_info(sessions)').all();
+        const hasToken = columns.some(c => c.name === 'token');
+        const hasTokenHash = columns.some(c => c.name === 'token_hash');
+
+        if (hasToken && !hasTokenHash) {
+          db.exec('ALTER TABLE sessions RENAME COLUMN token TO token_hash');
+        }
+
+        const updatedColumns = db.prepare('PRAGMA table_info(sessions)').all();
+        if (!updatedColumns.some(c => c.name === 'token_hash')) {
+          throw new Error('Session migration failed: token_hash column is missing');
+        }
+
+        db.exec('DELETE FROM sessions');
+        db.exec('PRAGMA user_version = 3');
+        db.exec('COMMIT');
+        safeLog('🛡️ [Migration] Successfully executed session migration to token_hash (user_version = 3)');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
     }
   } catch (e) {
-    console.warn('[Migration Warning]:', e.message);
+    safeError('❌ [Migration Error] Failed to execute database migration:', e);
+    throw e;
   }
 
   // Periodic expiration purge
@@ -337,7 +359,7 @@ function seedInitialData() {
       });
 
       if (!policy.valid) {
-        console.error(`❌ [SECURITY] Cannot bootstrap initial admin: ${policy.error}. Please provide a strong password for INIT_ADMIN_PIN.`);
+        safeError(`❌ [SECURITY] Cannot bootstrap initial admin: ${policy.error}. Please provide a strong password for INIT_ADMIN_PIN.`);
         return;
       }
 
@@ -346,7 +368,7 @@ function seedInitialData() {
         INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
         VALUES (?, ?, ?, ?, 'admin', 1, 1, 1)
       `).run(envAdminName, envAdminPhone, hash, salt);
-      console.log(`[SECURITY] Initial Super Admin account created for ${envAdminPhone}`);
+      safeLog(`[SECURITY] Initial Super Admin account created for ${envAdminPhone}`);
     }
   }
 }
@@ -359,6 +381,6 @@ export function logAudit(userId, userName, action, entity, entityId = null, deta
     `);
     stmt.run(userId, userName, action, entity, String(entityId || ''), details ? String(details) : '');
   } catch (err) {
-    console.error('Failed to log audit:', err);
+    safeError('Failed to log audit:', err);
   }
 }
