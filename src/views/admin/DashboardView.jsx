@@ -150,7 +150,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
           
           {/* Card A: Treatment Needed */}
           <div 
-            onClick={() => onNavigateToFleet ? onNavigateToFleet('pending') : onNavigateToReports()}
+            onClick={() => onNavigateToFleet ? onNavigateToFleet('needed') : onNavigateToReports()}
             className="bg-amber-50/90 border-2 border-amber-400/80 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-amber-500 cursor-pointer transition-all group relative overflow-hidden"
           >
             <div className="flex items-center justify-between mb-2">
@@ -222,7 +222,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
             </div>
           </div>
           <button
-            onClick={() => onNavigateToFleet ? onNavigateToFleet('pending') : onNavigateToReports()}
+            onClick={() => onNavigateToFleet ? onNavigateToFleet('needed') : onNavigateToReports()}
             className="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-sm inline-flex items-center gap-2 transition-all min-h-[40px]"
           >
             <span>צפה באוטובוסים הדורשים טיפול</span>

@@ -45,6 +45,8 @@ export function validatePasswordStrength(password, context = {}) {
     };
   }
 
+  const lower = clean.toLowerCase();
+
   // Check common weak passwords
   if (COMMON_WEAK_PASSWORDS.has(lower)) {
     return {

@@ -214,9 +214,10 @@ export default function FleetView({ onSelectBusReports, initialStatus = '' }) {
               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
             >
               <option value="">כל הסטטוסים</option>
-              <option value="pending">⏳ נדרש טיפול מונע</option>
+              <option value="needed">⚠️ נדרש טיפול מונע</option>
               <option value="overdue">🔴 באיחור (מעל 6 חודשים)</option>
               <option value="valid">🟢 טופלו ובתוקף</option>
+              <option value="pending">⏳ טרם בוצע טיפול</option>
             </select>
           </div>
 

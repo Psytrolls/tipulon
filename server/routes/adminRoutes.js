@@ -238,17 +238,17 @@ router.get('/audit-logs', requireAdmin, (req, res) => {
 // ==========================================
 // Database Backup Endpoints
 // ==========================================
-import { createBackup, listBackups, getLatestBackupPath, isBackupEncryptionConfigured } from '../backupService.js';
+import { createBackup, listBackups, getLatestBackupPath, getBackupSystemStatus } from '../backupService.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
 // GET /api/admin/backups - List backups (Super Admin only)
 router.get('/backups', requireSuperAdmin, (req, res) => {
   try {
-    const isEncryptionConfigured = isBackupEncryptionConfigured();
+    const status = getBackupSystemStatus();
     const backups = listBackups();
     res.json({
-      isEncryptionConfigured,
+      ...status,
       backups
     });
   } catch (err) {

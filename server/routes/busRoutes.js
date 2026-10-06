@@ -239,7 +239,7 @@ router.get('/', requireAuth, (req, res) => {
     } else if (status === 'overdue') {
       whereClauses.push("b.next_treatment_date IS NOT NULL AND datetime(b.next_treatment_date) < datetime('now')");
     } else if (status === 'needed') {
-      whereClauses.push("(b.status = 'נדרש טיפול' OR b.bus_number NOT IN (SELECT DISTINCT bus_number FROM reports WHERE status = 'הטיפול הושלם'))");
+      whereClauses.push("b.status = 'נדרש טיפול'");
     }
 
     if (search && search.trim()) {

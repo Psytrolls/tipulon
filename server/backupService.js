@@ -19,6 +19,8 @@ if (!fs.existsSync(backupsDir)) {
 }
 
 let lastBackupDate = null;
+let lastBackupTime = null;
+let lastBackupError = null;
 
 function isWeakOrTemplateSecret(secret) {
   if (!secret || typeof secret !== 'string') return true;
@@ -30,6 +32,22 @@ function isWeakOrTemplateSecret(secret) {
 export function isBackupEncryptionConfigured() {
   const secret = process.env.BACKUP_ENCRYPTION_KEY;
   return Boolean(secret && Buffer.byteLength(secret, 'utf8') >= 32 && !isWeakOrTemplateSecret(secret));
+}
+
+export function getBackupSystemStatus() {
+  const isConfigured = isBackupEncryptionConfigured();
+  const isDbPresent = fs.existsSync(dbPath);
+  const existingBackups = listBackups();
+  const latestBackup = existingBackups.length > 0 ? existingBackups[0] : null;
+
+  return {
+    isEncryptionConfigured: isConfigured,
+    isBackupOperational: isConfigured && isDbPresent,
+    lastBackupTime: lastBackupTime || latestBackup?.createdAt || null,
+    lastBackupFilename: latestBackup?.filename || null,
+    lastBackupError: lastBackupError,
+    totalBackups: existingBackups.length
+  };
 }
 
 // Derive a deterministic 32-byte AES-256 key strictly from BACKUP_ENCRYPTION_KEY environment variable
@@ -106,6 +124,8 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
     fs.writeFileSync(targetPath, encryptedPayload);
 
     lastBackupDate = dateStr;
+    lastBackupTime = now.toISOString();
+    lastBackupError = null;
     const sizeKb = (encryptedPayload.length / 1024).toFixed(1);
 
     safeLog(`🛡️ [Backup] Created AES-256-GCM encrypted backup: ${filename} (${sizeKb} KB) [Reason: ${reason}]`);
@@ -131,6 +151,7 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
       reason
     };
   } catch (err) {
+    lastBackupError = err.message || 'שגיאה ביצירת גיבוי';
     safeError('❌ [Backup] Failed to create encrypted database backup:', err);
     throw err;
   }

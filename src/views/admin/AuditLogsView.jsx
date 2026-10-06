@@ -22,7 +22,7 @@ export default function AuditLogsView() {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showConfirmCreate, setShowConfirmCreate] = useState(false);
   const [backups, setBackups] = useState([]);
-  const [isEncryptionConfigured, setIsEncryptionConfigured] = useState(false);
+  const [backupSystemStatus, setBackupSystemStatus] = useState(null);
   const [loadingBackups, setLoadingBackups] = useState(false);
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [backupNotice, setBackupNotice] = useState('');
@@ -43,6 +43,7 @@ export default function AuditLogsView() {
   };
 
   const loadBackups = async () => {
+    if (!user?.isSuperAdmin) return;
     try {
       setLoadingBackups(true);
       const res = await fetch('/api/admin/backups');
@@ -50,10 +51,14 @@ export default function AuditLogsView() {
         const json = await res.json();
         if (Array.isArray(json)) {
           setBackups(json);
-          setIsEncryptionConfigured(json.some(b => b.isEncrypted));
+          setBackupSystemStatus({
+            isEncryptionConfigured: json.some(b => b.isEncrypted),
+            isBackupOperational: json.some(b => b.isEncrypted),
+            lastBackupTime: json[0]?.createdAt || null
+          });
         } else {
           setBackups(json.backups || []);
-          setIsEncryptionConfigured(Boolean(json.isEncryptionConfigured));
+          setBackupSystemStatus(json);
         }
       }
     } catch (e) {
@@ -68,10 +73,10 @@ export default function AuditLogsView() {
   }, []);
 
   useEffect(() => {
-    if (showBackupModal) {
+    if (showBackupModal && user?.isSuperAdmin) {
       loadBackups();
     }
-  }, [showBackupModal]);
+  }, [showBackupModal, user]);
 
   const handleCreateBackup = async () => {
     try {
@@ -209,28 +214,46 @@ export default function AuditLogsView() {
 
             {/* Notification / status banner */}
             <div className={`p-4 rounded-2xl border space-y-2 text-xs ${
-              isEncryptionConfigured 
+              backupSystemStatus?.isBackupOperational
                 ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
-                : 'bg-slate-50 border-slate-200 text-slate-800'
+                : 'bg-amber-50 border-amber-300 text-amber-950'
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-black">
-                  <CheckCircle2 className={`w-4 h-4 ${isEncryptionConfigured ? 'text-emerald-600' : 'text-slate-500'}`} />
+                  {backupSystemStatus?.isBackupOperational ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0" />
+                  )}
                   <span>
-                    {isEncryptionConfigured 
+                    {backupSystemStatus?.isBackupOperational
                       ? 'מערכת גיבוי אוטומטית פעילה (הצפנת AES-256-GCM מוגדרת)' 
-                      : 'מערכת גיבוי אוטומטית פעילה (דחיסת GZIP)'}
+                      : 'מערכת הגיבוי אינה פעילה — יש להגדיר את מפתח ההצפנה BACKUP_ENCRYPTION_KEY בשרת'}
                   </span>
                 </div>
                 {user?.isSuperAdmin && (
-                  <span className="px-2 py-0.5 bg-slate-200 text-slate-900 text-[10px] font-black rounded-full">
+                  <span className="px-2 py-0.5 bg-white/80 text-slate-800 text-[10px] font-black rounded-full border border-slate-200">
                     הרשאת מנהל-על
                   </span>
                 )}
               </div>
               <p className="leading-relaxed font-medium">
-                השרת מייצר גיבוי דחוס של מסד הנתונים מדי לילה ב-<strong>02:00</strong> ושומר את 30 הגיבויים האחרונים.
+                {backupSystemStatus?.isBackupOperational
+                  ? 'השרת מייצר גיבוי מוצפן ודחוס מדי לילה ב-02:00 ושומר את 30 הגיבויים האחרונים.'
+                  : 'ללא מפתח הצפנה תקין (מינימום 32 תווים), השרת אינו יכול לייצר או להצפין גיבויים של מסד הנתונים.'}
               </p>
+              {backupSystemStatus?.lastBackupTime && (
+                <div className="text-[11px] text-slate-600 font-bold pt-1 border-t border-slate-200/60 flex items-center justify-between">
+                  <span>מועד גיבוי אחרון שנוצר:</span>
+                  <span dir="ltr" className="font-mono">{new Date(backupSystemStatus.lastBackupTime).toLocaleString('he-IL')}</span>
+                </div>
+              )}
+              {backupSystemStatus?.lastBackupError && (
+                <div className="text-[11px] text-rose-700 font-bold pt-1 border-t border-rose-200 flex items-center gap-1">
+                  <span>שגיאה בגיבוי אחרון:</span>
+                  <span>{backupSystemStatus.lastBackupError}</span>
+                </div>
+              )}
             </div>
 
             {backupNotice && (
