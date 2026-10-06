@@ -19,9 +19,14 @@ if (!fs.existsSync(backupsDir)) {
 
 let lastBackupDate = null;
 
-// Derive a deterministic 32-byte AES-256 key from environment or system secret
+// Derive a deterministic 32-byte AES-256 key strictly from BACKUP_ENCRYPTION_KEY environment variable
 function getBackupKey() {
-  const secret = process.env.BACKUP_ENCRYPTION_KEY || process.env.SESSION_SECRET || 'tipulon_default_secure_backup_key_2026';
+  const secret = process.env.BACKUP_ENCRYPTION_KEY;
+
+  if (!secret || Buffer.byteLength(secret, 'utf8') < 32) {
+    throw new Error('BACKUP_ENCRYPTION_KEY must be configured and contain at least 32 bytes');
+  }
+
   return crypto.createHash('sha256').update(secret).digest();
 }
 
@@ -219,7 +224,12 @@ async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
  * Start the daily backup scheduler
  */
 export function startBackupScheduler() {
-  console.log('⏰ [Backup] Backup service initialized.');
+  if (!process.env.BACKUP_ENCRYPTION_KEY || Buffer.byteLength(process.env.BACKUP_ENCRYPTION_KEY, 'utf8') < 32) {
+    console.warn('⚠️ [Backup] BACKUP_ENCRYPTION_KEY is not configured or shorter than 32 bytes. Backup encryption is disabled until configured.');
+    return;
+  }
+
+  console.log('⏰ [Backup] Backup service initialized with AES-256-GCM encryption.');
 
   // Run on startup if no backup exists for today
   setTimeout(async () => {

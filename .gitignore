@@ -9,3 +9,6 @@ uploads/*
 !uploads/.gitkeep
 data/*
 !data/.gitkeep
+.env
+.env.*
+!.env.example
