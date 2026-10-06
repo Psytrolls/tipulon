@@ -38,7 +38,7 @@ async function fetchGpsCoordinates(opId, cleanBusNumber) {
             gpsTime: item.SpmTime || null,
             mapsUrl: `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`,
             wazeUrl: `https://waze.com/ul?ll=${lat},${lon}&navigate=yes`,
-            embedMapUrl: `https://www.openstreetmap.org/export/embed.html?bbox=${(lon - 0.006).toFixed(6)},${(lat - 0.004).toFixed(6)},${(lon + 0.006).toFixed(6)},${(lat + 0.004).toFixed(6)}&layer=mapnik&marker=${lat.toFixed(6)},${lon.toFixed(6)}`
+            embedMapUrl: `https://maps.google.com/maps?q=${lat.toFixed(6)},${lon.toFixed(6)}&hl=he&z=16&output=embed`
           };
         }
       }

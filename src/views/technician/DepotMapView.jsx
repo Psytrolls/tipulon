@@ -311,8 +311,10 @@ export default function DepotMapView({ onSelectBusForTreatment }) {
                     width="100%"
                     height="100%"
                     style={{ border: 0 }}
-                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${(hubLon - 0.008).toFixed(6)},${(hubLat - 0.005).toFixed(6)},${(hubLon + 0.008).toFixed(6)},${(hubLat + 0.005).toFixed(6)}&layer=mapnik&marker=${hubLat.toFixed(6)},${hubLon.toFixed(6)}`}
+                    src={`https://maps.google.com/maps?q=${hubLat.toFixed(6)},${hubLon.toFixed(6)}&hl=he&z=16&output=embed`}
                     className="w-full h-full border-0"
+                    allowFullScreen
+                    loading="lazy"
                   />
                 </div>
               </div>
