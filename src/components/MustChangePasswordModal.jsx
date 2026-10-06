@@ -14,12 +14,25 @@ export default function MustChangePasswordModal() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const isAdmin = user?.role === 'admin' || user?.isSuperAdmin;
+  const minLength = isAdmin ? 12 : 6;
+
   // Validation criteria
-  const hasMinLength = newPin.trim().length >= 6;
-  const hasLetter = /[a-zA-Z]/.test(newPin);
-  const hasDigit = /[0-9]/.test(newPin);
-  const isMatching = newPin.trim().length > 0 && newPin === confirmPin;
-  const isValid = hasMinLength && hasLetter && hasDigit && isMatching;
+  const trimmed = newPin.trim();
+  const hasMinLength = trimmed.length >= minLength;
+  const hasLetter = /[a-zA-Z]/.test(trimmed);
+  const hasDigit = /[0-9]/.test(trimmed);
+  const isMatching = trimmed.length > 0 && trimmed === confirmPin.trim();
+
+  // Phone / username collision check
+  const cleanPhone = user?.phone ? String(user.phone).replace(/[^0-9]/g, '') : '';
+  const containsPhone = Boolean(cleanPhone && cleanPhone.length >= 6 && trimmed.includes(cleanPhone));
+  const isNotPhone = !containsPhone;
+
+  // Not all identical characters
+  const isNotRepeated = !(/^(.)\1+$/.test(trimmed));
+
+  const isValid = hasMinLength && hasLetter && hasDigit && isMatching && isNotPhone && isNotRepeated;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,11 +40,19 @@ export default function MustChangePasswordModal() {
 
     if (!isValid) {
       if (!hasMinLength) {
-        setError('הסיסמה החדשה חייבת להכיל לפחות 6 תווים');
+        setError(`הסיסמה חייבת להכיל לפחות ${minLength} תווים עבור ${isAdmin ? 'מנהל מערכת' : 'טכנאי'}`);
         return;
       }
       if (!hasLetter || !hasDigit) {
-        setError('הסיסמה חייבת לכלול שילוב של אותיות באנגלית ומספרים (לדוגמה: Tipul2026)');
+        setError('הסיסמה חייבת לכלול שילוב של אותיות באנגלית ומספרים');
+        return;
+      }
+      if (containsPhone) {
+        setError('הסיסמה אינה יכולה להכיל את מספר הטלפון שלך');
+        return;
+      }
+      if (!isNotRepeated) {
+        setError('הסיסמה אינה יכולה להכיל רצף של תווים זהים בלבד');
         return;
       }
       if (!isMatching) {
@@ -46,7 +67,7 @@ export default function MustChangePasswordModal() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newPin: newPin.trim()
+          newPin: trimmed
         })
       });
 
@@ -69,32 +90,41 @@ export default function MustChangePasswordModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden flex flex-col my-auto">
+      <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden flex flex-col my-auto max-h-[95vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 text-white text-center relative">
+        <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 text-white text-center relative shrink-0">
           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
             <KeyRound className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-black tracking-tight">נדרש עדכון סיסמה</h2>
-          <p className="text-emerald-100 text-xs mt-1.5 leading-relaxed max-w-xs mx-auto">
+          <p className="text-emerald-50 text-xs mt-1.5 leading-relaxed max-w-xs mx-auto font-medium">
             שלום <strong className="text-white underline">{user?.fullName || 'משתמש'}</strong>, מטעמי אבטחה יש להגדיר סיסמה אישית חדשה למערכת.
           </p>
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/20 text-emerald-100 text-[11px] font-bold">
+            <span>דרישת אבטחה לתפקיד:</span>
+            <strong className="text-white">{isAdmin ? 'מנהל (12+ תווים)' : 'טכנאי (6+ תווים)'}</strong>
+          </div>
         </div>
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-700 text-xs font-bold animate-in fade-in duration-150">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl flex items-start gap-2.5 text-rose-800 text-xs font-black animate-in fade-in duration-150">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
               <span>{error}</span>
             </div>
           )}
 
           {/* New Password */}
           <div>
-            <label className="block text-xs font-black text-slate-700 mb-1">
-              סיסמה חדשה (מינימום 6 תווים, אותיות ומספרים)
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-black text-slate-800">
+                סיסמה חדשה ({isAdmin ? 'לפחות 12 תווים' : 'לפחות 6 תווים'})
+              </label>
+              <span className="text-[11px] text-slate-500 font-bold">
+                {trimmed.length} / {minLength}
+              </span>
+            </div>
             <div className="relative">
               <input
                 type={showNew ? 'text' : 'password'}
@@ -102,15 +132,16 @@ export default function MustChangePasswordModal() {
                 required
                 value={newPin}
                 onChange={(e) => setNewPin(e.target.value)}
-                placeholder="לדוגמה: Tipul2026"
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left text-sm"
+                placeholder={isAdmin ? 'לדוגמה: Tipul-Admin-2026' : 'לדוגמה: Tipul2026'}
+                className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left text-sm min-h-[48px]"
               />
-              <ShieldCheck className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+              <ShieldCheck className="w-5 h-5 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
               <button
                 type="button"
                 onClick={() => setShowNew(!showNew)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-2.5 top-2.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-500 hover:text-slate-800 focus:outline-none rounded-lg"
                 tabIndex="-1"
+                aria-label={showNew ? 'הסתר סיסמה' : 'הצג סיסמה'}
               >
                 {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -119,7 +150,7 @@ export default function MustChangePasswordModal() {
 
           {/* Confirm New Password */}
           <div>
-            <label className="block text-xs font-black text-slate-700 mb-1">
+            <label className="block text-xs font-black text-slate-800 mb-1.5">
               אימות סיסמה חדשה
             </label>
             <div className="relative">
@@ -130,14 +161,15 @@ export default function MustChangePasswordModal() {
                 value={confirmPin}
                 onChange={(e) => setConfirmPin(e.target.value)}
                 placeholder="הקלד את הסיסמה החדשה שוב"
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left text-sm"
+                className="w-full pl-10 pr-10 py-3 bg-slate-50 border border-slate-300 rounded-xl text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all text-left text-sm min-h-[48px]"
               />
-              <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+              <Lock className="w-5 h-5 text-slate-400 absolute left-3 top-3.5 pointer-events-none" />
               <button
                 type="button"
                 onClick={() => setShowConfirm(!showConfirm)}
-                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                className="absolute right-2.5 top-2.5 min-w-[36px] min-h-[36px] flex items-center justify-center text-slate-500 hover:text-slate-800 focus:outline-none rounded-lg"
                 tabIndex="-1"
+                aria-label={showConfirm ? 'הסתר סיסמה' : 'הצג סיסמה'}
               >
                 {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -145,23 +177,30 @@ export default function MustChangePasswordModal() {
           </div>
 
           {/* Real-time Requirements Checklist */}
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1.5 font-bold">
-            <div className={`flex items-center gap-2 ${hasMinLength ? 'text-emerald-700' : 'text-slate-400'}`}>
-              {hasMinLength ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-              <span>לפחות 6 תווים באורך</span>
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-xs space-y-2 font-bold">
+            <div className="text-[11px] text-slate-600 font-black mb-1">תנאי תקינות הסיסמה:</div>
+            <div className={`flex items-center gap-2 ${hasMinLength ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
+              {hasMinLength ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <XCircle className="w-4 h-4 text-slate-400 shrink-0" />}
+              <span>לפחות {minLength} תווים באורך ({isAdmin ? 'מנהל מערכת' : 'טכנאי שטח'})</span>
             </div>
-            <div className={`flex items-center gap-2 ${hasLetter ? 'text-emerald-700' : 'text-slate-400'}`}>
-              {hasLetter ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+            <div className={`flex items-center gap-2 ${hasLetter ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
+              {hasLetter ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <XCircle className="w-4 h-4 text-slate-400 shrink-0" />}
               <span>כולל אותיות באנגלית (A-Z, a-z)</span>
             </div>
-            <div className={`flex items-center gap-2 ${hasDigit ? 'text-emerald-700' : 'text-slate-400'}`}>
-              {hasDigit ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+            <div className={`flex items-center gap-2 ${hasDigit ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
+              {hasDigit ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <XCircle className="w-4 h-4 text-slate-400 shrink-0" />}
               <span>כולל ספרות (0-9)</span>
             </div>
-            <div className={`flex items-center gap-2 ${isMatching ? 'text-emerald-700' : 'text-slate-400'}`}>
-              {isMatching ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+            <div className={`flex items-center gap-2 ${isMatching ? 'text-emerald-700 font-black' : 'text-slate-500'}`}>
+              {isMatching ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <XCircle className="w-4 h-4 text-slate-400 shrink-0" />}
               <span>הסיסמאות תואמות זו לזו</span>
             </div>
+            {cleanPhone && (
+              <div className={`flex items-center gap-2 ${isNotPhone ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}`}>
+                {isNotPhone ? <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" /> : <XCircle className="w-4 h-4 text-rose-500 shrink-0" />}
+                <span>אינה מכילה את מספר הטלפון האישי</span>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -169,7 +208,7 @@ export default function MustChangePasswordModal() {
             <button
               type="submit"
               disabled={loading || !isValid}
-              className="w-full py-3 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-[0.98] text-white font-black text-sm rounded-xl shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed min-h-[48px]"
             >
               {loading ? (
                 <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -184,7 +223,7 @@ export default function MustChangePasswordModal() {
             <button
               type="button"
               onClick={logout}
-              className="w-full py-2 px-3 text-slate-500 hover:text-rose-600 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              className="w-full py-2.5 px-3 text-slate-600 hover:text-rose-600 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors min-h-[44px]"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>התנתק מהמערכת</span>

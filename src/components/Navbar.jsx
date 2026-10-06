@@ -92,26 +92,28 @@ export default function Navbar({ currentView, setCurrentView }) {
           </nav>
 
           {/* User Info & Actions */}
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex flex-col text-left items-end">
-              <span className="text-sm font-bold text-slate-900 leading-tight">{user.fullName}</span>
-              <span className="text-xs text-slate-500 font-medium">
-                {isAdmin ? 'מנהל מערכת' : 'טכנאי שטח'}
+          <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2.5 bg-slate-100/90 border border-slate-200/80 rounded-full py-1 px-3 shadow-inner">
+              <div className="flex flex-col text-right">
+                <span className="text-xs font-black text-slate-800 leading-tight">{user.fullName}</span>
+                <span className="text-[10px] font-semibold text-slate-500 leading-none">
+                  {isAdmin ? 'מנהל מערכת' : 'טכנאי שטח'}
+                </span>
+              </div>
+              <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {isAdmin ? 'מנהל' : 'טכנאי'}
               </span>
             </div>
-
-            <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-              isAdmin ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
-            }`}>
-              {isAdmin ? 'מנהל' : 'טכנאי'}
-            </span>
 
             <a
               href="/guide.html"
               target="_blank"
               rel="noopener noreferrer"
               title="מדריך הפעלה והדרכה"
-              className="p-2 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center gap-1 text-xs font-bold"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 transition-colors flex items-center justify-center gap-1 text-xs font-bold"
+              aria-label="מדריך הפעלה והדרכה"
             >
               <BookOpen className="w-5 h-5 text-emerald-600" />
               <span className="hidden md:inline">הדרכה</span>
@@ -120,7 +122,8 @@ export default function Navbar({ currentView, setCurrentView }) {
             <button
               onClick={logout}
               title="התנתק מהמערכת"
-              className="p-2 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              className="min-w-[44px] min-h-[44px] p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center"
+              aria-label="התנתק מהמערכת"
             >
               <LogOut className="w-5 h-5" />
             </button>
@@ -128,7 +131,9 @@ export default function Navbar({ currentView, setCurrentView }) {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100"
+              className="lg:hidden min-w-[44px] min-h-[44px] p-2 rounded-xl text-slate-700 hover:bg-slate-100 flex items-center justify-center"
+              aria-label={mobileMenuOpen ? 'סגור תפריט ניווט' : 'פתח תפריט ניווט'}
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>

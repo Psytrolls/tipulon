@@ -2,10 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Bus, 
   Search, 
-  Filter, 
   CheckCircle2, 
   Clock, 
-  AlertCircle, 
   RefreshCw, 
   ChevronRight, 
   ChevronLeft,
@@ -13,7 +11,6 @@ import {
   ShieldCheck,
   TrendingUp,
   MapPin,
-  Calendar,
   Building2
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
@@ -101,6 +98,29 @@ export default function FleetView({ onSelectBusReports }) {
     }
   };
 
+  const handleResetFilters = () => {
+    setSearch('');
+    setOperator('');
+    setStatus('');
+    setSelectedHubId('');
+    setPage(1);
+  };
+
+  const handleHubSelect = (e) => {
+    const hubId = e.target.value;
+    setSelectedHubId(hubId);
+    if (!hubId) {
+      setSearch('');
+    } else {
+      const hub = summary.hubs?.find(h => String(h.id) === String(hubId));
+      if (hub) {
+        setSearch(hub.city);
+        if (hub.operator) setOperator(hub.operator);
+      }
+    }
+    setPage(1);
+  };
+
   // Active KPI numbers depending on operator selection
   const activeKpi = operator === 'דן באר שבע'
     ? summary.danBeerSheva
@@ -114,10 +134,10 @@ export default function FleetView({ onSelectBusReports }) {
       };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* 1. Header with Visual Administrative Separation for MOT Sync */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-200/80">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
             <span className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
@@ -125,77 +145,122 @@ export default function FleetView({ onSelectBusReports }) {
             </span>
             <span>צי אוטובוסים ומעקב ביצוע</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            מעקב אחר כל צי הרכבים, פילוח לפי חברות, חניונים ואוטובוסים שטופלו מול אלו שנותרו
+          <p className="text-xs sm:text-sm text-slate-600 mt-1 font-medium">
+            חיפוש מהיר של אוטובוסים, בדיקת תוקף טיפול מונע וסידור עבודה יומי
           </p>
         </div>
 
-        <button
-          onClick={handleSyncFleet}
-          disabled={syncingFleet}
-          className="self-start sm:self-auto py-2.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl shadow-sm flex items-center gap-2 transition-all disabled:opacity-50"
-          title="סנכרון מלא מול מאגר משרד התחבורה Data.gov.il"
-        >
-          <RefreshCw className={`w-4 h-4 text-emerald-400 ${syncingFleet ? 'animate-spin' : ''}`} />
-          <span>{syncingFleet ? 'מסנכרן...' : 'סנכרן צי ממשרד התחבורה'}</span>
-        </button>
+        {/* Dedicated Administrative Action */}
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={handleSyncFleet}
+            disabled={syncingFleet}
+            className="py-2 px-3.5 bg-slate-50 hover:bg-slate-100 active:scale-95 text-slate-700 text-xs font-bold rounded-xl border border-slate-300 shadow-2xs flex items-center gap-2 transition-all disabled:opacity-50 min-h-[44px]"
+            title="פעולה ניהולית: סנכרון מאגר רכבים מול מאגר משרד התחבורה Data.gov.il"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-slate-600 ${syncingFleet ? 'animate-spin' : ''}`} />
+            <span>{syncingFleet ? 'מסנכרן...' : 'סנכרן מול משרד התחבורה'}</span>
+          </button>
+        </div>
       </div>
 
       {syncNotice && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-900 animate-fadeIn">
+        <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-black text-emerald-900 animate-fadeIn">
           {syncNotice}
         </div>
       )}
 
-      {/* Operator Segmentation Switcher */}
-      <div className="flex items-center gap-2 p-1.5 bg-slate-200/70 rounded-2xl w-full sm:w-max overflow-x-auto">
-        <button
-          type="button"
-          onClick={() => { setOperator(''); setPage(1); }}
-          className={`flex-1 sm:flex-none py-2.5 px-5 rounded-xl text-xs font-black transition-all ${
-            !operator
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          כל הצי המאוחד ({summary.total})
-        </button>
+      {/* 2. Top Fast Search & Filter Bar (Visible without scrolling) */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col lg:flex-row gap-2.5 items-center">
+          
+          {/* Main Search Input */}
+          <div className="relative flex-1 w-full">
+            <input
+              type="text"
+              placeholder="חיפוש לפי מספר רישוי אוטובוס (7–8 ספרות), חניון או עיר..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 placeholder:text-slate-500 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
+            />
+            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5 pointer-events-none" />
+          </div>
 
-        <button
-          type="button"
-          onClick={() => { setOperator('דן באר שבע'); setPage(1); }}
-          className={`flex-1 sm:flex-none py-2.5 px-5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
-            operator === 'דן באר שבע'
-              ? 'bg-emerald-600 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <span className={`w-2 h-2 rounded-full ${operator === 'דן באר שבע' ? 'bg-white' : 'bg-emerald-500'}`}></span>
-          <span>דן באר שבע ({summary.danBeerSheva?.total || 0})</span>
-        </button>
+          {/* Operator Select */}
+          <div className="w-full sm:w-auto lg:w-48">
+            <select
+              value={operator}
+              onChange={(e) => { setOperator(e.target.value); setPage(1); }}
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
+            >
+              <option value="">כל המפעילים</option>
+              <option value="דן באר שבע">דן באר שבע</option>
+              <option value="דן בדרום">דן בדרום</option>
+            </select>
+          </div>
 
-        <button
-          type="button"
-          onClick={() => { setOperator('דן בדרום'); setPage(1); }}
-          className={`flex-1 sm:flex-none py-2.5 px-5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${
-            operator === 'דן בדרום'
-              ? 'bg-blue-600 text-white shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <span className={`w-2 h-2 rounded-full ${operator === 'דן בדרום' ? 'bg-white' : 'bg-blue-500'}`}></span>
-          <span>דן בדרום ({summary.danBaDarom?.total || 0})</span>
-        </button>
+          {/* Status Select */}
+          <div className="w-full sm:w-auto lg:w-44">
+            <select
+              value={status}
+              onChange={(e) => { setStatus(e.target.value); setPage(1); }}
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
+            >
+              <option value="">כל הסטטוסים</option>
+              <option value="valid">🟢 טופלו ובתוקף</option>
+              <option value="pending">⏳ נותרו לביצוע</option>
+            </select>
+          </div>
+
+          {/* Compact Depot / Hub Select */}
+          {summary.hubs && summary.hubs.length > 0 && (
+            <div className="w-full sm:w-auto lg:w-48">
+              <select
+                value={selectedHubId}
+                onChange={handleHubSelect}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
+              >
+                <option value="">כל החניונים והמתחמים</option>
+                {summary.hubs.map((h) => (
+                  <option key={h.id} value={h.id}>
+                    📍 {h.name} ({h.city})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="submit"
+              className="flex-1 sm:flex-none py-2.5 px-5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-black rounded-xl transition-all shadow-sm active:scale-95 min-h-[44px] flex items-center justify-center gap-1.5"
+            >
+              <Search className="w-3.5 h-3.5" />
+              <span>חפש</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              title="איפוס כל הסינונים"
+              className="py-2.5 px-3.5 border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 min-h-[44px] transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+              <span>איפוס</span>
+            </button>
+          </div>
+        </form>
       </div>
 
-      {/* Company Side-by-Side Comparison Cards */}
+      {/* 3. Company Side-by-Side Comparison & Progress Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {/* Dan Beer Sheva Card */}
         <div 
-          onClick={() => { setOperator('דן באר שבע'); setPage(1); }}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+          onClick={() => { setOperator(operator === 'דן באר שבע' ? '' : 'דן באר שבע'); setPage(1); }}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs ${
             operator === 'דן באר שבע' 
-              ? 'bg-emerald-50/70 border-emerald-400 ring-2 ring-emerald-500' 
+              ? 'bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-500' 
               : 'bg-white border-slate-200 hover:border-emerald-300'
           }`}
         >
@@ -203,14 +268,14 @@ export default function FleetView({ onSelectBusReports }) {
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-emerald-600"></span>
               <span className="font-black text-slate-900 text-sm">דן באר שבע</span>
-              <span className="text-[11px] text-slate-400 font-medium">({summary.danBeerSheva?.total || 0} אוטובוסים)</span>
+              <span className="text-xs text-slate-600 font-bold">({summary.danBeerSheva?.total || 0} אוטובוסים)</span>
             </div>
             <span className="text-xs font-black text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-lg">
               {summary.danBeerSheva?.progressPercent || 0}% הושלמו
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-2">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
             <span>טופלו ובתוקף: <strong className="text-emerald-700 text-sm">{summary.danBeerSheva?.treatedValid || 0}</strong></span>
             <span>נותרו לביצוע: <strong className="text-amber-700 text-sm">{summary.danBeerSheva?.pendingTreatment || 0}</strong></span>
           </div>
@@ -225,10 +290,10 @@ export default function FleetView({ onSelectBusReports }) {
 
         {/* Dan BaDarom Card */}
         <div 
-          onClick={() => { setOperator('דן בדרום'); setPage(1); }}
-          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-xs ${
+          onClick={() => { setOperator(operator === 'דן בדרום' ? '' : 'דן בדרום'); setPage(1); }}
+          className={`p-4 rounded-2xl border transition-all cursor-pointer shadow-2xs ${
             operator === 'דן בדרום' 
-              ? 'bg-blue-50/70 border-blue-400 ring-2 ring-blue-500' 
+              ? 'bg-blue-50/80 border-blue-400 ring-2 ring-blue-500' 
               : 'bg-white border-slate-200 hover:border-blue-300'
           }`}
         >
@@ -236,14 +301,14 @@ export default function FleetView({ onSelectBusReports }) {
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-full bg-blue-600"></span>
               <span className="font-black text-slate-900 text-sm">דן בדרום</span>
-              <span className="text-[11px] text-slate-400 font-medium">({summary.danBaDarom?.total || 0} אוטובוסים)</span>
+              <span className="text-xs text-slate-600 font-bold">({summary.danBaDarom?.total || 0} אוטובוסים)</span>
             </div>
             <span className="text-xs font-black text-blue-800 bg-blue-100 px-2.5 py-0.5 rounded-lg">
               {summary.danBaDarom?.progressPercent || 0}% הושלמו
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-2">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-700 mb-2">
             <span>טופלו ובתוקף: <strong className="text-blue-700 text-sm">{summary.danBaDarom?.treatedValid || 0}</strong></span>
             <span>נותרו לביצוע: <strong className="text-amber-700 text-sm">{summary.danBaDarom?.pendingTreatment || 0}</strong></span>
           </div>
@@ -257,59 +322,7 @@ export default function FleetView({ onSelectBusReports }) {
         </div>
       </div>
 
-      {/* Active Depots / Hubs Filter Chips */}
-      {summary.hubs && summary.hubs.length > 0 && (
-        <div className="bg-white p-3.5 rounded-2xl border border-slate-200 space-y-2 shadow-xs">
-          <div className="flex items-center justify-between text-xs font-black text-slate-700">
-            <span className="flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-rose-500" />
-              <span>מתחמי חניה וחניונים פעילים (לחץ לסינון מהיר לפי חניון):</span>
-            </span>
-            {(search || selectedHubId) && (
-              <button
-                type="button"
-                onClick={() => { setSelectedHubId(''); setSearch(''); setOperator(''); setPage(1); }}
-                className="text-[10px] text-rose-600 hover:underline font-bold"
-              >
-                נקה סינון חניון ✕
-              </button>
-            )}
-          </div>
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-            {summary.hubs.map((h) => {
-              const isSelected = selectedHubId === h.id;
-              return (
-                <button
-                  key={h.id}
-                  type="button"
-                  onClick={() => {
-                    if (isSelected) {
-                      setSelectedHubId('');
-                      setSearch('');
-                      setOperator('');
-                    } else {
-                      setSelectedHubId(h.id);
-                      setSearch(h.city);
-                      setOperator(h.operator);
-                    }
-                    setPage(1);
-                  }}
-                  className={`whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 active:scale-95 ${
-                    isSelected 
-                      ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  <span>📍 {h.name}</span>
-                  <span className="text-[10px] opacity-75">({h.city})</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* KPI Stats for Current Selection */}
+      {/* 4. KPI Stats for Current Selection (RTL Number formatting: X מתוך Y) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         
         {/* Total in Current View */}
@@ -318,16 +331,16 @@ export default function FleetView({ onSelectBusReports }) {
           className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm cursor-pointer hover:border-slate-400 transition-all"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">
+            <span className="text-xs font-bold text-slate-600">
               {operator ? `סה"כ ${operator}` : 'סה"כ כל הצי'}
             </span>
-            <Bus className="w-4 h-4 text-slate-400" />
+            <Bus className="w-4 h-4 text-slate-500" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
             {activeKpi.total || 0}
           </div>
-          <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
-            אוטובוסים רשומים במערכת
+          <span className="text-xs text-slate-500 block mt-0.5 font-medium">
+            אוטובוסים רשומים
           </span>
         </div>
 
@@ -336,18 +349,18 @@ export default function FleetView({ onSelectBusReports }) {
           onClick={() => { setStatus(prev => prev === 'valid' ? '' : 'valid'); setPage(1); }}
           className={`p-4 rounded-2xl border shadow-sm cursor-pointer transition-all ${
             status === 'valid'
-              ? 'bg-emerald-50/80 border-emerald-400 ring-2 ring-emerald-500'
+              ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500'
               : 'bg-white border-slate-200 hover:border-emerald-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-700">טופלו ובתוקף</span>
+            <span className="text-xs font-bold text-emerald-800">טופלו ובתוקף</span>
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-emerald-700 mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-emerald-700 mt-1">
             {activeKpi.treatedValid || 0}
           </div>
-          <span className="text-[11px] text-emerald-600 block mt-0.5 font-medium">
+          <span className="text-xs text-emerald-700 block mt-0.5 font-bold">
             תוקף 6 חודשים פעיל
           </span>
         </div>
@@ -357,96 +370,51 @@ export default function FleetView({ onSelectBusReports }) {
           onClick={() => { setStatus(prev => prev === 'pending' ? '' : 'pending'); setPage(1); }}
           className={`p-4 rounded-2xl border shadow-sm cursor-pointer transition-all ${
             status === 'pending'
-              ? 'bg-amber-50/80 border-amber-400 ring-2 ring-amber-500'
+              ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-500'
               : 'bg-white border-slate-200 hover:border-amber-300'
           }`}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-700">נותרו לביצוע</span>
+            <span className="text-xs font-bold text-amber-800">נותרו לביצוע</span>
             <Clock className="w-4 h-4 text-amber-600" />
           </div>
-          <div className="text-2xl font-black text-amber-700 mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-amber-700 mt-1">
             {activeKpi.pendingTreatment || 0}
           </div>
-          <span className="text-[11px] text-amber-600 block mt-0.5 font-medium">
-            טרם טופלו / דורשים טיפול
+          <span className="text-xs text-amber-800 block mt-0.5 font-bold">
+            דורשים ביצוע טיפול
           </span>
         </div>
 
         {/* Progress Percent */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-500">אחוז התקדמות</span>
+            <span className="text-xs font-bold text-slate-600">אחוז התקדמות</span>
             <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-1">
             {activeKpi.progressPercent || 0}%
           </div>
-          <span className="text-[11px] text-slate-400 block mt-0.5 font-medium">
+          <span className="text-xs text-slate-600 block mt-0.5 font-bold">
             {activeKpi.treatedValid || 0} מתוך {activeKpi.total || 0}
           </span>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row gap-3 items-center">
-          
-          <div className="relative flex-1 w-full">
-            <input
-              type="text"
-              placeholder="חיפוש לפי מספר רישוי אוטובוס, חניון או עיר..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3 pointer-events-none" />
-          </div>
-
-          <div className="w-full sm:w-48">
-            <select
-              value={status}
-              onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-            >
-              <option value="">כל הסטטוסים</option>
-              <option value="valid">🟢 טופלו ובתוקף</option>
-              <option value="pending">⏳ נותרו לביצוע</option>
-            </select>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full sm:w-auto py-2.5 px-5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors"
-          >
-            חפש
-          </button>
-
-          <button
-            type="button"
-            onClick={() => { setSearch(''); setOperator(''); setStatus(''); setSelectedHubId(''); setPage(1); }}
-            className="w-full sm:w-auto p-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>איפוס</span>
-          </button>
-        </form>
-      </div>
-
-      {/* Fleet Table */}
+      {/* 5. Fleet Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-16 flex justify-center">
             <div className="w-8 h-8 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : buses.length === 0 ? (
-          <div className="p-16 text-center text-slate-400 text-sm">
-            לא נמצאו אוטובוסים התואמים לסינון הנוכחי
+          <div className="p-16 text-center text-slate-500 text-sm font-bold">
+            לא נמצאו אוטובוסים התואמים לחיפוש או לסינון הנוכחי
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+              <thead className="bg-slate-50 text-slate-700 font-bold border-b border-slate-200">
                 <tr>
                   <th className="p-3.5">מפעיל</th>
                   <th className="p-3.5">מספר רישוי</th>
@@ -470,8 +438,8 @@ export default function FleetView({ onSelectBusReports }) {
                           {b.operator || 'דן באר שבע'}
                         </span>
                       </td>
-                      <td className="p-3.5 font-black text-slate-900 font-mono text-sm">{b.bus_number}</td>
-                      <td className="p-3.5 text-slate-600 font-medium">
+                      <td className="p-3.5 font-black text-slate-900 font-mono text-sm" dir="ltr">{b.bus_number}</td>
+                      <td className="p-3.5 text-slate-700 font-medium">
                         {b.bus_type || 'אוטובוס עירוני'} {b.production_year ? `(${b.production_year})` : ''}
                       </td>
                       <td className="p-3.5">
@@ -480,11 +448,11 @@ export default function FleetView({ onSelectBusReports }) {
                             ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                             : b.status === 'נדרש טיפול' || b.last_treatment_date
                             ? 'bg-rose-50 text-rose-800 border-rose-300'
-                            : 'bg-slate-100 text-slate-600 border-slate-300'
+                            : 'bg-slate-100 text-slate-700 border-slate-300'
                         }`}>
                           {hasValid ? (
                             <>
-                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               <span>טיפול בתוקף</span>
                             </>
                           ) : (
@@ -495,19 +463,19 @@ export default function FleetView({ onSelectBusReports }) {
                           )}
                         </span>
                       </td>
-                      <td className="p-3.5 text-slate-600">
+                      <td className="p-3.5 text-slate-700">
                         {b.last_treatment_date ? (
                           <div>
                             <span className="font-bold">{new Date(b.last_treatment_date).toLocaleDateString('he-IL')}</span>
                             {b.last_technician_name && (
-                              <span className="text-[10px] text-slate-400 block">ע"י {b.last_technician_name}</span>
+                              <span className="text-[10px] text-slate-500 block">ע"י {b.last_technician_name}</span>
                             )}
                           </div>
                         ) : (
                           <span className="text-slate-400">טרם בוצע</span>
                         )}
                       </td>
-                      <td className="p-3.5 text-slate-600 font-bold">
+                      <td className="p-3.5 text-slate-700 font-bold">
                         {b.next_treatment_date ? (
                           <span className={hasValid ? 'text-emerald-700 font-black' : 'text-rose-600'}>
                             {new Date(b.next_treatment_date).toLocaleDateString('he-IL')}
@@ -516,7 +484,7 @@ export default function FleetView({ onSelectBusReports }) {
                           <span className="text-slate-400 font-normal">לא נקבע</span>
                         )}
                       </td>
-                      <td className="p-3.5 text-slate-600 font-medium">
+                      <td className="p-3.5 text-slate-700 font-medium">
                         {b.last_known_location || b.cluster || 'מרכז תפעול'}
                       </td>
                       <td className="p-3.5 text-center">
@@ -524,14 +492,14 @@ export default function FleetView({ onSelectBusReports }) {
                           <button
                             type="button"
                             onClick={() => onSelectBusReports && onSelectBusReports(b.bus_number)}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-xs flex items-center gap-1 mx-auto transition-colors"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-black text-xs inline-flex items-center gap-1 transition-colors min-h-[36px]"
                             title="הצג דוחות עבור אוטובוס זה"
                           >
                             <span>{b.reports_count} דוחות</span>
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3 h-3 text-emerald-600" />
                           </button>
                         ) : (
-                          <span className="text-[11px] text-slate-300 font-medium">-</span>
+                          <span className="text-[11px] text-slate-400 font-medium">-</span>
                         )}
                       </td>
                     </tr>
@@ -544,23 +512,25 @@ export default function FleetView({ onSelectBusReports }) {
 
         {/* Pagination Footer */}
         {totalPages > 1 && (
-          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+          <div className="p-4 border-t border-slate-200 flex items-center justify-between text-xs font-bold text-slate-700 flex-wrap gap-2">
             <span>מוצגים {buses.length} מתוך {filteredCount} אוטובוסים</span>
             <div className="flex items-center gap-1.5">
               <button
                 disabled={page <= 1}
                 onClick={() => setPage(prev => Math.max(1, prev - 1))}
-                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40"
+                className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                aria-label="עמוד קודם"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
-              <span className="px-3 py-1 bg-slate-100 rounded-lg">
+              <span className="px-3 py-1 bg-slate-100 rounded-lg text-slate-900 font-black">
                 עמוד {page} מתוך {totalPages}
               </span>
               <button
                 disabled={page >= totalPages}
                 onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
-                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 disabled:opacity-40"
+                className="p-2 rounded-lg border border-slate-300 hover:bg-slate-100 disabled:opacity-40 min-w-[36px] min-h-[36px] flex items-center justify-center"
+                aria-label="עמוד הבא"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>

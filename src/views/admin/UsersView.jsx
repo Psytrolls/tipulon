@@ -173,6 +173,14 @@ export default function UsersView() {
     e.preventDefault();
     setPinError('');
 
+    const targetIsAdmin = pinModalUser?.role === 'admin' || pinModalUser?.is_super_admin;
+    const reqMinLen = targetIsAdmin ? 12 : 6;
+
+    if (newPin.trim().length < reqMinLen) {
+      setPinError(`הסיסמה חייבת להכיל לפחות ${reqMinLen} תווים עבור ${targetIsAdmin ? 'מנהל מערכת' : 'טכנאי'}`);
+      return;
+    }
+
     if (newPin.trim() !== confirmPin.trim()) {
       setPinError('הסיסמאות אינן תואמות');
       return;
@@ -712,7 +720,7 @@ export default function UsersView() {
                       type={showPinText ? 'text' : 'password'}
                       maxLength={32}
                       dir="ltr"
-                      placeholder="הזן סיסמה חדשה (לפחות 6 תווים)..."
+                      placeholder={pinModalUser?.role === 'admin' ? "הזן סיסמה חדשה (לפחות 12 תווים למנהל)..." : "הזן סיסמה חדשה (לפחות 6 תווים)..."}
                       value={newPin}
                       onChange={(e) => setNewPin(e.target.value)}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left font-mono"
@@ -735,8 +743,8 @@ export default function UsersView() {
                     />
                   </div>
 
-                  <p className="text-[11px] text-slate-500">
-                    🔒 המשתמש יחויב להחליף סיסמה זו לסיסמה אישית בכניסתו הבאה, וכל החיבורים הפעילים ינותקו.
+                  <p className="text-[11px] text-slate-600 font-medium">
+                    🔒 דרישת אבטחה: {pinModalUser?.role === 'admin' ? 'מינימום 12 תווים למנהל מערכת' : 'מינימום 6 תווים לטכנאי'}. המשתמש יחויב להחליף סיסמה זו לסיסמה אישית בכניסתו הבאה.
                   </p>
 
                   <div className="flex gap-2 pt-2">

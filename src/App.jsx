@@ -91,6 +91,7 @@ export default function App() {
           <DashboardView 
             onNavigateToReports={() => setCurrentView('reports')}
             onNavigateToFollowUp={() => setCurrentView('follow-up')}
+            onNavigateToFleet={() => setCurrentView('fleet')}
           />
         )}
 

@@ -152,7 +152,8 @@ export default function LoginView() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 focus:outline-none"
+                    className="min-w-[44px] min-h-[44px] absolute right-1 top-1 text-slate-500 hover:text-slate-700 focus:outline-none flex items-center justify-center rounded-lg"
+                    aria-label={showPassword ? 'הסתר סיסמה' : 'הצג סיסמה'}
                     tabIndex="-1"
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
