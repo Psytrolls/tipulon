@@ -18,6 +18,7 @@ import {
   Check
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import EdiConfirmationModal from '../../components/EdiConfirmationModal';
 import { useAuth } from '../../context/AuthContext';
 import { generateEdiClosingText, copyTextToClipboard } from '../../utils/ediHelper';
 
@@ -147,25 +148,49 @@ export default function ReportsView({ initialReportId = null }) {
     }
   }, [isAdmin]);
 
-  // Toggle or update EDI status (Admin and Technician)
-  const handleToggleEdi = async (reportId, currentStatus) => {
+  // EDI Confirmation Modal and Toast states
+  const [ediConfirmTarget, setEdiConfirmTarget] = useState(null); // { reportId, currentStatus, busNumber }
+  const [ediModalLoading, setEdiModalLoading] = useState(false);
+  const [ediModalError, setEdiModalError] = useState('');
+  const [ediToast, setEdiToast] = useState(null); // { message, type }
+
+  const requestToggleEdi = (reportId, currentStatus, busNumber) => {
+    if (updatingEdiId || ediModalLoading) return;
+    setEdiModalError('');
+    setEdiConfirmTarget({
+      reportId,
+      currentStatus: Boolean(currentStatus),
+      busNumber
+    });
+  };
+
+  const handleConfirmToggleEdi = async () => {
+    if (!ediConfirmTarget || ediModalLoading) return;
+    const { reportId, currentStatus } = ediConfirmTarget;
+    const newStatus = !currentStatus;
+
+    setEdiModalLoading(true);
+    setEdiModalError('');
+    setUpdatingEdiId(reportId);
+
     try {
-      setUpdatingEdiId(reportId);
-      const newStatus = !currentStatus;
       const res = await fetch(`/api/treatments/${reportId}/edi`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isEdiClosed: newStatus })
       });
 
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         throw new Error(data.error || 'שגיאה בעדכון סטטוס אדי');
       }
 
+      const closedIso = newStatus ? (data.ediClosedAt || new Date().toISOString()) : null;
+
+      // Immediately update local state
       setReports(prev => prev.map(r => 
         r.id === reportId 
-          ? { ...r, is_edi_closed: newStatus ? 1 : 0, edi_closed_at: newStatus ? new Date().toISOString() : null }
+          ? { ...r, is_edi_closed: newStatus ? 1 : 0, edi_closed_at: closedIso }
           : r
       ));
 
@@ -173,13 +198,21 @@ export default function ReportsView({ initialReportId = null }) {
         setSelectedReport(prev => ({
           ...prev,
           is_edi_closed: newStatus ? 1 : 0,
-          edi_closed_at: newStatus ? new Date().toISOString() : null
+          edi_closed_at: closedIso
         }));
       }
+
+      setEdiConfirmTarget(null);
+      setEdiToast({
+        message: newStatus ? 'הדוח סומן כסגור באדי בהצלחה! ✓' : 'הדוח נפתח מחדש באדי בהצלחה! ✓',
+        type: 'success'
+      });
+      setTimeout(() => setEdiToast(null), 3500);
     } catch (err) {
       console.error('Failed to toggle EDI status:', err);
-      alert(err.message || 'שגיאה בעדכון סטטוס אדי');
+      setEdiModalError(err.message || 'שגיאה בעדכון סטטוס אדי');
     } finally {
+      setEdiModalLoading(false);
       setUpdatingEdiId(null);
     }
   };
@@ -564,8 +597,8 @@ export default function ReportsView({ initialReportId = null }) {
                     <td className="p-3.5 text-center">
                       <button
                         type="button"
-                        disabled={updatingEdiId === report.id}
-                        onClick={() => handleToggleEdi(report.id, report.is_edi_closed)}
+                        disabled={updatingEdiId === report.id || ediModalLoading}
+                        onClick={() => requestToggleEdi(report.id, report.is_edi_closed, report.bus_number)}
                         title="לחץ לשינוי סטטוס סגור באדי"
                         className={`py-1 px-2.5 rounded-lg text-xs font-black border inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
                           report.is_edi_closed
@@ -653,8 +686,8 @@ export default function ReportsView({ initialReportId = null }) {
                 <span className="text-slate-400 block mb-1">סגור באדי</span>
                 <button
                   type="button"
-                  disabled={updatingEdiId === selectedReport.id}
-                  onClick={() => handleToggleEdi(selectedReport.id, selectedReport.is_edi_closed)}
+                  disabled={updatingEdiId === selectedReport.id || ediModalLoading}
+                  onClick={() => requestToggleEdi(selectedReport.id, selectedReport.is_edi_closed, selectedReport.bus_number)}
                   className={`py-1 px-2.5 rounded-lg text-xs font-black border transition-all text-center inline-flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
                     selectedReport.is_edi_closed
                       ? 'bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200'
@@ -1014,6 +1047,30 @@ export default function ReportsView({ initialReportId = null }) {
             </div>
 
           </div>
+        </div>
+      )}
+
+      {/* EDI Confirmation Modal */}
+      <EdiConfirmationModal
+        isOpen={Boolean(ediConfirmTarget)}
+        isClosing={ediConfirmTarget ? !ediConfirmTarget.currentStatus : true}
+        busNumber={ediConfirmTarget?.busNumber}
+        onConfirm={handleConfirmToggleEdi}
+        onCancel={() => {
+          if (!ediModalLoading) {
+            setEdiConfirmTarget(null);
+            setEdiModalError('');
+          }
+        }}
+        loading={ediModalLoading}
+        error={ediModalError}
+      />
+
+      {/* Floating EDI Success Toast */}
+      {ediToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-sm font-black animate-fadeIn border border-slate-700/80">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <span>{ediToast.message}</span>
         </div>
       )}
 

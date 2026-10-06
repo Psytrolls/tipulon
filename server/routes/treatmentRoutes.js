@@ -233,24 +233,36 @@ router.get('/:id', requireAuth, (req, res) => {
   }
 });
 
-// PATCH /api/treatments/:id/edi - Toggle or set EDI closed status (Technicians and Admins)
+// PATCH /api/treatments/:id/edi - Toggle or set EDI closed status (Technicians for their own reports, Admins for all)
 router.patch('/:id/edi', requireAuth, validateBody(validateEdiStatusSchema), (req, res) => {
   try {
     const reportId = Number(req.params.id);
+    if (!reportId || isNaN(reportId)) {
+      return res.status(400).json({ error: 'מזהה דוח לא תקין' });
+    }
+
     const { isEdiClosed } = req.body;
     const closed = isEdiClosed ? 1 : 0;
     const now = closed ? new Date().toISOString() : null;
+
+    // Check report existence and ownership
+    const report = db.prepare('SELECT id, bus_number, technician_id, is_edi_closed FROM reports WHERE id = ?').get(reportId);
+    if (!report) {
+      return res.status(404).json({ error: 'דוח לא נמצא' });
+    }
+
+    // Role check: Only admin can change any report. Technician can ONLY change their own report.
+    const isAdmin = req.user.role === 'admin';
+    if (!isAdmin && report.technician_id !== req.user.id) {
+      return res.status(403).json({ error: 'אין הרשאה לעדכן דוח של טכנאי אחר' });
+    }
 
     const stmt = db.prepare(`
       UPDATE reports
       SET is_edi_closed = ?, edi_closed_at = ?
       WHERE id = ?
     `);
-    const result = stmt.run(closed, now, reportId);
-
-    if (result.changes === 0) {
-      return res.status(404).json({ error: 'דוח לא נמצא' });
-    }
+    stmt.run(closed, now, reportId);
 
     logAudit(
       req.user.id,
@@ -258,7 +270,7 @@ router.patch('/:id/edi', requireAuth, validateBody(validateEdiStatusSchema), (re
       closed ? 'סגירה באדי' : 'ביטול סגירה באדי',
       'דוח טיפול',
       reportId,
-      `דוח #${reportId} עודכן ל-${closed ? 'סגור באדי' : 'פתוח באדי'}`
+      `דוח #${reportId} (אוטובוס ${report.bus_number}) עודכן ל-${closed ? 'סגור באדי' : 'פתוח באדי'} ע"י ${req.user.fullName} (${isAdmin ? 'מנהל' : 'טכנאי'})`
     );
 
     res.json({

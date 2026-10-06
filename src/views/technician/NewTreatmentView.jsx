@@ -22,6 +22,7 @@ import {
   Copy
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import EdiConfirmationModal from '../../components/EdiConfirmationModal';
 import { validateBusNumber, validateDeviceSerialNumber } from '../../utils/validators';
 import { generateEdiClosingText, copyTextToClipboard } from '../../utils/ediHelper';
 
@@ -61,6 +62,52 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
   const [copiedNotifBus, setCopiedNotifBus] = useState(false);
   const [copiedNotifEdi, setCopiedNotifEdi] = useState(false);
   const [updatingNotifEdi, setUpdatingNotifEdi] = useState(false);
+  const [ediConfirmModalOpen, setEdiConfirmModalOpen] = useState(false);
+  const [ediModalLoading, setEdiModalLoading] = useState(false);
+  const [ediModalError, setEdiModalError] = useState('');
+  const [ediToast, setEdiToast] = useState(null);
+
+  const handleBannerEdiClick = () => {
+    if (updatingNotifEdi || ediModalLoading) return;
+    setEdiModalError('');
+    setEdiConfirmModalOpen(true);
+  };
+
+  const handleConfirmBannerEdi = async () => {
+    if (!lastCompletedNotification || ediModalLoading) return;
+    const newStatus = !lastCompletedNotification.isEdiClosed;
+
+    setEdiModalLoading(true);
+    setEdiModalError('');
+    setUpdatingNotifEdi(true);
+
+    try {
+      const res = await fetch(`/api/treatments/${lastCompletedNotification.reportId}/edi`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isEdiClosed: newStatus })
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.error || 'שגיאה בעדכון סטטוס אדי');
+      }
+
+      setLastCompletedNotification(prev => ({ ...prev, isEdiClosed: newStatus }));
+      setEdiConfirmModalOpen(false);
+      setEdiToast({
+        message: newStatus ? 'הדוח סומן כסגור באדי בהצלחה! ✓' : 'הדוח נפתח מחדש באדי בהצלחה! ✓',
+        type: 'success'
+      });
+      setTimeout(() => setEdiToast(null), 3500);
+    } catch (e) {
+      console.error('Failed to toggle EDI from banner:', e);
+      setEdiModalError(e.message || 'שגיאה בעדכון סטטוס אדי');
+    } finally {
+      setEdiModalLoading(false);
+      setUpdatingNotifEdi(false);
+    }
+  };
 
   // Fetch active products on mount
   useEffect(() => {
@@ -413,32 +460,15 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
 
                 <button
                   type="button"
-                  disabled={updatingNotifEdi}
-                  onClick={async () => {
-                    try {
-                      setUpdatingNotifEdi(true);
-                      const newStatus = !lastCompletedNotification.isEdiClosed;
-                      const res = await fetch(`/api/treatments/${lastCompletedNotification.reportId}/edi`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ isEdiClosed: newStatus })
-                      });
-                      if (res.ok) {
-                        setLastCompletedNotification(prev => ({ ...prev, isEdiClosed: newStatus }));
-                      }
-                    } catch (e) {
-                      console.error('Failed to toggle EDI from banner:', e);
-                    } finally {
-                      setUpdatingNotifEdi(false);
-                    }
-                  }}
+                  disabled={updatingNotifEdi || ediModalLoading}
+                  onClick={handleBannerEdiClick}
                   className={`py-1.5 px-3 rounded-xl text-xs font-black inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 border ${
                     lastCompletedNotification.isEdiClosed
                       ? 'bg-emerald-950 text-emerald-300 border-emerald-400 hover:bg-emerald-900'
                       : 'bg-amber-400 text-amber-950 border-amber-300 hover:bg-amber-300'
-                  } ${updatingNotifEdi ? 'opacity-50 cursor-wait' : ''}`}
+                  } ${updatingNotifEdi || ediModalLoading ? 'opacity-50 cursor-wait' : ''}`}
                 >
-                  {updatingNotifEdi ? (
+                  {updatingNotifEdi || ediModalLoading ? (
                     <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
                   ) : lastCompletedNotification.isEdiClosed ? (
                     <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -1377,6 +1407,30 @@ export default function NewTreatmentView({ onTreatmentCompleted, onOpenDepotMap,
               <span>פתח טיפול לאוטובוס נוסף</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* EDI Confirmation Modal */}
+      <EdiConfirmationModal
+        isOpen={ediConfirmModalOpen}
+        isClosing={lastCompletedNotification ? !lastCompletedNotification.isEdiClosed : true}
+        busNumber={lastCompletedNotification?.busNumber}
+        onConfirm={handleConfirmBannerEdi}
+        onCancel={() => {
+          if (!ediModalLoading) {
+            setEdiConfirmModalOpen(false);
+            setEdiModalError('');
+          }
+        }}
+        loading={ediModalLoading}
+        error={ediModalError}
+      />
+
+      {/* Floating EDI Success Toast */}
+      {ediToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-sm font-black animate-fadeIn border border-slate-700/80">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0" />
+          <span>{ediToast.message}</span>
         </div>
       )}
 
