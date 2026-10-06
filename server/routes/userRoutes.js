@@ -2,6 +2,7 @@ import express from 'express';
 import { db, normalizePhone, hashPin, logAudit } from '../db.js';
 import { requireAdmin } from '../auth.js';
 import { unlockUserPhone, isUserPhoneLocked } from '../securityService.js';
+import { validatePasswordStrength, generateSecureTempPassword } from '../utils/passwordPolicy.js';
 
 const router = express.Router();
 
@@ -30,7 +31,7 @@ router.get('/', requireAdmin, (req, res) => {
 // POST /api/users - Add user (Admin only)
 router.post('/', requireAdmin, (req, res) => {
   try {
-    const { fullName, phone, pin, role, mustChangePin } = req.body;
+    const { fullName, phone, pin, role } = req.body;
 
     const cleanName = String(fullName || '').trim();
     if (!cleanName) {
@@ -42,15 +43,25 @@ router.post('/', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'מספר טלפון חייב להכיל בין 9 ל-15 ספרות' });
     }
 
-    const cleanPin = String(pin || '').trim();
-    if (cleanPin.length < 4 || cleanPin.length > 32) {
-      return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל בין 4 ל-32 תווים' });
-    }
-
     const validRoles = ['technician', 'admin'];
     const chosenRole = role || 'technician';
     if (!validRoles.includes(chosenRole)) {
       return res.status(400).json({ error: 'תפקיד לא חוקי (בחר טכנאי או מנהל)' });
+    }
+
+    // Use provided PIN or auto-generate secure 12-char temp password
+    let finalPin = String(pin || '').trim();
+    if (!finalPin) {
+      finalPin = generateSecureTempPassword();
+    } else {
+      const policy = validatePasswordStrength(finalPin, {
+        phone: cleanPhone,
+        fullName: cleanName,
+        role: chosenRole
+      });
+      if (!policy.valid) {
+        return res.status(400).json({ error: policy.error });
+      }
     }
 
     // Check duplicate phone
@@ -60,8 +71,9 @@ router.post('/', requireAdmin, (req, res) => {
       return res.status(400).json({ error: 'קיים כבר משתמש פעיל עם מספר טלפון זה' });
     }
 
-    const { hash, salt } = hashPin(cleanPin);
-    const forceChange = mustChangePin !== undefined ? (mustChangePin ? 1 : 0) : 1;
+    const { hash, salt } = hashPin(finalPin);
+    // Security policy: Newly created users must ALWAYS change password on first login
+    const forceChange = 1;
 
     const insertStmt = db.prepare(`
       INSERT INTO users (full_name, phone, pin_hash, pin_salt, role, is_active, is_super_admin, must_change_pin)
@@ -80,7 +92,8 @@ router.post('/', requireAdmin, (req, res) => {
       role: chosenRole,
       is_active: 1,
       is_super_admin: false,
-      must_change_pin: forceChange === 1
+      must_change_pin: true,
+      tempPassword: finalPin
     });
   } catch (err) {
     console.error('Create user error:', err);
@@ -207,14 +220,9 @@ router.delete('/:id', requireAdmin, (req, res) => {
 router.patch('/:id/pin', requireAdmin, (req, res) => {
   try {
     const { id } = req.params;
-    const { newPin, mustChangePin } = req.body;
+    const { newPin } = req.body;
 
-    const cleanPin = String(newPin || '').trim();
-    if (cleanPin.length < 4 || cleanPin.length > 32) {
-      return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל בין 4 ל-32 תווים' });
-    }
-
-    const checkStmt = db.prepare('SELECT id, full_name, phone, is_super_admin FROM users WHERE id = ?');
+    const checkStmt = db.prepare('SELECT id, full_name, phone, role, is_super_admin FROM users WHERE id = ?');
     const targetUser = checkStmt.get(id);
     if (!targetUser) {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
@@ -225,8 +233,24 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
       return res.status(403).json({ error: 'רק מנהל העל (Super Admin) רשאי לשנות את הסיסמה של חשבון מנהל העל' });
     }
 
-    const { hash, salt } = hashPin(cleanPin);
-    const forceChange = mustChangePin !== undefined ? (mustChangePin ? 1 : 0) : 1;
+    // Use provided new PIN or generate secure 12-char temp password
+    let finalPin = String(newPin || '').trim();
+    if (!finalPin) {
+      finalPin = generateSecureTempPassword();
+    } else {
+      const policy = validatePasswordStrength(finalPin, {
+        phone: targetUser.phone,
+        fullName: targetUser.full_name,
+        role: targetUser.role
+      });
+      if (!policy.valid) {
+        return res.status(400).json({ error: policy.error });
+      }
+    }
+
+    const { hash, salt } = hashPin(finalPin);
+    // Forced change is always required on administrative password reset
+    const forceChange = 1;
 
     const updateStmt = db.prepare('UPDATE users SET pin_hash = ?, pin_salt = ?, must_change_pin = ? WHERE id = ?');
     updateStmt.run(hash, salt, forceChange, id);
@@ -240,13 +264,17 @@ router.patch('/:id/pin', requireAdmin, (req, res) => {
     logAudit(
       req.user.id,
       req.user.fullName,
-      'שינוי סיסמה ושחרור נעילה',
+      'איפוס סיסמה ושחרור נעילה',
       'משתמש',
       id,
-      `עודכנה סיסמה ובוטלו כל ההתחברויות הפעילות עבור: ${targetUser.full_name} (${targetUser.phone})`
+      `הונפקה סיסמה זמנית חדשה ובוטלו כל ההתחברויות הפעילות עבור: ${targetUser.full_name} (${targetUser.phone})`
     );
 
-    res.json({ success: true, message: 'הסיסמה עודכנה והנעילה שוחררה בהצלחה' });
+    res.json({
+      success: true,
+      message: 'הסיסמה עודכנה והנעילה שוחררה בהצלחה',
+      tempPassword: finalPin
+    });
   } catch (err) {
     console.error('Update PIN error:', err);
     res.status(500).json({ error: 'שגיאה בעדכון קוד PIN' });

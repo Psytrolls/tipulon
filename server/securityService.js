@@ -1,138 +1,205 @@
-import crypto from 'node:crypto';
+import { db } from './db.js';
 
 // Configuration
-const MAX_FAILED_PER_PHONE = 5;              // Lockout after 5 consecutive failed attempts
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes lock
-const WINDOW_DURATION_MS = 15 * 60 * 1000;  // 15 minutes window
+const MAX_FAILED_PER_PHONE = 5;              // Lockout after 5 consecutive failed attempts per phone
+const MAX_FAILED_PER_IP = 25;                // Max 25 failed attempts per IP across any accounts
+const MAX_FAILED_PER_IP_PHONE = 5;           // Max 5 failed attempts for specific IP + Phone
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;  // 15 minutes lock
+const WINDOW_DURATION_MS = 15 * 60 * 1000;   // 15 minutes window
 
-const MAX_FAILED_PER_IP = 25;               // Max 25 failed attempts per IP across any accounts
+// Prepared statements for high-performance rate limiting
+const getLockoutStmt = db.prepare(`
+  SELECT locked_until, reason 
+  FROM security_lockouts 
+  WHERE target_type = ? AND target_value = ?
+`);
 
-// In-memory rate limiting stores
-// phoneAttempts: Map<string, { count: number, firstAttempt: number, lockUntil: number | null }>
-const phoneAttempts = new Map();
-// ipAttempts: Map<string, { count: number, firstAttempt: number, lockUntil: number | null }>
-const ipAttempts = new Map();
+const setLockoutStmt = db.prepare(`
+  INSERT INTO security_lockouts (target_type, target_value, locked_until, reason)
+  VALUES (?, ?, ?, ?)
+  ON CONFLICT(target_type, target_value) DO UPDATE SET
+    locked_until = excluded.locked_until,
+    reason = excluded.reason
+`);
 
-// Periodic cleanup every 10 minutes to prevent memory leaks
+const deleteLockoutStmt = db.prepare(`
+  DELETE FROM security_lockouts 
+  WHERE target_type = ? AND target_value = ?
+`);
+
+const insertAttemptStmt = db.prepare(`
+  INSERT INTO login_attempts (ip, phone, attempted_at, is_success)
+  VALUES (?, ?, ?, ?)
+`);
+
+const countRecentFailuresPhoneStmt = db.prepare(`
+  SELECT COUNT(*) as count 
+  FROM login_attempts 
+  WHERE phone = ? AND is_success = 0 AND attempted_at >= ?
+`);
+
+const countRecentFailuresIpStmt = db.prepare(`
+  SELECT COUNT(*) as count 
+  FROM login_attempts 
+  WHERE ip = ? AND is_success = 0 AND attempted_at >= ?
+`);
+
+const countRecentFailuresIpPhoneStmt = db.prepare(`
+  SELECT COUNT(*) as count 
+  FROM login_attempts 
+  WHERE ip = ? AND phone = ? AND is_success = 0 AND attempted_at >= ?
+`);
+
+const clearSuccessAttemptsStmt = db.prepare(`
+  DELETE FROM login_attempts 
+  WHERE phone = ? AND attempted_at < ?
+`);
+
+// Periodic cleanup of expired lockouts and old login attempts (every 10 minutes)
 setInterval(() => {
-  const now = Date.now();
-  for (const [phone, data] of phoneAttempts.entries()) {
-    if (data.lockUntil && data.lockUntil < now) {
-      phoneAttempts.delete(phone);
-    } else if (!data.lockUntil && (now - data.firstAttempt) > WINDOW_DURATION_MS) {
-      phoneAttempts.delete(phone);
-    }
-  }
-
-  for (const [ip, data] of ipAttempts.entries()) {
-    if (data.lockUntil && data.lockUntil < now) {
-      ipAttempts.delete(ip);
-    } else if (!data.lockUntil && (now - data.firstAttempt) > WINDOW_DURATION_MS) {
-      ipAttempts.delete(ip);
-    }
+  try {
+    const now = Date.now();
+    const purgeBefore = now - (24 * 60 * 60 * 1000); // 24 hours
+    db.prepare('DELETE FROM security_lockouts WHERE locked_until < ?').run(now);
+    db.prepare('DELETE FROM login_attempts WHERE attempted_at < ?').run(purgeBefore);
+  } catch (err) {
+    console.error('[SECURITY] Cleanup error:', err);
   }
 }, 10 * 60 * 1000).unref();
 
+/**
+ * Accurately extracts the client IP address using Express req.ip (trusted proxy configured).
+ */
 export function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    return String(forwarded).split(',')[0].trim();
-  }
-  return req.socket?.remoteAddress || req.ip || '127.0.0.1';
+  return req.ip || req.socket?.remoteAddress || '127.0.0.1';
 }
 
 /**
  * Checks whether login is permitted for the given phone number and client IP.
+ * Persistent in SQLite database across container restarts.
  * @returns {{ allowed: boolean, status?: number, error?: string }}
  */
 export function checkLoginRateLimit(phone, ip) {
   const now = Date.now();
 
-  // 1. Check IP lock
-  const ipData = ipAttempts.get(ip);
-  if (ipData?.lockUntil && ipData.lockUntil > now) {
-    const minutesLeft = Math.ceil((ipData.lockUntil - now) / 60000);
-    return {
-      allowed: false,
-      status: 429,
-      error: `בוצעו יותר מדי ניסיונות התחברות מכתובת זו. המערכת חסומה לעוד ${minutesLeft} דקות.`
-    };
-  }
-
-  // 2. Check Phone lock
-  if (phone) {
-    const phoneData = phoneAttempts.get(phone);
-    if (phoneData?.lockUntil && phoneData.lockUntil > now) {
-      const minutesLeft = Math.ceil((phoneData.lockUntil - now) / 60000);
-      return {
-        allowed: false,
-        status: 429,
-        error: `החשבון ננעל זמנית עקב 5 ניסיונות שגויים ברצף. נסה שוב בעוד ${minutesLeft} דקות.`
-      };
+  try {
+    // 1. Check IP lock
+    if (ip) {
+      const ipLock = getLockoutStmt.get('ip', ip);
+      if (ipLock && ipLock.locked_until > now) {
+        const minutesLeft = Math.ceil((ipLock.locked_until - now) / 60000);
+        return {
+          allowed: false,
+          status: 429,
+          error: `בוצעו יותר מדי ניסיונות התחברות מכתובת זו. המערכת חסומה לעוד ${minutesLeft} דקות.`
+        };
+      }
     }
+
+    // 2. Check Phone lock
+    if (phone) {
+      const phoneLock = getLockoutStmt.get('phone', phone);
+      if (phoneLock && phoneLock.locked_until > now) {
+        const minutesLeft = Math.ceil((phoneLock.locked_until - now) / 60000);
+        return {
+          allowed: false,
+          status: 429,
+          error: `החשבון ננעל זמנית עקב מספר ניסיונות שגויים ברצף. נסה שוב בעוד ${minutesLeft} דקות.`
+        };
+      }
+
+      // 3. Check combined IP + Phone lock
+      if (ip) {
+        const comboLock = getLockoutStmt.get('ip_phone', `${ip}:${phone}`);
+        if (comboLock && comboLock.locked_until > now) {
+          const minutesLeft = Math.ceil((comboLock.locked_until - now) / 60000);
+          return {
+            allowed: false,
+            status: 429,
+            error: `החשבון ננעל זמנית מכתובת זו. נסה שוב בעוד ${minutesLeft} דקות.`
+          };
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[SECURITY] checkLoginRateLimit error:', err);
   }
 
   return { allowed: true };
 }
 
 /**
- * Records a failed login attempt for phone and IP.
+ * Records a failed login attempt for phone and IP and applies persistent lockouts.
  * @returns {{ isLocked: boolean, attemptsLeft: number, lockMinutes: number }}
  */
 export function recordFailedLogin(phone, ip) {
   const now = Date.now();
+  const windowStart = now - WINDOW_DURATION_MS;
   let isLocked = false;
   let attemptsLeft = MAX_FAILED_PER_PHONE;
+  const lockUntil = now + LOCKOUT_DURATION_MS;
+  const lockMinutes = Math.ceil(LOCKOUT_DURATION_MS / 60000);
 
-  // Track Phone
-  if (phone) {
-    let pData = phoneAttempts.get(phone);
-    if (!pData || (now - pData.firstAttempt) > WINDOW_DURATION_MS) {
-      pData = { count: 1, firstAttempt: now, lockUntil: null };
-    } else {
-      pData.count += 1;
+  try {
+    // 1. Record attempt in database
+    insertAttemptStmt.run(ip || '127.0.0.1', phone || '', now, 0);
+
+    // 2. Evaluate Phone failures
+    if (phone) {
+      const phoneFailures = countRecentFailuresPhoneStmt.get(phone, windowStart)?.count || 1;
+      if (phoneFailures >= MAX_FAILED_PER_PHONE) {
+        setLockoutStmt.run('phone', phone, lockUntil, `5 failed attempts within ${lockMinutes}m`);
+        isLocked = true;
+        attemptsLeft = 0;
+      } else {
+        attemptsLeft = Math.max(0, MAX_FAILED_PER_PHONE - phoneFailures);
+      }
     }
 
-    if (pData.count >= MAX_FAILED_PER_PHONE) {
-      pData.lockUntil = now + LOCKOUT_DURATION_MS;
-      isLocked = true;
-      attemptsLeft = 0;
-    } else {
-      attemptsLeft = MAX_FAILED_PER_PHONE - pData.count;
+    // 3. Evaluate IP failures
+    if (ip) {
+      const ipFailures = countRecentFailuresIpStmt.get(ip, windowStart)?.count || 1;
+      if (ipFailures >= MAX_FAILED_PER_IP) {
+        setLockoutStmt.run('ip', ip, lockUntil, `25 failed attempts within ${lockMinutes}m across IP`);
+        isLocked = true;
+      }
+
+      // 4. Evaluate combined IP + Phone failures
+      if (phone) {
+        const comboFailures = countRecentFailuresIpPhoneStmt.get(ip, phone, windowStart)?.count || 1;
+        if (comboFailures >= MAX_FAILED_PER_IP_PHONE) {
+          setLockoutStmt.run('ip_phone', `${ip}:${phone}`, lockUntil, `5 failed attempts from IP for phone`);
+          isLocked = true;
+        }
+      }
     }
-
-    phoneAttempts.set(phone, pData);
-  }
-
-  // Track IP
-  if (ip) {
-    let iData = ipAttempts.get(ip);
-    if (!iData || (now - iData.firstAttempt) > WINDOW_DURATION_MS) {
-      iData = { count: 1, firstAttempt: now, lockUntil: null };
-    } else {
-      iData.count += 1;
-    }
-
-    if (iData.count >= MAX_FAILED_PER_IP) {
-      iData.lockUntil = now + LOCKOUT_DURATION_MS;
-    }
-
-    ipAttempts.set(ip, iData);
+  } catch (err) {
+    console.error('[SECURITY] recordFailedLogin error:', err);
   }
 
   return {
     isLocked,
     attemptsLeft,
-    lockMinutes: Math.ceil(LOCKOUT_DURATION_MS / 60000)
+    lockMinutes
   };
 }
 
 /**
- * Resets failed attempts for a successfully logged in phone.
+ * Resets failed attempts and unlocks phone upon successful login.
  */
 export function recordSuccessfulLogin(phone, ip) {
-  if (phone) {
-    phoneAttempts.delete(phone);
+  const now = Date.now();
+  try {
+    if (phone) {
+      insertAttemptStmt.run(ip || '127.0.0.1', phone, now, 1);
+      clearSuccessAttemptsStmt.run(phone, now);
+      deleteLockoutStmt.run('phone', phone);
+      if (ip) {
+        deleteLockoutStmt.run('ip_phone', `${ip}:${phone}`);
+      }
+    }
+  } catch (err) {
+    console.error('[SECURITY] recordSuccessfulLogin error:', err);
   }
 }
 
@@ -141,7 +208,13 @@ export function recordSuccessfulLogin(phone, ip) {
  */
 export function unlockUserPhone(phone) {
   if (phone) {
-    phoneAttempts.delete(phone);
+    try {
+      deleteLockoutStmt.run('phone', phone);
+      db.prepare("DELETE FROM security_lockouts WHERE target_type = 'ip_phone' AND target_value LIKE '%:' || ?").run(phone);
+      db.prepare('DELETE FROM login_attempts WHERE phone = ?').run(phone);
+    } catch (err) {
+      console.error('[SECURITY] unlockUserPhone error:', err);
+    }
   }
 }
 
@@ -150,8 +223,12 @@ export function unlockUserPhone(phone) {
  */
 export function isUserPhoneLocked(phone) {
   if (!phone) return false;
-  const pData = phoneAttempts.get(phone);
-  return Boolean(pData?.lockUntil && pData.lockUntil > Date.now());
+  try {
+    const phoneLock = getLockoutStmt.get('phone', phone);
+    return Boolean(phoneLock && phoneLock.locked_until > Date.now());
+  } catch {
+    return false;
+  }
 }
 
 /**

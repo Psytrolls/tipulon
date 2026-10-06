@@ -1,5 +1,5 @@
 import { db, normalizePhone, hashPin, logAudit } from './db.js';
-import crypto from 'node:crypto';
+import { validatePasswordStrength, generateSecureTempPassword } from './utils/passwordPolicy.js';
 
 const args = process.argv.slice(2);
 const phoneArg = args[0] || process.env.INIT_ADMIN_PHONE;
@@ -23,7 +23,19 @@ if (cleanPhone.length < 9) {
   process.exit(1);
 }
 
-const finalPin = pinArg || crypto.randomBytes(5).toString('hex') + 'A1';
+let finalPin = pinArg ? String(pinArg).trim() : generateSecureTempPassword();
+if (pinArg) {
+  const policy = validatePasswordStrength(finalPin, {
+    phone: cleanPhone,
+    fullName: nameArg,
+    role: 'admin'
+  });
+  if (!policy.valid) {
+    console.error(`\n❌ Error: Password does not meet security requirements: ${policy.error}\n`);
+    process.exit(1);
+  }
+}
+
 const { hash, salt } = hashPin(finalPin);
 
 const checkStmt = db.prepare('SELECT id, full_name, phone FROM users WHERE phone = ?');

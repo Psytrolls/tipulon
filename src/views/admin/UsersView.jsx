@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff, Unlock, ShieldAlert, Trash2, Crown, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Shield, Wrench, CheckCircle2, XCircle, Phone, Lock, User, KeyRound, Edit2, X, RotateCcw, Eye, EyeOff, Unlock, ShieldAlert, Trash2, Crown, AlertTriangle, Copy, Check, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+
+const generateClientSecurePassword = () => {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz';
+  const getChunk = (len) => {
+    const array = new Uint8Array(len);
+    window.crypto.getRandomValues(array);
+    return Array.from(array).map(b => chars[b % chars.length]).join('');
+  };
+  return `${getChunk(4)}-${getChunk(4)}-${getChunk(4)}`;
+};
 
 export default function UsersView() {
   const { user: currentUser } = useAuth();
@@ -12,20 +22,21 @@ export default function UsersView() {
   const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [role, setRole] = useState('technician');
-  const [forceChangeOnAdd, setForceChangeOnAdd] = useState(true);
-  const [showAddPinText, setShowAddPinText] = useState(false);
+  const [showAddPinText, setShowAddPinText] = useState(true);
   const [addError, setAddError] = useState('');
-  const [addSuccess, setAddSuccess] = useState('');
+  const [addSuccessData, setAddSuccessData] = useState(null); // { name, phone, tempPassword }
+  const [copiedAddPass, setCopiedAddPass] = useState(false);
   const [adding, setAdding] = useState(false);
 
   // Change PIN modal state
   const [pinModalUser, setPinModalUser] = useState(null);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
-  const [forceChangeOnReset, setForceChangeOnReset] = useState(true);
-  const [showPinText, setShowPinText] = useState(false);
+  const [showPinText, setShowPinText] = useState(true);
   const [pinError, setPinError] = useState('');
   const [pinSaving, setPinSaving] = useState(false);
+  const [pinSuccessData, setPinSuccessData] = useState(null); // { name, phone, tempPassword }
+  const [copiedPinPass, setCopiedPinPass] = useState(false);
 
   // Edit details modal state
   const [editModalUser, setEditModalUser] = useState(null);
@@ -61,15 +72,10 @@ export default function UsersView() {
   const handleAddUser = async (e) => {
     e.preventDefault();
     setAddError('');
-    setAddSuccess('');
+    setAddSuccessData(null);
 
-    if (!fullName.trim() || !phone.trim() || !pin.trim()) {
-      setAddError('כל השדות הם חובה');
-      return;
-    }
-
-    if (pin.trim().length < 4 || pin.trim().length > 32) {
-      setAddError('הסיסמה / PIN חייבים להכיל בין 4 ל-32 תווים');
+    if (!fullName.trim() || !phone.trim()) {
+      setAddError('שם מלא ומספר טלפון הם שדות חובה');
       return;
     }
 
@@ -79,11 +85,10 @@ export default function UsersView() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fullName,
-          phone,
+          fullName: fullName.trim(),
+          phone: phone.trim(),
           pin: pin.trim(),
-          role,
-          mustChangePin: forceChangeOnAdd
+          role
         })
       });
       const data = await res.json();
@@ -91,7 +96,11 @@ export default function UsersView() {
         throw new Error(data.error || 'שגיאה ביצירת משתמש');
       }
 
-      setAddSuccess(`המשתמש ${data.full_name} נוצר בהצלחה!`);
+      setAddSuccessData({
+        name: data.full_name,
+        phone: data.phone,
+        tempPassword: data.tempPassword || pin.trim()
+      });
       setFullName('');
       setPhone('');
       setPin('');
@@ -152,22 +161,20 @@ export default function UsersView() {
 
   const handleOpenPinModal = (u) => {
     setPinModalUser(u);
-    setNewPin('');
-    setConfirmPin('');
-    setForceChangeOnReset(true);
+    const initialGen = generateClientSecurePassword();
+    setNewPin(initialGen);
+    setConfirmPin(initialGen);
     setPinError('');
+    setPinSuccessData(null);
+    setCopiedPinPass(false);
   };
 
   const handleSavePin = async (e) => {
     e.preventDefault();
     setPinError('');
 
-    if (newPin.trim().length < 4 || newPin.trim().length > 32) {
-      setPinError('קוד PIN / סיסמה חייבים להכיל לפחות 4 תווים (ועד 32 תווים)');
-      return;
-    }
     if (newPin.trim() !== confirmPin.trim()) {
-      setPinError('הסיסמאות / קודי ה-PIN אינם תואמים');
+      setPinError('הסיסמאות אינן תואמות');
       return;
     }
 
@@ -177,16 +184,19 @@ export default function UsersView() {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          newPin: newPin.trim(),
-          mustChangePin: forceChangeOnReset
+          newPin: newPin.trim()
         })
       });
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error || 'שגיאה בעדכון הסיסמה');
       }
-      alert(`הסיסמה עבור ${pinModalUser.full_name} עודכנה והנעילה שוחררה בהצלחה!`);
-      setPinModalUser(null);
+
+      setPinSuccessData({
+        name: pinModalUser.full_name,
+        phone: pinModalUser.phone,
+        tempPassword: data.tempPassword || newPin.trim()
+      });
       loadUsers();
     } catch (err) {
       setPinError(err.message);
@@ -279,10 +289,48 @@ export default function UsersView() {
           <span>הוספת משתמש חדש</span>
         </h2>
 
-        {addSuccess && (
-          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs font-bold text-emerald-800 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <span>{addSuccess}</span>
+        {addSuccessData && (
+          <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl space-y-3 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                <span className="font-extrabold text-sm text-emerald-900">
+                  המשתמש {addSuccessData.name} נוצר בהצלחה!
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAddSuccessData(null)}
+                className="p-1 text-emerald-700 hover:text-emerald-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-3 bg-white rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="text-xs font-bold text-slate-500 block">סיסמה זמנית ראשונית למסירה לעובד:</span>
+                <span className="text-base font-black font-mono text-emerald-800 tracking-wider" dir="ltr">
+                  {addSuccessData.tempPassword}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  await navigator.clipboard.writeText(addSuccessData.tempPassword);
+                  setCopiedAddPass(true);
+                  setTimeout(() => setCopiedAddPass(false), 2000);
+                }}
+                className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shrink-0 transition-all active:scale-95"
+              >
+                {copiedAddPass ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedAddPass ? 'הועתק! ✓' : 'העתק סיסמה'}</span>
+              </button>
+            </div>
+
+            <p className="text-[11px] text-emerald-800 font-medium">
+              * המשתמש יידרש להחליף סיסמה זו לסיסמה אישית וקבועה מיד עם כניסתו הראשונה למערכת.
+            </p>
           </div>
         )}
 
@@ -326,15 +374,18 @@ export default function UsersView() {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-xs font-bold text-slate-700">סיסמה / PIN ראשוני</label>
+              <label className="text-xs font-bold text-slate-700">סיסמה זמנית ראשונית</label>
               <button
                 type="button"
-                onClick={() => setShowAddPinText(!showAddPinText)}
-                className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                onClick={() => {
+                  const gen = generateClientSecurePassword();
+                  setPin(gen);
+                }}
+                className="text-[11px] text-emerald-700 hover:text-emerald-900 font-bold flex items-center gap-1"
                 tabIndex="-1"
               >
-                {showAddPinText ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                <span>{showAddPinText ? 'הסתר' : 'הצג'}</span>
+                <Sparkles className="w-3 h-3 text-emerald-600" />
+                <span>חולל אקראית</span>
               </button>
             </div>
             <div className="relative">
@@ -342,11 +393,10 @@ export default function UsersView() {
                 type={showAddPinText ? 'text' : 'password'}
                 maxLength={32}
                 dir="ltr"
-                placeholder="לפחות 4 תווים"
+                placeholder="השאר ריק למחולל אוטומטי"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left"
-                required
+                className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none text-left font-mono"
               />
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
             </div>
@@ -365,15 +415,9 @@ export default function UsersView() {
           </div>
 
           <div className="sm:col-span-2 lg:col-span-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
-            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-              <input
-                type="checkbox"
-                checked={forceChangeOnAdd}
-                onChange={(e) => setForceChangeOnAdd(e.target.checked)}
-                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300"
-              />
-              <span>חייב את המשתמש להחליף סיסמה בהתחברות הראשונה</span>
-            </label>
+            <span className="text-[11px] text-slate-500 font-medium">
+              🔒 כל משתמש חדש מחויב אוטומטית לשנות את הסיסמה האישית שלו בהתחברות הראשונה.
+            </span>
 
             <button
               type="submit"
@@ -580,103 +624,141 @@ export default function UsersView() {
               </button>
             </div>
 
-            {pinError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
-                ⚠️ {pinError}
-              </div>
-            )}
+            {pinSuccessData ? (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="p-4 bg-emerald-50 border-2 border-emerald-300 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-900 font-extrabold text-sm">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <span>הסיסמה הזמנית אופסה בהצלחה!</span>
+                  </div>
 
-            {/* Quick Reset Option for Technicians */}
-            <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-              <div>
-                <span className="text-xs font-bold text-slate-800 block">איפוס מהיר לטכנאי שנשכח ממנו הקוד:</span>
-                <span className="text-[11px] text-slate-500">קביעת קוד ברירת המחדל 1234 בלחיצה אחת</span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewPin('1234');
-                  setConfirmPin('1234');
-                  setForceChangeOnReset(true);
-                }}
-                className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-bold rounded-lg border border-amber-300 flex items-center gap-1.5 transition-colors shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>הגדר 1234</span>
-              </button>
-            </div>
+                  <div className="p-3 bg-white rounded-xl border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-bold text-slate-500 block">סיסמה זמנית חדשה עבור {pinSuccessData.name}:</span>
+                      <span className="text-base font-black font-mono text-emerald-800 tracking-wider" dir="ltr">
+                        {pinSuccessData.tempPassword}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await navigator.clipboard.writeText(pinSuccessData.tempPassword);
+                        setCopiedPinPass(true);
+                        setTimeout(() => setCopiedPinPass(false), 2000);
+                      }}
+                      className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shrink-0 transition-all active:scale-95"
+                    >
+                      {copiedPinPass ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedPinPass ? 'הועתק! ✓' : 'העתק סיסמה'}</span>
+                    </button>
+                  </div>
 
-            <form onSubmit={handleSavePin} className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-slate-700">סיסמה / PIN חדש:</label>
-                  <button
-                    type="button"
-                    onClick={() => setShowPinText(!showPinText)}
-                    className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1"
-                    tabIndex="-1"
-                  >
-                    {showPinText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    <span>{showPinText ? 'הסתר' : 'הצג סיסמה'}</span>
-                  </button>
+                  <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
+                    * כל ההתחברויות והסשנים הפעילים של המשתמש בוטלו מיידית. המשתמש יידרש להחליף סיסמה זו לסיסמה אישית בכניסתו הבאה.
+                  </p>
                 </div>
-                <input
-                  type={showPinText ? 'text' : 'password'}
-                  maxLength={32}
-                  dir="ltr"
-                  placeholder="הזן סיסמה חדשה (לפחות 4 תווים)..."
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left"
-                  required
-                  autoFocus
-                />
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">אימות סיסמה חדשה:</label>
-                <input
-                  type={showPinText ? 'text' : 'password'}
-                  maxLength={32}
-                  dir="ltr"
-                  placeholder="הזן שוב לאימות..."
-                  value={confirmPin}
-                  onChange={(e) => setConfirmPin(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left"
-                  required
-                />
-              </div>
-
-              <div className="pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
-                  <input
-                    type="checkbox"
-                    checked={forceChangeOnReset}
-                    onChange={(e) => setForceChangeOnReset(e.target.checked)}
-                    className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-slate-300"
-                  />
-                  <span>חייב את המשתמש להחליף סיסמה בהתחברות הבאה</span>
-                </label>
-              </div>
-
-              <div className="flex gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setPinModalUser(null)}
-                  className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                  className="w-full py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-all shadow-md"
                 >
-                  ביטול
-                </button>
-                <button
-                  type="submit"
-                  disabled={pinSaving}
-                  className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  <span>{pinSaving ? 'מעדכן...' : 'שמור סיסמה ושחרר נעילה'}</span>
+                  סגור חלון
                 </button>
               </div>
-            </form>
+            ) : (
+              <>
+                {pinError && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold rounded-xl">
+                    ⚠️ {pinError}
+                  </div>
+                )}
+
+                {/* Generator Option for Admin */}
+                <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">מחולל סיסמה זמנית אקראית:</span>
+                    <span className="text-[11px] text-slate-500">יוצר סיסמה מאובטחת של 12 תווים</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const gen = generateClientSecurePassword();
+                      setNewPin(gen);
+                      setConfirmPin(gen);
+                    }}
+                    className="px-3 py-1.5 bg-purple-100 hover:bg-purple-200 text-purple-900 text-xs font-bold rounded-lg border border-purple-300 flex items-center gap-1.5 transition-colors shrink-0"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-purple-700" />
+                    <span>חולל אקראית</span>
+                  </button>
+                </div>
+
+                <form onSubmit={handleSavePin} className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-bold text-slate-700">סיסמה זמנית חדשה:</label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPinText(!showPinText)}
+                        className="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                        tabIndex="-1"
+                      >
+                        {showPinText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        <span>{showPinText ? 'הסתר' : 'הצג סיסמה'}</span>
+                      </button>
+                    </div>
+                    <input
+                      type={showPinText ? 'text' : 'password'}
+                      maxLength={32}
+                      dir="ltr"
+                      placeholder="הזן סיסמה חדשה (לפחות 6 תווים)..."
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left font-mono"
+                      required
+                      autoFocus
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">אימות סיסמה חדשה:</label>
+                    <input
+                      type={showPinText ? 'text' : 'password'}
+                      maxLength={32}
+                      dir="ltr"
+                      placeholder="הזן שוב לאימות..."
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-purple-500 focus:outline-none text-left font-mono"
+                      required
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-slate-500">
+                    🔒 המשתמש יחויב להחליף סיסמה זו לסיסמה אישית בכניסתו הבאה, וכל החיבורים הפעילים ינותקו.
+                  </p>
+
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setPinModalUser(null)}
+                      className="flex-1 py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors"
+                    >
+                      ביטול
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={pinSaving}
+                      className="flex-1 py-3 px-4 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-xl shadow-md shadow-purple-600/20 transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                      <span>{pinSaving ? 'מעדכן...' : 'שמור סיסמה ושחרר נעילה'}</span>
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
         </div>
       )}

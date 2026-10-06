@@ -143,6 +143,22 @@ export function initDatabase() {
       details TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS login_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ip TEXT NOT NULL,
+      phone TEXT,
+      attempted_at INTEGER NOT NULL,
+      is_success INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS security_lockouts (
+      target_type TEXT NOT NULL,
+      target_value TEXT NOT NULL,
+      locked_until INTEGER NOT NULL,
+      reason TEXT,
+      PRIMARY KEY (target_type, target_value)
+    );
   `);
 
   // Safe migrations and cleanups for existing DB
@@ -172,7 +188,37 @@ export function initDatabase() {
   // Cleanup old demo/test users (0501234567, 0521234567) so they don't reappear on deploy
   try { db.exec("DELETE FROM users WHERE phone IN ('0501234567', '0521234567')"); } catch (e) {}
 
-  // Fix previously resolved follow-up reports where bus was marked completed or valid
+  // Migration: Add must_change_pin and is_super_admin columns to users table if missing
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN must_change_pin INTEGER DEFAULT 0`);
+  } catch (e) {}
+
+  try {
+    db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
+  } catch (e) {}
+
+  // Security Migration: Scan for any existing accounts with weak PIN '1234', enforce must_change_pin = 1 and revoke sessions
+  try {
+    const allUsers = db.prepare('SELECT id, phone, full_name, pin_hash, pin_salt FROM users').all();
+    const setMustChange = db.prepare('UPDATE users SET must_change_pin = 1 WHERE id = ?');
+    const deleteSessions = db.prepare('DELETE FROM sessions WHERE user_id = ?');
+
+    for (const u of allUsers) {
+      const isWeak1234 = verifyPin('1234', u.pin_salt, u.pin_hash);
+      if (isWeak1234.valid) {
+        setMustChange.run(u.id);
+        deleteSessions.run(u.id);
+        logAudit(
+          u.id,
+          u.full_name,
+          'אכיפת אבטחה: ביטול PIN ברירת מחדל 1234',
+          'משתמש',
+          u.id,
+          `סיסמת המשתמש זוהתה כ-1234. הופעל must_change_pin ונמחקו כל הסשנים הפעילים.`
+        );
+      }
+    }
+  } catch (e) {}
   try {
     db.exec(`
       UPDATE reports
@@ -246,6 +292,9 @@ export function initDatabase() {
 
   seedInitialData();
 }
+
+// Auto-run schema initialization on load
+initDatabase();
 
 function seedInitialData() {
   // Seed Products (The 3 official bus ticketing / validation devices)

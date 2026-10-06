@@ -8,6 +8,7 @@ import {
   recordFailedLogin,
   recordSuccessfulLogin
 } from '../securityService.js';
+import { validatePasswordStrength } from '../utils/passwordPolicy.js';
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.post('/login', (req, res) => {
     const clientIp = getClientIp(req);
 
     if (!phone || !pin) {
-      return res.status(400).json({ error: 'נא להזין מספר טלפון וקוד PIN' });
+      return res.status(400).json({ error: 'נא להזין מספר טלפון וסיסמה' });
     }
 
     const cleanPhone = normalizePhone(phone);
@@ -29,11 +30,11 @@ router.post('/login', (req, res) => {
     }
 
     const cleanPin = String(pin).trim();
-    if (cleanPin.length < 4 || cleanPin.length > 32) {
-      return res.status(400).json({ error: 'קוד PIN / סיסמה חייבים להכיל 4 עד 32 תווים' });
+    if (!cleanPin || cleanPin.length > 64) {
+      return res.status(400).json({ error: 'סיסמה לא חוקית' });
     }
 
-    // 1. Check Rate Limit / Account Lockout
+    // 1. Check Rate Limit / Account Lockout (Persistent across restarts)
     const rateLimit = checkLoginRateLimit(cleanPhone, clientIp);
     if (!rateLimit.allowed) {
       logAudit(
@@ -55,9 +56,9 @@ router.post('/login', (req, res) => {
 
     const user = stmt.get(cleanPhone);
 
-    // Constant-time dummy hash if user not found to prevent timing attack enumeration
+    // Constant-time dummy hash with full 220,000 iterations if user not found to prevent timing attack enumeration
     if (!user || !user.is_active) {
-      crypto.pbkdf2Sync(cleanPin, DUMMY_SALT, 10000, 64, 'sha512');
+      crypto.pbkdf2Sync(cleanPin, DUMMY_SALT, 220000, 64, 'sha512');
       const { isLocked, attemptsLeft, lockMinutes } = recordFailedLogin(cleanPhone, clientIp);
 
       logAudit(
@@ -71,12 +72,12 @@ router.post('/login', (req, res) => {
 
       if (isLocked) {
         return res.status(429).json({
-          error: `החשבון ננעל זמנית עקב 5 ניסיונות שגויים ברצף. נסה שוב בעוד ${lockMinutes} דקות.`
+          error: `החשבון ננעל זמנית עקב מספר ניסיונות שגויים ברצף. נסה שוב בעוד ${lockMinutes} דקות.`
         });
       }
 
       return res.status(401).json({
-        error: `פרטי התחברות שגויים. נותרו ${attemptsLeft} ניסיונות לפני נעילת החשבון.`
+        error: `פרטי התחברות שגויים (טלפון או סיסמה). נותרו ${attemptsLeft} ניסיונות לפני נעילת החשבון.`
       });
     }
 
@@ -91,13 +92,13 @@ router.post('/login', (req, res) => {
         'אבטחה',
         user.id,
         isLocked
-          ? `החשבון ננעל ל-15 דקות עקב 5 ניסיונות שגויים ברצף. IP: ${clientIp}`
+          ? `החשבון ננעל ל-${lockMinutes} דקות עקב מספר ניסיונות שגויים ברצף. IP: ${clientIp}`
           : `סיסמה שגויה עבור ${user.full_name}. נותרו ${attemptsLeft} ניסיונות. IP: ${clientIp}`
       );
 
       if (isLocked) {
         return res.status(429).json({
-          error: `החשבון ננעל זמנית עקב 5 ניסיונות שגויים ברצף. נסה שוב בעוד ${lockMinutes} דקות.`
+          error: `החשבון ננעל זמנית עקב מספר ניסיונות שגויים ברצף. נסה שוב בעוד ${lockMinutes} דקות.`
         });
       }
 
@@ -171,29 +172,25 @@ router.post('/change-password', (req, res) => {
   try {
     const { currentPin, newPin } = req.body;
 
-    if (!newPin) {
-      return res.status(400).json({ error: 'נא להזין סיסמה חדשה' });
-    }
-
-    const cleanNewPin = String(newPin).trim();
-    if (cleanNewPin.length < 6 || cleanNewPin.length > 32) {
-      return res.status(400).json({ error: 'הסיסמה החדשה חייבת להכיל לפחות 6 תווים (ועד 32 תווים)' });
-    }
-
-    const hasLetter = /[a-zA-Z]/.test(cleanNewPin);
-    const hasDigit = /[0-9]/.test(cleanNewPin);
-    if (!hasLetter || !hasDigit) {
-      return res.status(400).json({ error: 'הסיסמה החדשה חייבת לכלול שילוב של אותיות באנגלית ומספרים (לדוגמה: Tipul123)' });
-    }
-
     const stmt = db.prepare(`
-      SELECT id, full_name, phone, pin_hash, pin_salt, must_change_pin
+      SELECT id, full_name, phone, pin_hash, pin_salt, role, must_change_pin
       FROM users
       WHERE id = ?
     `);
     const user = stmt.get(req.user.id);
     if (!user) {
       return res.status(404).json({ error: 'משתמש לא נמצא' });
+    }
+
+    const cleanNewPin = String(newPin || '').trim();
+    const policyResult = validatePasswordStrength(cleanNewPin, {
+      phone: user.phone,
+      fullName: user.full_name,
+      role: user.role
+    });
+
+    if (!policyResult.valid) {
+      return res.status(400).json({ error: policyResult.error });
     }
 
     // If user is not in forced change mode, verify currentPin
