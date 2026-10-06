@@ -31,6 +31,8 @@ export default function ReportsView({ initialReportId = null }) {
   const [filterResult, setFilterResult] = useState('');
   const [filterOperator, setFilterOperator] = useState('');
   const [filterEdi, setFilterEdi] = useState('');
+  const [filterTechnician, setFilterTechnician] = useState('');
+  const [technicians, setTechnicians] = useState([]);
   const [updatingEdiId, setUpdatingEdiId] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
   const [downloadingOp, setDownloadingOp] = useState(null);
@@ -117,6 +119,7 @@ export default function ReportsView({ initialReportId = null }) {
       if (filterResult) params.append('result', filterResult);
       if (filterOperator) params.append('operator', filterOperator);
       if (filterEdi) params.append('ediStatus', filterEdi);
+      if (filterTechnician) params.append('technicianId', filterTechnician);
 
       const res = await fetch(`/api/treatments?${params.toString()}`);
       if (res.ok) {
@@ -130,7 +133,21 @@ export default function ReportsView({ initialReportId = null }) {
     }
   };
 
-  // Toggle or update EDI status (Admin only)
+  // Load active technicians list for admin filter dropdown
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/users')
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setTechnicians(data);
+          }
+        })
+        .catch(err => console.error('Failed to load technicians list:', err));
+    }
+  }, [isAdmin]);
+
+  // Toggle or update EDI status (Admin and Technician)
   const handleToggleEdi = async (reportId, currentStatus) => {
     try {
       setUpdatingEdiId(reportId);
@@ -169,7 +186,7 @@ export default function ReportsView({ initialReportId = null }) {
 
   useEffect(() => {
     loadReports();
-  }, [filterResult, filterOperator, filterEdi]);
+  }, [filterResult, filterOperator, filterEdi, filterTechnician]);
 
   useEffect(() => {
     if (initialReportId) {
@@ -441,6 +458,23 @@ export default function ReportsView({ initialReportId = null }) {
             </select>
           </div>
 
+          {isAdmin && (
+            <div className="w-full sm:w-48">
+              <select
+                value={filterTechnician}
+                onChange={(e) => setFilterTechnician(e.target.value)}
+                className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+              >
+                <option value="">כל הטכנאים (הכול)</option>
+                {technicians.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    👤 {t.full_name || t.fullName} {t.role === 'admin' ? '(מנהל)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             type="submit"
             className="w-full sm:w-auto py-2.5 px-5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl transition-colors"
@@ -450,7 +484,7 @@ export default function ReportsView({ initialReportId = null }) {
 
           <button
             type="button"
-            onClick={() => { setSearchBus(''); setFilterResult(''); setFilterOperator(''); setFilterEdi(''); loadReports(); }}
+            onClick={() => { setSearchBus(''); setFilterResult(''); setFilterOperator(''); setFilterEdi(''); setFilterTechnician(''); loadReports(); }}
             className="w-full sm:w-auto p-2.5 border border-slate-200 hover:bg-slate-100 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center gap-1"
           >
             <RefreshCw className="w-3.5 h-3.5" />

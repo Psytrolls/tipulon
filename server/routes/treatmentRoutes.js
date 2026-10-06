@@ -137,7 +137,7 @@ router.post('/', requireAuth, validateBody(validateSubmitTreatmentSchema), (req,
 // GET /api/treatments - List reports with filters
 router.get('/', requireAuth, (req, res) => {
   try {
-    const { busNumber, result, status, operator, ediStatus } = req.query;
+    const { busNumber, result, status, operator, ediStatus, technicianId } = req.query;
 
     let query = `
       SELECT r.id, r.bus_number, r.operator, r.technician_id, r.technician_name, r.photo_path,
@@ -172,10 +172,13 @@ router.get('/', requireAuth, (req, res) => {
       query += ' AND (r.is_edi_closed = 0 OR r.is_edi_closed IS NULL)';
     }
 
-    // Technicians see only their own completed/submitted reports; Admins see all
+    // Technicians see only their own completed/submitted reports; Admins see all or filter by technician
     if (req.user.role !== 'admin' && !req.user.isSuperAdmin) {
       query += ' AND r.technician_id = ?';
       params.push(req.user.id);
+    } else if (technicianId) {
+      query += ' AND r.technician_id = ?';
+      params.push(Number(technicianId));
     }
 
     query += ' ORDER BY r.created_at DESC, r.id DESC LIMIT 5000';
@@ -315,7 +318,7 @@ router.patch('/:id/resolution', requireAdmin, validateBody(validateResolutionNot
 // GET /api/treatments/export/excel - Professional Styled RTL Excel (.xlsx) export with AutoFilter
 router.get('/export/excel', requireAdmin, exportRateLimit, async (req, res) => {
   try {
-    const { operator } = req.query;
+    const { operator, technicianId } = req.query;
 
     let query = `
       SELECT r.id, r.operator, r.bus_number, r.created_at, r.technician_name, r.summary, r.result, r.status,
@@ -328,6 +331,10 @@ router.get('/export/excel', requireAdmin, exportRateLimit, async (req, res) => {
     if (operator && operator.trim()) {
       query += ' AND r.operator = ?';
       params.push(operator.trim());
+    }
+    if (technicianId) {
+      query += ' AND r.technician_id = ?';
+      params.push(Number(technicianId));
     }
     query += ' ORDER BY r.created_at DESC';
 
