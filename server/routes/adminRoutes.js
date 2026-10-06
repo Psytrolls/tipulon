@@ -1,6 +1,6 @@
 import express from 'express';
 import { db, logAudit } from '../db.js';
-import { requireAdmin } from '../auth.js';
+import { requireAdmin, requireSuperAdmin } from '../auth.js';
 
 const router = express.Router();
 
@@ -223,8 +223,8 @@ import { createBackup, listBackups, getLatestBackupPath } from '../backupService
 import path from 'node:path';
 import fs from 'node:fs';
 
-// GET /api/admin/backups - List backups
-router.get('/backups', requireAdmin, (req, res) => {
+// GET /api/admin/backups - List backups (Super Admin only)
+router.get('/backups', requireSuperAdmin, (req, res) => {
   try {
     const backups = listBackups();
     res.json(backups);
@@ -233,17 +233,17 @@ router.get('/backups', requireAdmin, (req, res) => {
   }
 });
 
-// POST /api/admin/backups/create - Create backup now
-router.post('/backups/create', requireAdmin, async (req, res) => {
+// POST /api/admin/backups/create - Create backup now (Super Admin only)
+router.post('/backups/create', requireSuperAdmin, async (req, res) => {
   try {
-    const result = await createBackup({ reason: 'יזום על ידי מנהל' });
+    const result = await createBackup({ reason: 'יזום על ידי מנהל על' });
     logAudit(
       req.user.id,
       req.user.fullName,
       'יצירת גיבוי ידני',
       'מסד נתונים',
       result.filename,
-      `נוצר קובץ גיבוי בגודל ${result.sizeFormatted}`
+      `נוצר קובץ גיבוי מוצפן בגודל ${result.sizeFormatted}`
     );
     res.json(result);
   } catch (err) {
@@ -252,8 +252,8 @@ router.post('/backups/create', requireAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/backups/download-latest - Download latest backup file
-router.get('/backups/download-latest', requireAdmin, (req, res) => {
+// GET /api/admin/backups/download-latest - Download latest backup file (Super Admin only)
+router.get('/backups/download-latest', requireSuperAdmin, (req, res) => {
   try {
     const latestPath = getLatestBackupPath();
     if (!latestPath || !fs.existsSync(latestPath)) {
@@ -266,8 +266,8 @@ router.get('/backups/download-latest', requireAdmin, (req, res) => {
   }
 });
 
-// GET /api/admin/backups/download/:filename - Download specific backup file
-router.get('/backups/download/:filename', requireAdmin, (req, res) => {
+// GET /api/admin/backups/download/:filename - Download specific backup file (Super Admin only)
+router.get('/backups/download/:filename', requireSuperAdmin, (req, res) => {
   try {
     const { filename } = req.params;
     const safeFilename = path.basename(filename);

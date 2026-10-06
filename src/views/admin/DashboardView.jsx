@@ -16,8 +16,10 @@ import {
   X
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
+import { useAuth } from '../../context/AuthContext';
 
 export default function DashboardView({ onNavigateToReports, onNavigateToFollowUp }) {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -494,12 +496,19 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
 
             {/* Notification / status banner */}
             <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-2 text-xs text-emerald-900">
-              <div className="flex items-center gap-2 font-black text-emerald-800">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>מערכת גיבוי אוטומטית פעילה</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-black text-emerald-800">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>מערכת גיבוי אוטומטית פעילה (הצפנת AES-256-GCM)</span>
+                </div>
+                {user?.isSuperAdmin && (
+                  <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 text-[10px] font-black rounded-full">
+                    הרשאת מנהל-על מאושרת
+                  </span>
+                )}
               </div>
               <p className="text-emerald-700 leading-relaxed">
-                השרת מייצר באופן אוטומטי גיבוי דחוס מדי לילה ב-<strong>02:00</strong> ושומר את 30 הגיבויים האחרונים בתיקיית <code>data/backups/</code>.
+                השרת מייצר גיבוי מוצפן ודחוס מדי לילה ב-<strong>02:00</strong> ושומר את 30 הגיבויים האחרונים. כל קבצי הגיבוי מוצפנים בהצפנה צבאית ואינם ניתנים לקריאה ללא מפתח ההצפנה.
               </p>
             </div>
 
@@ -510,68 +519,84 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
             )}
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href="/api/admin/backups/download-latest"
-                download
-                className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
-              >
-                <Download className="w-4 h-4" />
-                <span>הורד גיבוי עדכני למחשב (.db.gz)</span>
-              </a>
+            {user?.isSuperAdmin ? (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a
+                  href="/api/admin/backups/download-latest"
+                  download
+                  className="flex-1 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>הורד גיבוי מוצפן עדכני (.db.enc.gz)</span>
+                </a>
 
-              <button
-                type="button"
-                onClick={handleCreateBackup}
-                disabled={creatingBackup}
-                className="py-3 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all"
-              >
-                <HardDrive className="w-4 h-4 text-slate-400" />
-                <span>{creatingBackup ? 'יוצר גיבוי...' : 'בצע גיבוי חדש כעת'}</span>
-              </button>
-            </div>
-
-            {/* Backups List */}
-            <div className="space-y-3 pt-2 border-t border-slate-100">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">היסטוריית גיבויים קיימים בשרת:</span>
                 <button
                   type="button"
-                  onClick={loadBackups}
-                  className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                  onClick={handleCreateBackup}
+                  disabled={creatingBackup}
+                  className="py-3 px-4 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all"
                 >
-                  <RefreshCw className="w-3 h-3" />
-                  <span>רענן רשימה</span>
+                  <HardDrive className="w-4 h-4 text-slate-400" />
+                  <span>{creatingBackup ? 'יוצר גיבוי מוצפן...' : 'בצע גיבוי חדש כעת'}</span>
                 </button>
               </div>
+            ) : (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-bold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                <span>הורדה ויצירה יזומה של גיבויים מורשית למנהל-על (Super Admin) בלבד מטעמי אבטחה.</span>
+              </div>
+            )}
 
-              {loadingBackups ? (
-                <div className="text-center py-6 text-xs text-slate-400">טוען קבצי גיבוי...</div>
-              ) : backups.length === 0 ? (
-                <div className="text-center py-6 text-xs text-slate-400">טרם נוצרו קבצי גיבוי בשרת</div>
-              ) : (
-                <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-200">
-                  {backups.map((b) => (
-                    <div key={b.filename} className="p-3 flex items-center justify-between hover:bg-slate-50 text-xs">
-                      <div className="space-y-0.5">
-                        <div className="font-mono font-bold text-slate-800">{b.filename}</div>
-                        <div className="text-[11px] text-slate-400">
-                          גודל: {b.sizeFormatted} | נוצר: {new Date(b.createdAt).toLocaleString('he-IL')}
-                        </div>
-                      </div>
-                      <a
-                        href={`/api/admin/backups/download/${encodeURIComponent(b.filename)}`}
-                        download
-                        title="הורד קובץ גיבוי זה"
-                        className="p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                      >
-                        <Download className="w-4 h-4" />
-                      </a>
-                    </div>
-                  ))}
+            {/* Backups List */}
+            {user?.isSuperAdmin && (
+              <div className="space-y-3 pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-700">היסטוריית גיבויים קיימים בשרת:</span>
+                  <button
+                    type="button"
+                    onClick={loadBackups}
+                    className="text-[11px] font-bold text-emerald-600 hover:underline flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>רענן רשימה</span>
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {loadingBackups ? (
+                  <div className="text-center py-6 text-xs text-slate-400">טוען קבצי גיבוי...</div>
+                ) : backups.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-slate-400">טרם נוצרו קבצי גיבוי בשרת</div>
+                ) : (
+                  <div className="max-h-56 overflow-y-auto divide-y divide-slate-100 rounded-xl border border-slate-200">
+                    {backups.map((b) => (
+                      <div key={b.filename} className="p-3 flex items-center justify-between hover:bg-slate-50 text-xs">
+                        <div className="space-y-0.5">
+                          <div className="font-mono font-bold text-slate-800 flex items-center gap-1.5">
+                            <span>{b.filename}</span>
+                            {b.isEncrypted && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-100 text-emerald-800 rounded">
+                                מוצפן AES
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-400">
+                            גודל: {b.sizeFormatted} | נוצר: {new Date(b.createdAt).toLocaleString('he-IL')}
+                          </div>
+                        </div>
+                        <a
+                          href={`/api/admin/backups/download/${encodeURIComponent(b.filename)}`}
+                          download
+                          title="הורד קובץ גיבוי זה"
+                          className="p-2 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Cloud Sync Hint for TrueNAS / Google Drive */}
             <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[11px] text-slate-600 space-y-1">

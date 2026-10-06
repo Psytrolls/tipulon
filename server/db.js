@@ -83,7 +83,7 @@ export function initDatabase() {
     );
 
     CREATE TABLE IF NOT EXISTS sessions (
-      token TEXT PRIMARY KEY,
+      token_hash TEXT PRIMARY KEY,
       user_id INTEGER NOT NULL,
       expires_at DATETIME NOT NULL,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -197,27 +197,18 @@ export function initDatabase() {
     db.exec(`ALTER TABLE users ADD COLUMN is_super_admin INTEGER DEFAULT 0`);
   } catch (e) {}
 
-  // Security Migration: Scan for any existing accounts with weak PIN '1234', enforce must_change_pin = 1 and revoke sessions
+  // Session Security Migration: Rename token to token_hash and purge expired sessions
   try {
-    const allUsers = db.prepare('SELECT id, phone, full_name, pin_hash, pin_salt FROM users').all();
-    const setMustChange = db.prepare('UPDATE users SET must_change_pin = 1 WHERE id = ?');
-    const deleteSessions = db.prepare('DELETE FROM sessions WHERE user_id = ?');
-
-    for (const u of allUsers) {
-      const isWeak1234 = verifyPin('1234', u.pin_salt, u.pin_hash);
-      if (isWeak1234.valid) {
-        setMustChange.run(u.id);
-        deleteSessions.run(u.id);
-        logAudit(
-          u.id,
-          u.full_name,
-          'אכיפת אבטחה: ביטול PIN ברירת מחדל 1234',
-          'משתמש',
-          u.id,
-          `סיסמת המשתמש זוהתה כ-1234. הופעל must_change_pin ונמחקו כל הסשנים הפעילים.`
-        );
-      }
+    const tableInfo = db.prepare("PRAGMA table_info(sessions)").all();
+    const hasTokenCol = tableInfo.some(c => c.name === 'token');
+    const hasTokenHashCol = tableInfo.some(c => c.name === 'token_hash');
+    if (hasTokenCol && !hasTokenHashCol) {
+      db.exec(`ALTER TABLE sessions RENAME COLUMN token TO token_hash`);
     }
+  } catch (e) {}
+
+  try {
+    db.exec(`DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')`);
   } catch (e) {}
   try {
     db.exec(`

@@ -120,8 +120,8 @@ router.post('/login', (req, res) => {
     // Reset failed attempts upon successful login
     recordSuccessfulLogin(cleanPhone, clientIp);
 
-    // Create session
-    const session = createSession(user.id, 30);
+    // Create session (24h for admin, 7d for technician)
+    const session = createSession(user.id, user.role);
 
     const isSecure = process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https';
 
@@ -130,7 +130,7 @@ router.post('/login', (req, res) => {
       httpOnly: true,
       secure: isSecure,
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      maxAge: session.maxAgeMs
     });
 
     logAudit(user.id, user.full_name, 'התחברות', 'משתמש', user.id, `התחברות מוצלחת למערכת (IP: ${clientIp})`);
@@ -216,14 +216,14 @@ router.post('/change-password', (req, res) => {
     db.prepare('DELETE FROM sessions WHERE user_id = ?').run(req.user.id);
 
     // Issue a fresh new session
-    const newSession = createSession(req.user.id, 30);
+    const newSession = createSession(req.user.id, req.user.role);
     const isSecure = process.env.NODE_ENV === 'production' || req.secure || req.headers['x-forwarded-proto'] === 'https';
 
     res.cookie('tipulon_session', newSession.token, {
       httpOnly: true,
       secure: isSecure,
       sameSite: 'lax',
-      maxAge: 30 * 24 * 60 * 60 * 1000
+      maxAge: newSession.maxAgeMs
     });
 
     logAudit(

@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
+import crypto from 'node:crypto';
 import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'node:url';
 
@@ -18,8 +19,48 @@ if (!fs.existsSync(backupsDir)) {
 
 let lastBackupDate = null;
 
+// Derive a deterministic 32-byte AES-256 key from environment or system secret
+function getBackupKey() {
+  const secret = process.env.BACKUP_ENCRYPTION_KEY || process.env.SESSION_SECRET || 'tipulon_default_secure_backup_key_2026';
+  return crypto.createHash('sha256').update(secret).digest();
+}
+
+const BACKUP_MAGIC = Buffer.from('TPBK'); // Tipulon Backup Header (4 bytes)
+
 /**
- * Creates a compressed gzip backup of the SQLite database
+ * Encrypts a buffer using AES-256-GCM
+ */
+export function encryptBackupBuffer(plainBuffer) {
+  const key = getBackupKey();
+  const iv = crypto.randomBytes(12); // 96-bit IV for GCM
+  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+  const encrypted = Buffer.concat([cipher.update(plainBuffer), cipher.final()]);
+  const authTag = cipher.getAuthTag(); // 16 bytes
+
+  // Format: [MAGIC (4B)][IV (12B)][AUTH_TAG (16B)][ENCRYPTED_DATA]
+  return Buffer.concat([BACKUP_MAGIC, iv, authTag, encrypted]);
+}
+
+/**
+ * Decrypts an encrypted backup buffer
+ */
+export function decryptBackupBuffer(encryptedBuffer) {
+  const key = getBackupKey();
+  if (encryptedBuffer.length < 32 || !encryptedBuffer.subarray(0, 4).equals(BACKUP_MAGIC)) {
+    throw new Error('Invalid or unencrypted backup file format');
+  }
+
+  const iv = encryptedBuffer.subarray(4, 16);
+  const authTag = encryptedBuffer.subarray(16, 32);
+  const data = encryptedBuffer.subarray(32);
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
+  decipher.setAuthTag(authTag);
+  return Buffer.concat([decipher.update(data), decipher.final()]);
+}
+
+/**
+ * Creates an AES-256-GCM encrypted and gzipped backup of the SQLite database
  */
 export async function createBackup({ reason = 'scheduled', sendEmail = true } = {}) {
   try {
@@ -31,23 +72,30 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
     const pad = (n) => String(n).padStart(2, '0');
     const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const timeStr = `${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
-    const filename = `tipulon_backup_${dateStr}_${timeStr}.db.gz`;
+    const filename = `tipulon_backup_${dateStr}_${timeStr}.db.enc.gz`;
     const targetPath = path.join(backupsDir, filename);
 
-    // Read and compress
+    // 1. Read raw DB
     const dbBuffer = fs.readFileSync(dbPath);
+
+    // 2. Compress with GZIP
     const compressed = zlib.gzipSync(dbBuffer);
-    fs.writeFileSync(targetPath, compressed);
+
+    // 3. Encrypt with AES-256-GCM
+    const encryptedPayload = encryptBackupBuffer(compressed);
+
+    // 4. Save to disk
+    fs.writeFileSync(targetPath, encryptedPayload);
 
     lastBackupDate = dateStr;
-    const sizeKb = (compressed.length / 1024).toFixed(1);
+    const sizeKb = (encryptedPayload.length / 1024).toFixed(1);
 
-    console.log(`🛡️ [Backup] Created database backup: ${filename} (${sizeKb} KB) [Reason: ${reason}]`);
+    console.log(`🛡️ [Backup] Created AES-256-GCM encrypted backup: ${filename} (${sizeKb} KB) [Reason: ${reason}]`);
 
     // Clean up old backups (keep last 30)
     pruneOldBackups(30);
 
-    // Send email if configured
+    // Send encrypted email attachment if configured
     if (sendEmail && process.env.BACKUP_EMAIL && process.env.SMTP_HOST) {
       await sendBackupEmail(targetPath, filename, sizeKb, dateStr);
     }
@@ -56,14 +104,16 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
       success: true,
       filename,
       filePath: targetPath,
-      sizeBytes: compressed.length,
+      sizeBytes: encryptedPayload.length,
       sizeFormatted: `${sizeKb} KB`,
+      isEncrypted: true,
+      encryptionAlgorithm: 'AES-256-GCM',
       date: dateStr,
       timestamp: now.toISOString(),
       reason
     };
   } catch (err) {
-    console.error('❌ [Backup] Failed to create database backup:', err);
+    console.error('❌ [Backup] Failed to create encrypted database backup:', err);
     throw err;
   }
 }
@@ -74,7 +124,7 @@ export async function createBackup({ reason = 'scheduled', sendEmail = true } = 
 function pruneOldBackups(maxKeep = 30) {
   try {
     const files = fs.readdirSync(backupsDir)
-      .filter(f => f.endsWith('.db.gz'))
+      .filter(f => f.endsWith('.gz'))
       .map(f => {
         const fullPath = path.join(backupsDir, f);
         const stat = fs.statSync(fullPath);
@@ -101,14 +151,17 @@ export function listBackups() {
   try {
     if (!fs.existsSync(backupsDir)) return [];
     return fs.readdirSync(backupsDir)
-      .filter(f => f.endsWith('.db.gz'))
+      .filter(f => f.endsWith('.gz'))
       .map(f => {
         const fullPath = path.join(backupsDir, f);
         const stat = fs.statSync(fullPath);
+        const isEncrypted = f.includes('.enc.');
         return {
           filename: f,
           sizeBytes: stat.size,
           sizeFormatted: `${(stat.size / 1024).toFixed(1)} KB`,
+          isEncrypted,
+          encryptionAlgorithm: isEncrypted ? 'AES-256-GCM' : 'None',
           createdAt: stat.mtime.toISOString(),
           timestamp: stat.mtime.getTime()
         };
@@ -129,7 +182,7 @@ export function getLatestBackupPath() {
 }
 
 /**
- * Optional email sender via Nodemailer
+ * Secure email delivery of ENCRYPTED backup only
  */
 async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
   try {
@@ -144,10 +197,10 @@ async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
     });
 
     await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"טיפולון - גיבוי" <${process.env.SMTP_USER}>`,
+      from: process.env.SMTP_FROM || `"טיפולון - גיבוי מאובטח" <${process.env.SMTP_USER}>`,
       to: process.env.BACKUP_EMAIL,
-      subject: `[טיפולון] גיבוי מסד נתונים אוטומטי - ${dateStr}`,
-      text: `שלום,\n\nמצורף קובץ גיבוי דחוס של מערכת טיפולון מהתאריך ${dateStr}.\nגודל קובץ: ${sizeKb} KB\nשם קובץ: ${filename}\n\nבברכה,\nמערכת טיפולון`,
+      subject: `[טיפולון] גיבוי מסד נתונים מוצפן (AES-256-GCM) - ${dateStr}`,
+      text: `שלום,\n\nמצורף קובץ גיבוי מוצפן (AES-256-GCM) ומאובטח של מערכת טיפולון מהתאריך ${dateStr}.\nגודל קובץ: ${sizeKb} KB\nשם קובץ: ${filename}\n\nהקובץ מוצפן ואינו ניתן לפענוח ללא מפתח ההצפנה של המערכת.\n\nבברכה,\nמערכת טיפולון`,
       attachments: [
         {
           filename,
@@ -156,7 +209,7 @@ async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
       ]
     });
 
-    console.log(`📧 [Backup] Backup email successfully sent to ${process.env.BACKUP_EMAIL}`);
+    console.log(`📧 [Backup] Encrypted backup email successfully sent to ${process.env.BACKUP_EMAIL}`);
   } catch (err) {
     console.warn('⚠️ [Backup] Could not send backup email (check SMTP settings):', err.message);
   }
