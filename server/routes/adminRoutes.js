@@ -1,8 +1,14 @@
 import express from 'express';
 import { db, logAudit } from '../db.js';
 import { requireAdmin, requireSuperAdmin } from '../auth.js';
+import { createHeavyOperationRateLimit } from '../securityService.js';
 
 const router = express.Router();
+const backupRateLimit = createHeavyOperationRateLimit({
+  windowMs: 5 * 60 * 1000,
+  maxRequests: 10,
+  message: 'בוצעו יותר מדי בקשות לפעולות גיבוי. נא להמתין מספר דקות.'
+});
 
 // GET /api/admin/dashboard - Dashboard KPIs
 router.get('/dashboard', requireAdmin, (req, res) => {
@@ -234,7 +240,7 @@ router.get('/backups', requireSuperAdmin, (req, res) => {
 });
 
 // POST /api/admin/backups/create - Create backup now (Super Admin only)
-router.post('/backups/create', requireSuperAdmin, async (req, res) => {
+router.post('/backups/create', requireSuperAdmin, backupRateLimit, async (req, res) => {
   try {
     const result = await createBackup({ reason: 'יזום על ידי מנהל על' });
     logAudit(
@@ -253,7 +259,7 @@ router.post('/backups/create', requireSuperAdmin, async (req, res) => {
 });
 
 // GET /api/admin/backups/download-latest - Download latest backup file (Super Admin only)
-router.get('/backups/download-latest', requireSuperAdmin, (req, res) => {
+router.get('/backups/download-latest', requireSuperAdmin, backupRateLimit, (req, res) => {
   try {
     const latestPath = getLatestBackupPath();
     if (!latestPath || !fs.existsSync(latestPath)) {
@@ -267,7 +273,7 @@ router.get('/backups/download-latest', requireSuperAdmin, (req, res) => {
 });
 
 // GET /api/admin/backups/download/:filename - Download specific backup file (Super Admin only)
-router.get('/backups/download/:filename', requireSuperAdmin, (req, res) => {
+router.get('/backups/download/:filename', requireSuperAdmin, backupRateLimit, (req, res) => {
   try {
     const { filename } = req.params;
     const safeFilename = path.basename(filename);

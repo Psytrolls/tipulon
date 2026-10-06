@@ -4,8 +4,14 @@ import { db, logAudit } from '../db.js';
 import { requireAuth, requireAdmin } from '../auth.js';
 import { evaluateBusStatus } from './busRoutes.js';
 import { validateBusNumber, validateDeviceSerialNumber } from '../validators.js';
+import { createHeavyOperationRateLimit } from '../securityService.js';
 
 const router = express.Router();
+const exportRateLimit = createHeavyOperationRateLimit({
+  windowMs: 3 * 60 * 1000,
+  maxRequests: 20,
+  message: 'בוצעו יותר מדי בקשות לייצוא קבצים. נא להמתין מספר דקות.'
+});
 
 // POST /api/treatments - Submit a new treatment report
 router.post('/', requireAuth, (req, res) => {
@@ -354,7 +360,7 @@ router.patch('/:id/resolution', requireAdmin, (req, res) => {
 });
 
 // GET /api/treatments/export/excel - Professional Styled RTL Excel (.xlsx) export with AutoFilter
-router.get('/export/excel', requireAdmin, async (req, res) => {
+router.get('/export/excel', requireAdmin, exportRateLimit, async (req, res) => {
   try {
     const { operator } = req.query;
 

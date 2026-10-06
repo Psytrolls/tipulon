@@ -8,7 +8,7 @@ import { initDatabase } from './db.js';
 import { authenticateUser, mustChangePinGuard } from './auth.js';
 import { startBackupScheduler } from './backupService.js';
 import { startWeeklyFleetSyncCron } from './services/fleetSyncService.js';
-import { securityHeadersMiddleware } from './securityService.js';
+import { securityHeadersMiddleware, csrfOriginGuard, generalApiRateLimit } from './securityService.js';
 
 import authRoutes from './routes/authRoutes.js';
 import busRoutes from './routes/busRoutes.js';
@@ -31,14 +31,20 @@ const PORT = process.env.PORT || 3000;
 // Trust reverse proxy (for TrueNAS Scale / Nginx reverse proxy SSL & IP forwarding)
 app.set('trust proxy', 1);
 
-// Security hardening
+// Security hardening & CSP headers
 app.disable('x-powered-by');
 app.use(securityHeadersMiddleware);
 
 // Body Parsers & Cookies
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
+
+// CSRF Origin verification for all mutating requests (POST, PUT, PATCH, DELETE)
+app.use(csrfOriginGuard);
+
+// General rate limiting across all API endpoints
+app.use('/api', generalApiRateLimit);
 
 // Authentication session middleware
 app.use(authenticateUser);

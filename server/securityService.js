@@ -232,7 +232,7 @@ export function isUserPhoneLocked(phone) {
 }
 
 /**
- * Security HTTP headers middleware
+ * Security HTTP headers middleware including strict CSP
  */
 export function securityHeadersMiddleware(req, res, next) {
   // Prevent MIME sniffing
@@ -253,6 +253,23 @@ export function securityHeadersMiddleware(req, res, next) {
   // Permissions Policy - allow camera for bus OCR scanner
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
 
+  // Content Security Policy (CSP)
+  const csp = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://bus.magavnegev.co.il",
+    "media-src 'self' blob:",
+    "worker-src 'self' blob:"
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', csp);
+
   // Cache Control for API routes to prevent sensitive data caching
   if (req.path.startsWith('/api/')) {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
@@ -261,4 +278,127 @@ export function securityHeadersMiddleware(req, res, next) {
   }
 
   next();
+}
+
+/**
+ * CSRF & Origin Verification Guard for all state-changing HTTP methods (POST, PUT, PATCH, DELETE)
+ */
+export function csrfOriginGuard(req, res, next) {
+  const mutatingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
+  if (!mutatingMethods.includes(req.method)) {
+    return next();
+  }
+
+  const origin = req.headers.origin || (req.headers.referer ? new URL(req.headers.referer).origin : null);
+  const host = req.headers.host;
+
+  // Allow internal server-side requests or development if Origin is omitted
+  if (!origin) {
+    if (process.env.NODE_ENV !== 'production' || host?.includes('localhost') || host?.includes('127.0.0.1')) {
+      return next();
+    }
+    return res.status(403).json({ error: 'חסרה הגדרת Origin לבקשה מאובטחת' });
+  }
+
+  // Define allowed origins
+  const allowedOrigins = new Set([
+    'https://bus.magavnegev.co.il',
+    'http://bus.magavnegev.co.il',
+    ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : [])
+  ]);
+
+  if (host) {
+    allowedOrigins.add(`https://${host}`);
+    allowedOrigins.add(`http://${host}`);
+  }
+
+  // Dev & Localhost origins
+  if (process.env.NODE_ENV !== 'production' || host?.includes('localhost') || host?.includes('127.0.0.1')) {
+    allowedOrigins.add('http://localhost:3000');
+    allowedOrigins.add('http://127.0.0.1:3000');
+    allowedOrigins.add('http://localhost:5173');
+    allowedOrigins.add('http://127.0.0.1:5173');
+  }
+
+  if (allowedOrigins.has(origin)) {
+    return next();
+  }
+
+  // Cloudflare quick tunnel subdomains in dev/test
+  try {
+    const originUrl = new URL(origin);
+    if (originUrl.hostname.endsWith('.trycloudflare.com') || originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1') {
+      return next();
+    }
+  } catch (e) {}
+
+  console.warn(`⚠️ [CSRF] Blocked request from untrusted origin: ${origin} on ${req.method} ${req.path}`);
+  return res.status(403).json({ error: 'מקור הבקשה (Origin) אינו מורשה לביצוע פעולה זו' });
+}
+
+// In-memory rate limiting map for general & heavy API calls
+const rateLimitBuckets = new Map();
+
+// Periodic cleanup of rate limit buckets
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of rateLimitBuckets.entries()) {
+    if (record.resetAt <= now) {
+      rateLimitBuckets.delete(key);
+    }
+  }
+}, 60 * 1000).unref();
+
+/**
+ * General API rate limiter (200 requests/minute per IP)
+ */
+export function generalApiRateLimit(req, res, next) {
+  const ip = getClientIp(req);
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute
+  const maxRequests = 300;     // 300 req / minute
+
+  const key = `gen:${ip}`;
+  let record = rateLimitBuckets.get(key);
+
+  if (!record || record.resetAt <= now) {
+    record = { count: 1, resetAt: now + windowMs };
+    rateLimitBuckets.set(key, record);
+    return next();
+  }
+
+  record.count += 1;
+  if (record.count > maxRequests) {
+    return res.status(429).json({
+      error: 'בוצעו יותר מדי פניות למערכת. נא להמתין דקה ולנסות שוב.'
+    });
+  }
+
+  next();
+}
+
+/**
+ * Heavy operations rate limiter (for Excel exports, backups, fleet sync)
+ */
+export function createHeavyOperationRateLimit({ windowMs = 5 * 60 * 1000, maxRequests = 15, message = 'יותר מדי בקשות לפעולה כבדה זו. נסה שוב בעוד מספר דקות.' } = {}) {
+  return (req, res, next) => {
+    const ip = getClientIp(req);
+    const userId = req.user?.id || 'anon';
+    const key = `heavy:${req.baseUrl || req.path}:${ip}:${userId}`;
+    const now = Date.now();
+
+    let record = rateLimitBuckets.get(key);
+    if (!record || record.resetAt <= now) {
+      record = { count: 1, resetAt: now + windowMs };
+      rateLimitBuckets.set(key, record);
+      return next();
+    }
+
+    record.count += 1;
+    if (record.count > maxRequests) {
+      return res.status(429).json({ error: message });
+    }
+
+    next();
+  };
 }

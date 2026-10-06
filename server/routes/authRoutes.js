@@ -241,7 +241,7 @@ router.post('/change-password', (req, res) => {
     });
   } catch (err) {
     console.error('Change password error:', err);
-    res.status(500).json({ error: 'שגיאה פנימית בעדכון הסיסמה: ' + (err.message || '') });
+    res.status(500).json({ error: 'שגיאה פנימית בעדכון הסיסמה' });
   }
 });
 

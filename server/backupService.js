@@ -228,9 +228,32 @@ async function sendBackupEmail(filePath, filename, sizeKb, dateStr) {
 }
 
 /**
+ * Safely purge any legacy unencrypted backup files from disk
+ */
+export function purgeLegacyUnencryptedBackups() {
+  try {
+    if (!fs.existsSync(backupsDir)) return;
+    const files = fs.readdirSync(backupsDir);
+    for (const f of files) {
+      if (f.endsWith('.gz') && !f.endsWith('.enc.gz')) {
+        const fullPath = path.join(backupsDir, f);
+        try {
+          fs.unlinkSync(fullPath);
+          console.log(`🛡️ [Backup] Safely purged unencrypted legacy backup: ${f}`);
+        } catch (e) {}
+      }
+    }
+  } catch (err) {
+    console.warn('⚠️ [Backup] Notice during backup purge:', err.message);
+  }
+}
+
+/**
  * Start the daily backup scheduler
  */
 export function startBackupScheduler() {
+  purgeLegacyUnencryptedBackups();
+
   const key = process.env.BACKUP_ENCRYPTION_KEY;
   if (!key || Buffer.byteLength(key, 'utf8') < 32 || isWeakOrTemplateSecret(key)) {
     console.warn('⚠️ [Backup] BACKUP_ENCRYPTION_KEY is not configured, shorter than 32 bytes, or using a placeholder value. Backup encryption is disabled until configured.');

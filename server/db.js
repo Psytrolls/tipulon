@@ -209,7 +209,7 @@ export function initDatabase() {
   } catch (e) {}
 
   try {
-    db.exec(`DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')`);
+    db.exec(`DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now') OR length(token_hash) != 64`);
   } catch (e) {}
   try {
     db.exec(`
