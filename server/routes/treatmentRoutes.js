@@ -231,7 +231,7 @@ router.get('/', requireAuth, (req, res) => {
       params.push(req.user.id);
     }
 
-    query += ' ORDER BY r.created_at DESC LIMIT 150';
+    query += ' ORDER BY r.created_at DESC, r.id DESC LIMIT 5000';
 
     const stmt = db.prepare(query);
     const reports = stmt.all(...params);
