@@ -4,290 +4,818 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>מדריך למשתמש ומצגת הדרכה – אפליקציית טיפולון</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800;900&family=Rubik:wght@500;700;900&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    :root {
+      --primary: #059669;
+      --primary-hover: #047857;
+      --primary-light: #ecfdf5;
+      --primary-border: #a7f3d0;
+      --primary-dark: #064e3b;
+      --bg-page: #f1f5f9;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-sub: #64748b;
+      --border-color: #e2e8f0;
+      --dark-card: #0f172a;
+      --dark-card-border: #1e293b;
+      --font-stack: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Assistant", "Rubik", "Segoe UI", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Assistant', sans-serif;
+      font-family: var(--font-stack);
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.5;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
     }
-    h1, h2, h3, .font-heading {
-      font-family: 'Rubik', sans-serif;
+
+    /* Sticky Navigation Header */
+    header.guide-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background-color: #0f172a;
+      color: #ffffff;
+      border-bottom: 1px solid #1e293b;
+      box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.25);
+      padding: 0.75rem 1rem;
     }
+
+    .header-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.35rem;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #34d399;
+      letter-spacing: -0.01em;
+    }
+
+    .header-subtitle {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+
+    .header-author {
+      color: #6ee7b7;
+      font-weight: 700;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn:active {
+      transform: scale(0.97);
+    }
+
+    .btn-dark {
+      background-color: #1e293b;
+      color: #e2e8f0;
+      border-color: #334155;
+    }
+    .btn-dark:hover {
+      background-color: #334155;
+      color: #ffffff;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #ffffff;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #059669, #047857);
+    }
+
+    /* Main Container */
+    main.guide-main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1.5rem 1rem 5rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    /* Slide Cards */
+    .slide-card {
+      background-color: var(--card-bg);
+      border-radius: 24px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      border: 1px solid var(--border-color);
+      position: relative;
+      overflow: hidden;
+      scroll-margin-top: 5rem;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .slide-card.border-featured {
+      border: 2px solid #10b981;
+      box-shadow: 0 12px 30px -5px rgba(16, 185, 129, 0.12);
+    }
+
+    .slide-top-gradient {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      height: 6px;
+      background: linear-gradient(90deg, #10b981, #14b8a6, #059669);
+    }
+
+    .slide-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #f1f5f9;
+      padding-bottom: 1rem;
+      margin-bottom: 1.25rem;
+      gap: 1rem;
+    }
+
+    .slide-badge-category {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #059669;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      display: inline-block;
+      margin-bottom: 0.25rem;
+    }
+
+    .slide-title {
+      font-size: 1.45rem;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+    }
+
+    .slide-icon {
+      font-size: 2.25rem;
+      flex-shrink: 0;
+    }
+
+    /* Grids and Layouts */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    @media (min-width: 640px) {
+      .grid-3 {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (min-width: 768px) {
+      .grid-2 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .slide-card {
+        padding: 2.25rem;
+      }
+      .slide-title {
+        font-size: 1.75rem;
+      }
+    }
+
+    /* Feature Info Boxes */
+    .info-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1rem 1.15rem;
+      font-size: 0.85rem;
+    }
+
+    .info-box.primary {
+      background-color: #ecfdf5;
+      border-color: #a7f3d0;
+      color: #065f46;
+    }
+
+    .info-box.blue {
+      background-color: #eff6ff;
+      border-color: #bfdbfe;
+      color: #1e40af;
+    }
+
+    .info-box.amber {
+      background-color: #fffbeb;
+      border-color: #fde68a;
+      color: #92400e;
+    }
+
+    .info-box.rose {
+      background-color: #fff1f2;
+      border-color: #fecdd3;
+      color: #9f1239;
+    }
+
+    .info-box.dark {
+      background-color: #1e293b;
+      border-color: #334155;
+      color: #f8fafc;
+    }
+
+    .info-box strong {
+      font-weight: 800;
+      display: block;
+      margin-bottom: 0.25rem;
+    }
+
+    .feature-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 1.1rem;
+      text-align: right;
+    }
+    .feature-card-icon {
+      font-size: 1.75rem;
+      margin-bottom: 0.4rem;
+    }
+    .feature-card-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    .feature-card-desc {
+      font-size: 0.775rem;
+      color: #64748b;
+      margin-top: 0.25rem;
+      line-height: 1.4;
+    }
+
+    /* Step Badge List */
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .step-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background-color: #0f172a;
+      color: #ffffff;
+      font-weight: 900;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .step-num.primary {
+      background-color: #059669;
+    }
+
+    .step-content {
+      font-size: 0.875rem;
+      color: #334155;
+      line-height: 1.45;
+    }
+
+    .step-content strong {
+      color: #0f172a;
+      font-weight: 800;
+    }
+
+    /* UI Mockups Container */
+    .ui-mockup {
+      background-color: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .ui-mockup.dark {
+      background-color: #0f172a;
+      border-color: #1e293b;
+      color: #ffffff;
+    }
+
+    .mockup-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .ui-mockup.dark .mockup-header {
+      border-bottom-color: #1e293b;
+    }
+
+    .mockup-input {
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 0.65rem 0.85rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #0f172a;
+      text-align: center;
+    }
+    .ui-mockup.dark .mockup-input {
+      background: #1e293b;
+      border-color: #334155;
+      color: #34d399;
+    }
+
+    .mockup-btn {
+      width: 100%;
+      padding: 0.75rem;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      text-align: center;
+      background: #059669;
+      color: #ffffff;
+      border: none;
+      cursor: default;
+      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.25);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.7rem;
+      font-weight: 800;
+      border-radius: 9999px;
+    }
+    .badge-primary {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .badge-blue {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-neutral {
+      background-color: #f1f5f9;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* Device Counter Box */
+    .counter-widget {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 20px;
+      padding: 1.25rem;
+      margin: 1rem auto;
+      max-width: 320px;
+    }
+    .counter-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 14px;
+      font-size: 1.5rem;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #0f172a;
+    }
+    .counter-btn.primary {
+      background: #059669;
+      border-color: #059669;
+      color: #ffffff;
+    }
+    .counter-value {
+      font-size: 3rem;
+      font-weight: 900;
+      color: #059669;
+      line-height: 1;
+    }
+
+    /* Device Selector Buttons */
+    .device-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+    .dev-btn {
+      padding: 0.65rem 0.25rem;
+      text-align: center;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      color: #334155;
+    }
+    .dev-btn.active {
+      background: #059669;
+      border-color: #059669;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+    }
+
+    /* Floating Navigation Controller */
+    .guide-controller {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      left: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #ffffff;
+      padding: 0.65rem 1rem;
+      border-radius: 16px;
+      box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.4);
+      border: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 40;
+    }
+
+    .controller-author {
+      font-size: 0.75rem;
+      color: #94a3b8;
+    }
+    .controller-author strong {
+      color: #34d399;
+    }
+
+    .controller-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Dark Presentation Cards */
+    .slide-card.dark-theme {
+      background: #0f172a;
+      color: #ffffff;
+      border-color: #1e293b;
+    }
+    .slide-card.dark-theme .slide-title {
+      color: #ffffff;
+    }
+    .slide-card.dark-theme .slide-header {
+      border-bottom-color: #1e293b;
+    }
+
+    /* Print Styles */
     @media print {
-      .no-print {
+      .no-print, header.guide-header, .guide-controller {
         display: none !important;
       }
-      .page-break {
-        page-break-before: always;
-        break-before: page;
-      }
       body {
-        background: white !important;
-        color: black !important;
+        background: #ffffff !important;
+        color: #000000 !important;
+      }
+      main.guide-main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        gap: 1.5rem !important;
       }
       .slide-card {
         box-shadow: none !important;
-        border: 1px solid #cbd5e1 !important;
+        border: 1px solid #94a3b8 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
         margin-bottom: 2rem !important;
+        padding: 1.5rem !important;
+      }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
       }
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 min-h-screen">
+<body>
 
-  <!-- Top Sticky Navigation Bar (Controls) -->
-  <header class="no-print sticky top-0 z-50 bg-slate-900 text-white border-b border-slate-800 shadow-lg px-4 py-3">
-    <div class="max-w-6xl mx-auto flex items-center justify-between flex-wrap gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center font-black text-xl shadow-md shadow-emerald-900/50">
-          🚌
-        </div>
+  <!-- Top Sticky Navigation Bar -->
+  <header class="guide-header no-print">
+    <div class="header-container">
+      <div class="header-brand">
+        <div class="header-logo">🚌</div>
         <div>
-          <h1 class="font-black text-lg text-emerald-400">טיפולון – מדריך הפעלה צעד-אחר-צעד לטכנאי</h1>
-          <p class="text-xs text-slate-400">הדרכה מפורטת, פשוטה וברורה לביצוע טיפול מונע בשטח • אפיון ופיתוח: <strong class="text-emerald-300">יבגני קבישר</strong></p>
+          <h1 class="header-title">טיפולון – מדריך הפעלה צעד-אחר-צעד לטכנאי</h1>
+          <p class="header-subtitle">מדריך מפורט וברור לביצוע טיפול מונע בשטח • אפיון ופיתוח: <strong class="header-author">יבגני קבישר</strong></p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
-        <a href="/" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
-          🏠 <span>חזרה לאפליקציה</span>
+      <div class="header-actions">
+        <a href="/" class="btn btn-dark">
+          <span>🏠</span> <span>חזרה לאפליקציה</span>
         </a>
-        <button onclick="window.print()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 font-bold text-xs rounded-xl shadow transition-all flex items-center gap-1.5 active:scale-95">
-          🖨️ <span>הדפס או שמור כ-PDF</span>
+        <button onclick="window.print()" class="btn btn-primary">
+          <span>🖨️</span> <span>הדפסה / שמירה כ-PDF</span>
         </button>
-        <button onclick="toggleViewMode()" id="viewModeBtn" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs rounded-xl border border-slate-700 transition-all flex items-center gap-1.5">
-          🖥️ <span>מצב מצגת מלאה</span>
+        <button onclick="toggleViewMode()" id="viewModeBtn" class="btn btn-dark">
+          <span>🖥️</span> <span>מצב מצגת מלאה</span>
         </button>
       </div>
     </div>
   </header>
 
   <!-- Presentation Slides Container -->
-  <main class="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8" id="slidesContainer">
+  <main class="guide-main" id="slidesContainer">
 
     <!-- SLIDE 1: Cover / Introduction -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 overflow-hidden relative">
-      <div class="absolute top-0 right-0 left-0 h-3 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600"></div>
+    <section class="slide-card border-featured" id="slide-1">
+      <div class="slide-top-gradient"></div>
       
-      <div class="text-center space-y-4 max-w-2xl mx-auto pt-4">
-        <div class="flex items-center justify-center gap-2 flex-wrap">
-          <span class="inline-block py-1.5 px-4 bg-emerald-100 text-emerald-800 font-black text-xs rounded-full uppercase tracking-wider">
-            שקף 1 מתוך 10 • פתיחה ומבוא
-          </span>
-          <span class="inline-block py-1.5 px-3 bg-slate-100 text-slate-700 font-bold text-xs rounded-full border border-slate-200">
-            אפיון ופיתוח: <strong class="text-emerald-800">יבגני קבישר</strong>
-          </span>
+      <div style="text-align: center; max-width: 650px; margin: 0 auto; padding-top: 0.5rem;">
+        <div style="display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem;">
+          <span class="badge badge-primary">שקף 1 מתוך 10 • פתיחה ומבוא</span>
+          <span class="badge badge-neutral">אפיון ופיתוח: <strong style="color: #065f46;">יבגני קבישר</strong></span>
         </div>
-        <h2 class="text-3xl sm:text-4xl font-black text-slate-900 leading-tight">
+        
+        <h2 class="slide-title" style="margin-bottom: 0.75rem;">
           מדריך ביצוע טיפול מונע באוטובוסים
         </h2>
-        <p class="text-slate-600 text-base sm:text-lg">
+        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 1.5rem;">
           המערכת הדיגיטלית החכמה שמחברת אתכם ללוויין (GPS) ולסידור העבודה ומאפשרת לתעד טיפול מלא ב-<strong>פחות מ-2 דקות</strong> ישירות מהטלפון הנייד!
         </p>
 
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-right">
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div class="text-2xl mb-1">🗺️</div>
-            <h3 class="font-black text-slate-800 text-sm">מפת חניונים חיה</h3>
-            <p class="text-xs text-slate-500 mt-1">מאתרת איפה עומדים כרגע אוטובוסים עם הפסקה מעל 20 דקות ומובילה ב-Waze.</p>
+        <div class="grid-3">
+          <div class="feature-card">
+            <div class="feature-card-icon">🗺️</div>
+            <h3 class="feature-card-title">מפת חניונים חיה</h3>
+            <p class="feature-card-desc">מאתרת איפה עומדים כרגע אוטובוסים עם הפסקה מעל 20 דקות ומובילה ב-Waze.</p>
           </div>
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div class="text-2xl mb-1">🛡️</div>
-            <h3 class="font-black text-slate-800 text-sm">הגנה מטעויות</h3>
-            <p class="text-xs text-slate-500 mt-1">בדיקה אוטומטית של תוקף 6 חודשים וחישוב חלון זמנים עד ליציאה הבאה.</p>
+          <div class="feature-card">
+            <div class="feature-card-icon">🛡️</div>
+            <h3 class="feature-card-title">הגנה מטעויות</h3>
+            <p class="feature-card-desc">בדיקה אוטומטית של תוקף 6 חודשים וחישוב חלון זמנים מדויק עד ליציאה הבאה.</p>
           </div>
-          <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-            <div class="text-2xl mb-1">⚡</div>
-            <h3 class="font-black text-slate-800 text-sm">מהיר בטירוף</h3>
-            <p class="text-xs text-slate-500 mt-1">בחירה חכמה של דגמי המכשירים בקליק אחד ללא הקלדות מיותרות.</p>
+          <div class="feature-card">
+            <div class="feature-card-icon">⚡</div>
+            <h3 class="feature-card-title">מהיר במיוחד</h3>
+            <p class="feature-card-desc">בחירה חכמה של דגמי המכשירים בקליק אחד ללא הקלדות מיותרות בשטח.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 2: PWA Installation -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card page-break" id="slide-2">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 2 • הכנה מוקדמת</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">איך שמים את האפליקציה במסך הבית?</h2>
+          <span class="slide-badge-category">שקף 2 • הכנה מוקדמת</span>
+          <h2 class="slide-title">איך שמים את האפליקציה במסך הבית?</h2>
         </div>
-        <div class="text-3xl">📱</div>
+        <div class="slide-icon">📱</div>
       </div>
 
-      <p class="text-slate-700 font-medium text-sm sm:text-base leading-relaxed">
-        אין צורך להיכנס לחנות האפליקציות! פותחים פעם אחת את הקישור בדפדפן ומוסיפים למסך הבית:
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
+        אין צורך להיכנס לחנות האפליקציות! פותחים פעם אחת את הקישור בדפדפן הנייד ומוסיפים למסך הבית:
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="grid-2">
         <!-- iPhone Box -->
-        <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-5 space-y-3">
-          <div class="flex items-center gap-2 font-black text-slate-900 text-base">
-            <span class="text-xl">🍏</span>
+        <div class="info-box dark" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; font-weight: 800; color: #ffffff;">
+            <span>🍏</span>
             <span>באייפון (iPhone - Safari):</span>
           </div>
-          <ol class="space-y-2.5 text-xs sm:text-sm text-slate-700 list-decimal list-inside font-semibold">
-            <li>נכנסים לקישור ב-<strong>Safari</strong>: <span class="text-emerald-700 font-mono underline">bus.magavnegev.co.il</span></li>
-            <li>לוחצים בתחתית המסך על כפתור <strong>השיתוף</strong> (ריבוע עם חץ למעלה ⎋).</li>
-            <li>גוללים טיפה למטה ולוחצים על <strong>«הוסף למסך הבית»</strong> (סמל ⊞).</li>
+          <ol class="step-list" style="list-style-type: decimal; padding-right: 1.25rem; font-size: 0.85rem; color: #cbd5e1;">
+            <li style="margin-bottom: 0.35rem;">נכנסים לקישור ב-<strong>Safari</strong>: <span style="color: #34d399; font-family: monospace;">bus.magavnegev.co.il</span></li>
+            <li style="margin-bottom: 0.35rem;">לוחצים בתחתית המסך על כפתור <strong>השיתוף</strong> (ריבוע עם חץ למעלה ⎋).</li>
+            <li style="margin-bottom: 0.35rem;">גוללים טיפה למטה ולוחצים על <strong>«הוסף למסך הבית»</strong> (סמל ⊞).</li>
             <li>לוחצים למעלה על <strong>«הוסף»</strong> (Add).</li>
           </ol>
-          <div class="bg-emerald-50 text-emerald-800 p-2.5 rounded-xl text-xs font-bold border border-emerald-200">
+          <div class="info-box primary" style="font-size: 0.8rem; font-weight: 700; margin-top: auto;">
             ✅ זהו! יש לכם אייקון ירוק של «טיפולון» במסך הראשי של הטלפון.
           </div>
         </div>
 
         <!-- Android Box -->
-        <div class="bg-slate-50 border-2 border-slate-200 rounded-2xl p-5 space-y-3">
-          <div class="flex items-center gap-2 font-black text-slate-900 text-base">
-            <span class="text-xl">🤖</span>
+        <div class="info-box dark" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; font-weight: 800; color: #ffffff;">
+            <span>🤖</span>
             <span>באנדרואיד (Android - Chrome):</span>
           </div>
-          <ol class="space-y-2.5 text-xs sm:text-sm text-slate-700 list-decimal list-inside font-semibold">
-            <li>נכנסים בדפדפן <strong>Chrome</strong> לכתובת האתר.</li>
-            <li>מיד תקפוץ לכם למעלה הודעה: <strong>«התקנת אפליקציית טיפולון»</strong>.</li>
-            <li>לוחצים על הכפתור הלבן <strong>«התקן עכשיו»</strong>.</li>
+          <ol class="step-list" style="list-style-type: decimal; padding-right: 1.25rem; font-size: 0.85rem; color: #cbd5e1;">
+            <li style="margin-bottom: 0.35rem;">נכנסים בדפדפן <strong>Chrome</strong> לכתובת האתר.</li>
+            <li style="margin-bottom: 0.35rem;">מיד תקפוץ לכם למעלה הודעה: <strong>«התקנת אפליקציית טיפולון»</strong>.</li>
+            <li style="margin-bottom: 0.35rem;">לוחצים על הכפתור <strong>«התקן עכשיו»</strong>.</li>
             <li>(או לוחצים על 3 נקודות ⋮ למעלה ➔ «התקן אפליקציה»).</li>
           </ol>
-          <div class="bg-emerald-50 text-emerald-800 p-2.5 rounded-xl text-xs font-bold border border-emerald-200">
-            ✅ האפליקציה מותקנת ופועלת במסך מלא בדיוק כמו ווטסאפ!
+          <div class="info-box primary" style="font-size: 0.8rem; font-weight: 700; margin-top: auto;">
+            ✅ האפליקציה מותקנת ופועלת במסך מלא ומהיר בדיוק כמו אפליקציה מקומית!
           </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 3: Login Screen -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card page-break" id="slide-3">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 3 • כניסה למערכת</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">איך מתחברים לאפליקציה?</h2>
+          <span class="slide-badge-category">שקף 3 • כניסה למערכת</span>
+          <h2 class="slide-title">איך מתחברים לאפליקציה?</h2>
         </div>
-        <div class="text-3xl">🔐</div>
+        <div class="slide-icon">🔐</div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-        <div class="space-y-4">
-          <div class="bg-amber-50 border-r-4 border-amber-500 p-4 rounded-xl text-amber-900 text-sm">
+      <div class="grid-2" style="align-items: center;">
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div class="info-box amber">
             <strong>שימו לב:</strong> לכל טכנאי יש מספר טלפון וקוד PIN אישי של 4 ספרות שנקבע מראש על ידי מנהל המערכת.
           </div>
 
-          <div class="space-y-3">
-            <div class="flex items-start gap-3">
-              <span class="w-7 h-7 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-sm shrink-0">1</span>
-              <p class="text-sm font-semibold text-slate-800">
+          <div class="step-list">
+            <div class="step-item">
+              <span class="step-num">1</span>
+              <div class="step-content">
                 <strong>הזנת מספר טלפון:</strong> מקלידים את מספר הנייד שלכם (לדוגמה: <code>0521234567</code>).
-              </p>
+              </div>
             </div>
-            <div class="flex items-start gap-3">
-              <span class="w-7 h-7 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-sm shrink-0">2</span>
-              <p class="text-sm font-semibold text-slate-800">
+            <div class="step-item">
+              <span class="step-num">2</span>
+              <div class="step-content">
                 <strong>הזנת קוד PIN:</strong> מקלידים את 4 הספרות הסודיות שלכם (לדוגמה: <code>1234</code>).
-              </p>
+              </div>
             </div>
-            <div class="flex items-start gap-3">
-              <span class="w-7 h-7 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-sm shrink-0">3</span>
-              <p class="text-sm font-semibold text-slate-800">
+            <div class="step-item">
+              <span class="step-num">3</span>
+              <div class="step-content">
                 לוחצים על הכפתור הירוק הגדול <strong>«התחבר למערכת»</strong>.
-              </p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Visual UI Mockup of Login -->
-        <div class="bg-slate-900 p-6 rounded-3xl text-white shadow-2xl border border-slate-800 max-w-sm mx-auto w-full">
-          <div class="text-center mb-5">
-            <div class="w-12 h-12 bg-emerald-500 rounded-2xl mx-auto flex items-center justify-center text-2xl mb-2">🚌</div>
-            <div class="font-black text-xl text-emerald-400">טיפולון</div>
-            <div class="text-xs text-slate-400">כניסה למערכת</div>
+        <!-- UI Mockup of Login -->
+        <div class="ui-mockup dark" style="max-width: 320px; margin: 0 auto; width: 100%;">
+          <div style="text-align: center; margin-bottom: 0.5rem;">
+            <div style="width: 48px; height: 48px; background: #10b981; border-radius: 14px; margin: 0 auto 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">🚌</div>
+            <div style="font-weight: 900; font-size: 1.2rem; color: #34d399;">טיפולון</div>
+            <div style="font-size: 0.75rem; color: #94a3b8;">כניסה מאובטחת לטכנאים</div>
           </div>
-          <div class="space-y-3 text-right">
-            <div>
-              <span class="text-xs text-slate-400 block mb-1">מספר טלפון</span>
-              <div class="bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-mono text-emerald-300">050-1234567</div>
-            </div>
-            <div>
-              <span class="text-xs text-slate-400 block mb-1">קוד PIN סודי</span>
-              <div class="bg-slate-800 border border-slate-700 rounded-xl p-2.5 text-sm font-mono tracking-widest text-emerald-300">••••</div>
-            </div>
-            <div class="pt-2">
-              <div class="w-full bg-emerald-600 text-center py-2.5 rounded-xl font-black text-sm text-white shadow-lg">
-                התחבר למערכת ←
-              </div>
-            </div>
+          <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">מספר טלפון נייד</label>
+            <div class="mockup-input">050-1234567</div>
+          </div>
+          <div>
+            <label style="font-size: 0.75rem; color: #94a3b8; display: block; margin-bottom: 0.25rem;">קוד PIN סודי (4 ספרות)</label>
+            <div class="mockup-input">••••</div>
+          </div>
+          <div class="mockup-btn" style="margin-top: 0.25rem;">
+            התחבר למערכת ←
           </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 4: Live Depot Map & Finding Buses -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-emerald-500 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card border-featured page-break" id="slide-4">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 4 • חדש! מפת חניונים חיה 🗺️</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">איפה יש אוטובוסים שמחכים לטיפול כעת?</h2>
+          <span class="slide-badge-category">שקף 4 • חדש! מפת חניונים חיה 🗺️</span>
+          <h2 class="slide-title">איפה יש אוטובוסים שמחכים לטיפול כעת?</h2>
         </div>
-        <div class="text-3xl">📍</div>
+        <div class="slide-icon">📍</div>
       </div>
 
-      <p class="text-slate-700 text-sm sm:text-base leading-relaxed">
-        במקום לחפש אוטובוסים פיזית בשטח, לוחצים בסרגל העליון על <strong>«מפת חניונים 🗺️»</strong> ורואים את כל מתחמי הדרום בזמן אמת:
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
+        במקום לחפש אוטובוסים פיזית ברגל, לוחצים בסרגל העליון על <strong>«מפת חניונים 🗺️»</strong> ורואים את כל מתחמי הדרום בזמן אמת:
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="space-y-3 text-xs sm:text-sm text-slate-700 font-medium">
-          <div class="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-1">
-            <strong class="text-emerald-900 block text-sm">1. איתור אוטובוסים לפי לווין (GPS):</strong>
-            <p>המערכת סורקת את כל מסופי ומתחמי הדרום (באר שבע, אלדן אשקלון, מסוף רמז, עד הלום אשדוד, קרית מלאכי, נתיבות, שדרות, אופקים, קרית גת) ומציגה כמה אוטובוסים עומדים כעת במקום.</p>
+      <div class="grid-2">
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <div class="info-box primary">
+            <strong>1. איתור אוטובוסים לפי לווין (GPS):</strong>
+            המערכת סורקת את כל מסופי ומתחמי הדרום (באר שבע, אלדן אשקלון, מסוף רמז, עד הלום אשדוד, קרית מלאכי, נתיבות, שדרות, אופקים, קרית גת) ומציגה כמה אוטובוסים עומדים כעת.
           </div>
 
-          <div class="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 space-y-1">
-            <strong class="text-blue-900 block text-sm">2. חוק 20 הדקות הפנויות ⏱️:</strong>
-            <p>אוטובוס מוצג כ-<strong>«זמין לטיפול»</strong> רק אם אין לו סידור עבודה כרגע, או שהוא סיים משמרת ללילה, או שיש לו <strong>הפסקה של מעל 20 דקות</strong> עד ליציאה הבאה!</p>
+          <div class="info-box blue">
+            <strong>2. חוק 20 הדקות הפנויות ⏱️:</strong>
+            אוטובוס מוצג כ-<strong>«זמין לטיפול»</strong> רק אם אין לו סידור עבודה כרגע, או שהוא סיים משמרת ללילה, או שיש לו <strong>הפסקה של מעל 20 דקות</strong> עד ליציאה הבאה!
           </div>
 
-          <div class="p-3.5 bg-rose-50 rounded-2xl border border-rose-200 space-y-1">
-            <strong class="text-rose-900 block text-sm">3. הפרדה ברורה במתחם הבונים / עמק שרה:</strong>
-            <p><strong>חניון רכב כבד (ירוק):</strong> פתוח לעבודה. <strong>מוסך דן (אדום):</strong> שטח סגור - אין כניסת טכנאים ללא תיאום מנהל מוסך.</p>
+          <div class="info-box rose">
+            <strong>3. הפרדה ברורה במתחם הבונים / עמק שרה:</strong>
+            <strong>חניון רכב כבד (ירוק):</strong> פתוח לעבודה. <strong>מוסך דן (אדום):</strong> שטח סגור - אין כניסת טכנאים ללא תיאום מנהל מוסך.
           </div>
 
-          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-            <strong class="text-slate-900 block text-sm">4. ניווט Waze והתחלת טיפול בלחיצה אחת:</strong>
-            <p>לחיצה על <strong>Waze</strong> פותחת ניווט ישיר לחניון, ולחיצה על <strong>«התחל טיפול»</strong> ליד מספר הרישוי פותחת מיד את דוח הטיפול מוכן להזנה!</p>
+          <div class="info-box">
+            <strong>4. ניווט Waze והתחלת טיפול בלחיצה אחת:</strong>
+            לחיצה על <strong>Waze</strong> פותחת ניווט ישיר לחניון, ולחיצה על <strong>«התחל טיפול»</strong> ליד מספר הרישוי פותחת מיד את דוח הטיפול מוכן להזנה!
           </div>
         </div>
 
         <!-- Depot Map Mockup Card -->
-        <div class="bg-slate-50 p-5 rounded-3xl border-2 border-slate-200 space-y-3">
-          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-            <div class="flex items-center justify-between">
-              <span class="font-black text-slate-900 text-sm">חניון ומסוף עד הלום (אשדוד)</span>
-              <span class="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded">דן בדרום</span>
+        <div class="ui-mockup" style="gap: 0.75rem;">
+          <div style="background: #ffffff; padding: 1rem; border-radius: 14px; border: 1px solid #cbd5e1; box-shadow: 0 2px 5px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="font-weight: 900; font-size: 0.95rem; color: #0f172a;">חניון ומסוף עד הלום (אשדוד)</span>
+              <span class="badge badge-blue">דן בדרום</span>
             </div>
-            <div class="grid grid-cols-2 gap-2 text-center">
-              <div class="p-2 bg-slate-50 rounded-xl border">
-                <span class="text-[10px] text-slate-500 block">עומדים כעת</span>
-                <span class="text-xl font-black text-slate-800">21</span>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; text-align: center; margin-bottom: 0.75rem;">
+              <div style="background: #f8fafc; padding: 0.5rem; border-radius: 10px; border: 1px solid #e2e8f0;">
+                <span style="font-size: 0.7rem; color: #64748b; display: block;">עומדים כעת</span>
+                <span style="font-size: 1.35rem; font-weight: 900; color: #0f172a;">21</span>
               </div>
-              <div class="p-2 bg-emerald-50 rounded-xl border border-emerald-300">
-                <span class="text-[10px] text-emerald-700 block">זמינים לטיפול</span>
-                <span class="text-xl font-black text-emerald-700">20</span>
+              <div style="background: #ecfdf5; padding: 0.5rem; border-radius: 10px; border: 1px solid #a7f3d0;">
+                <span style="font-size: 0.7rem; color: #065f46; display: block;">זמינים לטיפול</span>
+                <span style="font-size: 1.35rem; font-weight: 900; color: #059669;">20</span>
               </div>
             </div>
-            <div class="flex gap-2 pt-1">
-              <div class="flex-1 py-1.5 bg-blue-600 text-white text-center rounded-lg text-xs font-bold">Waze ↗</div>
-              <div class="flex-1 py-1.5 bg-slate-800 text-white text-center rounded-lg text-xs font-bold">Google Maps ↗</div>
+            <div style="display: flex; gap: 0.5rem;">
+              <div style="flex: 1; padding: 0.4rem; background: #2563eb; color: #fff; text-align: center; border-radius: 8px; font-size: 0.75rem; font-weight: 800;">Waze ↗</div>
+              <div style="flex: 1; padding: 0.4rem; background: #0f172a; color: #fff; text-align: center; border-radius: 8px; font-size: 0.75rem; font-weight: 800;">Google Maps ↗</div>
             </div>
           </div>
 
-          <div class="p-3 bg-white rounded-xl border flex items-center justify-between">
+          <div style="background: #ffffff; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
             <div>
-              <span class="font-mono font-black text-sm text-slate-900">53151403</span>
-              <span class="block text-[10px] text-emerald-700 font-bold">🟢 ללא סידור עבודה כעת</span>
+              <span style="font-family: monospace; font-weight: 900; font-size: 1rem; color: #0f172a; display: block;">53151403</span>
+              <span style="font-size: 0.75rem; color: #059669; font-weight: 700;">🟢 ללא סידור עבודה כעת</span>
             </div>
-            <div class="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black">
+            <div style="padding: 0.4rem 0.75rem; background: #059669; color: #ffffff; border-radius: 8px; font-size: 0.75rem; font-weight: 800;">
               התחל טיפול ➔
             </div>
           </div>
@@ -296,388 +824,371 @@
     </section>
 
     <!-- SLIDE 5: Step 1 - Bus Selection & Full License Plate -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card page-break" id="slide-5">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 5 • שלב 1 בתהליך</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">הזנת מספר רישוי ובדיקת חלון זמנים</h2>
+          <span class="slide-badge-category">שקף 5 • שלב 1 בתהליך</span>
+          <h2 class="slide-title">הזנת מספר רישוי ובדיקת חלון זמנים</h2>
         </div>
-        <div class="text-3xl">🚍</div>
+        <div class="slide-icon">🚍</div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="space-y-4 text-sm font-medium text-slate-800 leading-relaxed">
-          <div class="p-3 bg-emerald-50 rounded-2xl border border-emerald-200">
-            <strong class="text-emerald-900 block mb-1">א. בוחרים את המפעיל:</strong>
-            <div class="grid grid-cols-2 gap-2 mt-2">
-              <div class="border-2 border-emerald-600 bg-white p-3 rounded-xl text-center font-black text-xs text-emerald-900 shadow-sm">
-                דן באר שבע<br><span class="text-[10px] text-slate-500 font-normal">מינימום 3 מכשירים</span>
+      <div class="grid-2">
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div class="info-box primary">
+            <strong>א. בוחרים את המפעיל:</strong>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+              <div style="background: #ffffff; border: 2px solid #059669; padding: 0.5rem; border-radius: 10px; text-align: center; font-weight: 800; font-size: 0.8rem; color: #064e3b;">
+                דן באר שבע<br><span style="font-size: 0.65rem; color: #64748b; font-weight: 400;">מינימום 3 מכשירים</span>
               </div>
-              <div class="border border-slate-200 bg-white p-3 rounded-xl text-center font-black text-xs text-slate-700">
-                דן בדרום<br><span class="text-[10px] text-slate-500 font-normal">מכשיר 1 בלבד</span>
+              <div style="background: #ffffff; border: 1px solid #cbd5e1; padding: 0.5rem; border-radius: 10px; text-align: center; font-weight: 800; font-size: 0.8rem; color: #334155;">
+                דן בדרום<br><span style="font-size: 0.65rem; color: #64748b; font-weight: 400;">מכשיר 1 בלבד</span>
               </div>
             </div>
           </div>
 
-          <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <strong class="text-slate-900 block">ב. מקלידים מספר רישוי מלא (7–8 ספרות):</strong>
-            <p class="text-xs text-slate-600">
-              הקלד את מספר הרישוי המלא שעל האוטובוס (למשל: <code>17759703</code> או <code>53118903</code>) ולחץ על <strong>«בדוק»</strong>.
+          <div class="info-box">
+            <strong>ב. מקלידים מספר רישוי מלא (7–8 ספרות):</strong>
+            <p style="font-size: 0.8rem; color: #475569; margin: 0.25rem 0;">
+              הקלד את מספר הרישוי המלא שעל לוחית האוטובוס (למשל: <code>17759703</code> או <code>53118903</code>) ולחץ על <strong>«בדוק»</strong>.
             </p>
-            <div class="bg-emerald-50 text-emerald-800 p-2 rounded-xl text-xs font-bold border border-emerald-200">
-              💡 טיפ: בטלפון נפתחת מקלדת ספרות גדולה, ויש כפתור ✕ מהיר לניקוי המספר בלחיצה אחת.
+            <div class="info-box primary" style="font-size: 0.75rem; font-weight: 700; margin-top: 0.4rem;">
+              💡 טיפ: בטלפון נפתחת מקלדת ספרות גדולה ונוחה ויש כפתור ✕ לניקוי מהיר.
             </div>
           </div>
 
-          <div class="p-3 bg-blue-50 rounded-2xl border border-blue-200 space-y-1.5">
-            <strong class="text-blue-900 block mb-0.5">ג. בדיקת זכאות ולוח זמנים חי:</strong>
-            <ul class="text-xs space-y-1 text-blue-950 list-disc list-inside">
-              <li><strong>תוקף 6 חודשים:</strong> האם עברו 6 חודשים מהטיפול הקודם?</li>
-              <li><strong>זמן פנוי לטיפול:</strong> המערכת מציינת: <em>«פנוי לטיפול! נותרו 42 דקות פנויות (יוצא ב-22:50)»</em>.</li>
+          <div class="info-box blue">
+            <strong>ג. בדיקת זכאות ולוח זמנים חי:</strong>
+            <ul style="font-size: 0.8rem; padding-right: 1.25rem; list-style-type: disc; margin-top: 0.25rem;">
+              <li><strong>תוקף 6 חודשים:</strong> בדיקה מיידית האם עברו 6 חודשים מהטיפול הקודם.</li>
+              <li><strong>זמן פנוי לטיפול:</strong> המערכת מודיעה: <em>«פנוי לטיפול! נותרו 42 דקות (יוצא ב-22:50)»</em>.</li>
             </ul>
           </div>
         </div>
 
         <!-- UI Mockup Step 1 -->
-        <div class="bg-slate-50 p-6 rounded-3xl border-2 border-slate-200 space-y-4">
-          <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-            <span class="text-xs font-bold text-slate-500">שלב 1 מתוך 5</span>
-            <span class="text-xs font-black text-emerald-600">זיהוי אוטובוס</span>
+        <div class="ui-mockup">
+          <div class="mockup-header">
+            <span style="font-size: 0.75rem; font-weight: 700; color: #64748b;">שלב 1 מתוך 5</span>
+            <span style="font-size: 0.75rem; font-weight: 900; color: #059669;">זיהוי אוטובוס</span>
           </div>
 
           <div>
-            <div class="flex justify-between items-center mb-1">
-              <label class="text-xs font-black text-slate-700">מספר אוטובוס (לוחית רישוי)</label>
-              <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold">7–8 ספרות</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+              <label style="font-size: 0.75rem; font-weight: 800; color: #0f172a;">מספר אוטובוס (לוחית רישוי)</label>
+              <span class="badge badge-primary">7–8 ספרות</span>
             </div>
-            <div class="flex gap-2">
-              <input type="text" value="17759703" disabled class="bg-white border-2 border-emerald-500 rounded-xl p-3 font-black text-base text-slate-900 flex-1 text-center font-mono">
-              <button class="bg-emerald-600 text-white font-black px-5 rounded-xl text-xs shadow-md">בדוק 🔍</button>
+            <div style="display: flex; gap: 0.5rem;">
+              <input type="text" value="17759703" disabled class="mockup-input" style="font-family: monospace; font-size: 1.1rem; border-color: #10b981;">
+              <div style="padding: 0.65rem 1rem; background: #059669; color: #fff; font-weight: 800; border-radius: 12px; font-size: 0.8rem; display: flex; align-items: center;">בדוק 🔍</div>
             </div>
           </div>
 
-          <div class="bg-emerald-100 border border-emerald-300 p-3 rounded-xl text-emerald-900 text-xs font-black text-center flex items-center justify-center gap-2">
-            <span>✅</span>
-            <span>האוטובוס מאושר לביצוע טיפול מונע!</span>
+          <div class="info-box primary" style="text-align: center; font-weight: 900;">
+            ✅ האוטובוס מאושר לביצוע טיפול מונע!
           </div>
 
-          <div class="p-3 bg-white rounded-xl border border-slate-200 space-y-1 text-xs">
-            <span class="font-bold text-slate-800 block">🟢 מיקום וסידור עבודה חי:</span>
-            <span class="text-slate-600 block">תחנה: <strong>תחנה מרכזית (מסוף רמז) אשקלון</strong></span>
-            <span class="text-emerald-700 font-bold block">עומד במקום – פנוי לטיפול מונע!</span>
+          <div style="background: #ffffff; padding: 0.75rem; border-radius: 12px; border: 1px solid #e2e8f0; font-size: 0.75rem; display: flex; flex-direction: column; gap: 0.25rem;">
+            <span style="font-weight: 800; color: #0f172a;">🟢 מיקום וסידור עבודה חי:</span>
+            <span style="color: #475569;">תחנה: <strong>תחנה מרכזית (מסוף רמז) אשקלון</strong></span>
+            <span style="color: #059669; font-weight: 800;">עומד במקום – פנוי לטיפול מונע!</span>
           </div>
 
-          <button class="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-sm shadow-md flex items-center justify-center gap-2">
-            <span>המשך לבחירת מכשירים</span>
-            <span>←</span>
-          </button>
+          <div class="mockup-btn">
+            המשך לבחירת מכשירים ←
+          </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 6: Step 2 - Number of devices -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card page-break" id="slide-6">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 6 • שלב 2 בתהליך</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">כמה מכשירים יש באוטובוס?</h2>
+          <span class="slide-badge-category">שקף 6 • שלב 2 בתהליך</span>
+          <h2 class="slide-title">כמה מכשירים יש באוטובוס?</h2>
         </div>
-        <div class="text-3xl">🔢</div>
+        <div class="slide-icon">🔢</div>
       </div>
 
-      <div class="max-w-2xl mx-auto text-center space-y-6">
-        <p class="text-slate-700 text-base leading-relaxed">
+      <div style="max-w-2xl mx-auto; text-align: center;">
+        <p style="color: var(--text-muted); font-size: 1rem; margin-bottom: 1.25rem;">
           מגדירים את כמות המכשירים שנמצאים בפועל באוטובוס הזה בלחיצה על כפתורי ה-<strong>פלוס (+)</strong> וה-<strong>מינוס (-)</strong>:
         </p>
 
-        <div class="bg-slate-50 border-2 border-slate-200 rounded-3xl p-6 inline-block">
-          <div class="flex items-center justify-center gap-6">
-            <button class="w-14 h-14 rounded-2xl bg-white border-2 border-slate-300 text-slate-700 font-black text-2xl shadow-sm hover:bg-slate-100">-</button>
-            <div class="text-center">
-              <span class="text-5xl font-black text-emerald-600 block">4</span>
-              <span class="text-xs font-bold text-slate-500">מכשירים באוטובוס</span>
-            </div>
-            <button class="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-black text-2xl shadow-md hover:bg-emerald-700">+</button>
+        <div class="counter-widget">
+          <div class="counter-btn">-</div>
+          <div>
+            <div class="counter-value">4</div>
+            <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-top: 0.25rem;">מכשירים באוטובוס</div>
           </div>
+          <div class="counter-btn primary">+</div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-right">
-          <div class="p-3.5 bg-blue-50 rounded-2xl border border-blue-200 text-xs text-blue-900">
+        <div class="grid-2" style="text-align: right; margin-top: 1.25rem;">
+          <div class="info-box blue">
             <strong>בדן בדרום:</strong> יש בדרך כלל מכשיר 1 בלבד (מינימום 1).
           </div>
-          <div class="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900">
+          <div class="info-box primary">
             <strong>בדן באר שבע:</strong> יש מינימום 3 מכשירים (מחשב נהג + 2 או 3 מכשירי נוסעים).
           </div>
         </div>
 
-        <button class="w-full max-w-sm py-3.5 bg-emerald-600 text-white rounded-xl font-black text-base shadow-lg shadow-emerald-600/20">
-          התחל בדיקת מכשירים צעד-אחר-צעד ←
-        </button>
+        <div style="max-width: 320px; margin: 1.5rem auto 0;">
+          <div class="mockup-btn">
+            התחל בדיקת מכשירים צעד-אחר-צעד ←
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- SLIDE 7: Step 3 - Smart Device Selection -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-emerald-500 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-emerald-100 pb-4">
+    <section class="slide-card border-featured page-break" id="slide-7">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 7 • הכי חשוב! שלב 3</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">צ'ק-ליסט מכשירים ובחירה חכמה ⚡</h2>
+          <span class="slide-badge-category">שקף 7 • הכי חשוב! שלב 3</span>
+          <h2 class="slide-title">צ'ק-ליסט מכשירים ובחירה חכמה ⚡</h2>
         </div>
-        <div class="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-black flex items-center justify-center text-lg">
-          ⭐
-        </div>
+        <div class="slide-icon">⭐</div>
       </div>
 
-      <div class="bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-5 rounded-2xl shadow-md">
-        <h3 class="font-black text-lg mb-1">איך עובדת הבחירה החכמה? (חוסך 90% מהזמן!)</h3>
-        <p class="text-xs sm:text-sm text-emerald-100 leading-relaxed">
-          במקום ללחוץ שוב ושוב על הדגם בכל מכשיר — המערכת מנחשת ומגדירה את הכל אוטומטית לפי הבחירה שלכם:
+      <div class="info-box primary" style="margin-bottom: 1.25rem; padding: 1.15rem;">
+        <strong style="font-size: 1rem; margin-bottom: 0.35rem;">איך עובדת הבחירה החכמה? (חוסך 90% מהזמן בשטח!)</strong>
+        <p style="font-size: 0.85rem; color: #065f46;">
+          במקום ללחוץ שוב ושוב על הדגם בכל מכשיר — המערכת מנחשת ומגדירה את הכל אוטומטית לפי הבחירה הראשונה שלכם:
         </p>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        <div class="space-y-4 text-sm text-slate-800 font-medium">
-          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
-            <strong class="text-slate-900 text-base block">כלל הזהב של המערכת:</strong>
-            <ul class="space-y-2 text-xs sm:text-sm">
-              <li class="flex items-start gap-2">
-                <span class="text-emerald-600 font-bold">1.</span>
-                <span><strong>אם מכשיר 1 הוא PCE 415:</strong> כל המכשירים הבאים באוטובוס נפתחים אוטומטית על <strong>VPE 420</strong>!</span>
+      <div class="grid-2">
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+          <div class="info-box">
+            <strong style="color: #0f172a; font-size: 0.95rem; margin-bottom: 0.5rem;">כלל הזהב של המערכת:</strong>
+            <ul class="step-list">
+              <li class="step-item">
+                <span class="step-num primary">1</span>
+                <div class="step-content"><strong>אם מכשיר 1 הוא PCE 415:</strong> כל שאר המכשירים באוטובוס נפתחים אוטומטית כ-<strong>VPE 420</strong>!</div>
               </li>
-              <li class="flex items-start gap-2">
-                <span class="text-emerald-600 font-bold">2.</span>
-                <span><strong>אם מכשיר 1 הוא VPE 430:</strong> כל שאר המכשירים באוטובוס ייבחרו אוטומטית כ-<strong>VPE 430</strong>!</span>
+              <li class="step-item">
+                <span class="step-num primary">2</span>
+                <div class="step-content"><strong>אם מכשיר 1 הוא VPE 430:</strong> כל שאר המכשירים באוטובוס נפתחים אוטומטית כ-<strong>VPE 430</strong>!</div>
               </li>
             </ul>
           </div>
 
-          <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 space-y-1.5">
+          <div class="info-box primary">
             <strong>מה נשאר לטכנאי לעשות בכל מכשיר?</strong>
-            <p>1. רק להקליד <strong>3 או 4 ספרות</strong> של המספר הסידורי (למשל: <code>415</code> או <code>1234</code>).</p>
-            <p>2. לבדוק שמסומן <strong>«תקין»</strong> (ירוק).</p>
-            <p>3. ללחוץ <strong>«למכשיר הבא ←»</strong>!</p>
+            <p style="font-size: 0.8rem; margin: 0.25rem 0;">1. רק להקליד <strong>3 או 4 ספרות</strong> של המספר הסידורי (למשל: <code>415</code> או <code>1234</code>).</p>
+            <p style="font-size: 0.8rem; margin: 0.25rem 0;">2. לוודא שמסומן <strong>«תקין»</strong> (ירוק).</p>
+            <p style="font-size: 0.8rem; margin: 0.25rem 0;">3. ללחוץ <strong>«למכשיר הבא ←»</strong>!</p>
           </div>
         </div>
 
         <!-- UI Mockup of 3 Big Buttons -->
-        <div class="bg-slate-50 p-5 rounded-3xl border-2 border-slate-200 space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-black text-slate-500">מכשיר 1 מתוך 4</span>
-            <span class="text-xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">בחירה חכמה</span>
+        <div class="ui-mockup">
+          <div class="mockup-header">
+            <span style="font-size: 0.75rem; font-weight: 800; color: #64748b;">מכשיר 1 מתוך 4</span>
+            <span class="badge badge-primary">בחירה חכמה</span>
           </div>
 
           <div>
-            <label class="text-xs font-bold text-slate-700 block mb-1.5">בחר דגם מכשיר:</label>
-            <!-- 3 Buttons -->
-            <div class="grid grid-cols-3 gap-2">
-              <div class="py-2.5 bg-emerald-600 text-white font-black text-xs text-center rounded-xl shadow-md border-2 border-emerald-600">
-                PCE 415
-              </div>
-              <div class="py-2.5 bg-white text-slate-700 font-bold text-xs text-center rounded-xl border border-slate-300">
-                VPE 420
-              </div>
-              <div class="py-2.5 bg-white text-slate-700 font-bold text-xs text-center rounded-xl border border-slate-300">
-                VPE 430
-              </div>
+            <label style="font-size: 0.75rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 0.35rem;">בחר דגם מכשיר:</label>
+            <div class="device-buttons">
+              <div class="dev-btn active">PCE 415</div>
+              <div class="dev-btn">VPE 420</div>
+              <div class="dev-btn">VPE 430</div>
             </div>
           </div>
 
           <div>
-            <label class="text-xs font-bold text-slate-700 block mb-1">מספר מכשיר (3 עד 4 ספרות)</label>
-            <input type="text" value="415" disabled class="w-full bg-white border border-slate-300 rounded-xl p-2.5 font-mono font-black text-base text-center">
+            <label style="font-size: 0.75rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 0.25rem;">מספר מכשיר (3 עד 4 ספרות)</label>
+            <input type="text" value="415" disabled class="mockup-input" style="font-family: monospace;">
           </div>
 
           <div>
-            <label class="text-xs font-bold text-slate-700 block mb-1">סטטוס מכשיר:</label>
-            <div class="grid grid-cols-2 gap-2">
-              <div class="bg-emerald-600 text-white text-center py-2 rounded-xl text-xs font-black">✓ תקין</div>
-              <div class="bg-white text-slate-600 text-center py-2 rounded-xl text-xs font-bold border border-slate-200">לא תקין</div>
+            <label style="font-size: 0.75rem; font-weight: 800; color: #0f172a; display: block; margin-bottom: 0.25rem;">סטטוס מכשיר:</label>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+              <div style="background: #059669; color: #fff; text-align: center; padding: 0.5rem; border-radius: 10px; font-weight: 800; font-size: 0.75rem;">✓ תקין</div>
+              <div style="background: #f1f5f9; color: #64748b; text-align: center; padding: 0.5rem; border-radius: 10px; font-weight: 700; font-size: 0.75rem; border: 1px solid #cbd5e1;">לא תקין</div>
             </div>
           </div>
 
-          <button class="w-full py-2.5 bg-slate-900 text-white rounded-xl font-black text-xs">
+          <div class="mockup-btn" style="background: #0f172a;">
             שמור ועבור למכשיר 2 מתוך 4 ←
-          </button>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 8: Step 4 & 5 - Summary & Submit -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border border-slate-200 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card page-break" id="slide-8">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 8 • שלבים 4 ו-5</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">סיכום הטיפול ושליחת הדוח</h2>
+          <span class="slide-badge-category">שקף 8 • שלבים 4 ו-5</span>
+          <h2 class="slide-title">סיכום הטיפול ושליחת הדוח</h2>
         </div>
-        <div class="text-3xl">✅</div>
+        <div class="slide-icon">✅</div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-        <div class="space-y-4 text-sm text-slate-700">
-          <div class="flex items-start gap-3">
-            <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">1</span>
-            <div>
-              <strong class="text-slate-900 block">תוצאת הטיפול:</strong>
-              <p class="text-xs text-slate-500 mt-0.5">
-                ברוב המקרים בוחרים <strong>«הכול תקין באוטובוס»</strong>. אם נשאר רכיב תקול שמחייב טיפול מוסך, בוחרים «נדרש המשך טיפול של הלקוח».
-              </p>
+      <div class="grid-2" style="align-items: center;">
+        <div class="step-list">
+          <div class="step-item">
+            <span class="step-num primary">1</span>
+            <div class="step-content">
+              <strong>תוצאת הטיפול:</strong>
+              ברוב המקרים בוחרים <strong>«הכול תקין באוטובוס»</strong>. אם נשאר רכיב תקול שמחייב טיפול מוסך, בוחרים «נדרש המשך טיפול של הלקוח».
             </div>
           </div>
 
-          <div class="flex items-start gap-3">
-            <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">2</span>
-            <div>
-              <strong class="text-slate-900 block">סיכום מילולי:</strong>
-              <p class="text-xs text-slate-500 mt-0.5">
-                משפט קצר על מה שנעשה, למשל: <em>«בוצע טיפול מונע תקופתי, כל המכשירים נבדקו ותקינים»</em>.
-              </p>
+          <div class="step-item">
+            <span class="step-num primary">2</span>
+            <div class="step-content">
+              <strong>סיכום מילולי:</strong>
+              משפט קצר על מה שנעשה, למשל: <em>«בוצע טיפול מונע תקופתי, כל המכשירים נבדקו ותקינים»</em>.
             </div>
           </div>
 
-          <div class="flex items-start gap-3">
-            <span class="w-7 h-7 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shrink-0">3</span>
-            <div>
-              <strong class="text-slate-900 block">חתימה ושליחה סופית:</strong>
-              <p class="text-xs text-slate-500 mt-0.5">
-                עוברים על מסך הסיכום, בודקים שהמספרים נכונים ולוחצים על <strong>«אשר ושלח דוח טיפול»</strong>.
-              </p>
+          <div class="step-item">
+            <span class="step-num primary">3</span>
+            <div class="step-content">
+              <strong>חתימה ושליחה סופית:</strong>
+              עוברים על מסך הסיכום, בודקים שהמספרים נכונים ולוחצים על <strong>«אשר ושלח דוח טיפול»</strong>.
             </div>
           </div>
         </div>
 
-        <!-- Success Box -->
-        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-3xl p-6 text-center space-y-3">
-          <div class="w-16 h-16 bg-emerald-600 text-white rounded-full mx-auto flex items-center justify-center text-3xl shadow-lg shadow-emerald-600/30">
+        <!-- Success Box Mockup -->
+        <div class="info-box primary" style="text-align: center; padding: 1.75rem; display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+          <div style="width: 56px; height: 56px; background: #059669; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.75rem; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);">
             ✓
           </div>
-          <h3 class="text-xl font-black text-emerald-900">דוח הטיפול נשמר בהצלחה!</h3>
-          <p class="text-xs text-emerald-700">
+          <h3 style="font-size: 1.25rem; font-weight: 900; color: #064e3b;">דוח הטיפול נשמר בהצלחה!</h3>
+          <p style="font-size: 0.8rem; color: #065f46;">
             הדוח עלה ישירות לענן, האוטובוס עודכן כמשוריין ל-6 חודשים קדימה והנתונים מופיעים מיד באקסל ובדוחות המנהל!
           </p>
-          <button class="py-2.5 px-6 bg-emerald-600 text-white rounded-xl text-xs font-black shadow-md">
+          <div class="mockup-btn" style="max-width: 220px; font-size: 0.8rem; padding: 0.6rem 1rem;">
             פתח טיפול לאוטובוס הבא ➔
-          </button>
+          </div>
         </div>
       </div>
     </section>
 
     <!-- SLIDE 9: Top 5 Golden Rules for Field Technicians -->
-    <section class="slide-card bg-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-2xl border border-slate-800 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+    <section class="slide-card dark-theme page-break" id="slide-9">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-400 uppercase">שקף 9 מתוך 10 • כללי ברזל לטכנאי שטח</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-white">5 כללי ברזל לעבודה חלקה בשטח 🛡️</h2>
+          <span class="slide-badge-category" style="color: #34d399;">שקף 9 מתוך 10 • כללי ברזל לטכנאי שטח</span>
+          <h2 class="slide-title">5 כללי ברזל לעבודה חלקה בשטח 🛡️</h2>
         </div>
-        <div class="text-3xl">⭐</div>
+        <div class="slide-icon">⭐</div>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs sm:text-sm">
-        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
-          <div class="font-black text-emerald-400 text-base">1. הקפדה על מספר רישוי מלא (7–8 ספרות)</div>
-          <p class="text-slate-300">תמיד לבדוק את לוחית הרישוי על גבי האוטובוס. המספר חייב להיות מספר רישוי מלא ללא מספרים מקוצרים.</p>
+      <div class="grid-2">
+        <div class="info-box dark" style="background: #1e293b; border-color: #334155;">
+          <div style="color: #34d399; font-weight: 900; font-size: 0.95rem; margin-bottom: 0.25rem;">1. הקפדה על מספר רישוי מלא (7–8 ספרות)</div>
+          <p style="font-size: 0.8rem; color: #cbd5e1;">תמיד לבדוק את לוחית הרישוי שעל האוטובוס. המספר חייב להיות מספר רישוי מלא ללא מספרים מקוצרים.</p>
         </div>
 
-        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
-          <div class="font-black text-emerald-400 text-base">2. תוקף 6 חודשים</div>
-          <p class="text-slate-300">אם האפליקציה אומרת שהאוטובוס לא זכאי כי יש לו טיפול תקף — <strong>לא לגעת בו!</strong> הוא כבר טופל לאחרונה.</p>
+        <div class="info-box dark" style="background: #1e293b; border-color: #334155;">
+          <div style="color: #34d399; font-weight: 900; font-size: 0.95rem; margin-bottom: 0.25rem;">2. תוקף 6 חודשים</div>
+          <p style="font-size: 0.8rem; color: #cbd5e1;">אם האפליקציה אומרת שהאוטובוס אינו זכאי כי יש לו טיפול תקף — <strong>לא לגעת בו!</strong> הוא כבר טופל לאחרונה.</p>
         </div>
 
-        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
-          <div class="font-black text-emerald-400 text-base">3. מכשירים: שימוש בכפתורי הבחירה החכמה</div>
-          <p class="text-slate-300">לא לשבור את הראש: לחיצה אחת על <code>PCE 415</code> מסדרת לכם את כל שאר המכשירים כ-<code>VPE 420</code> אוטומטית.</p>
+        <div class="info-box dark" style="background: #1e293b; border-color: #334155;">
+          <div style="color: #34d399; font-weight: 900; font-size: 0.95rem; margin-bottom: 0.25rem;">3. מכשירים: שימוש בכפתורי הבחירה החכמה</div>
+          <p style="font-size: 0.8rem; color: #cbd5e1;">לא לשבור את הראש: לחיצה אחת על <code>PCE 415</code> מסדרת לכם את כל שאר המכשירים כ-<code>VPE 420</code> אוטומטית.</p>
         </div>
 
-        <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-1">
-          <div class="font-black text-emerald-400 text-base">4. מספר מכשיר: 3 עד 4 ספרות בלבד</div>
-          <p class="text-slate-300">מכניסים רק את המספר הסידורי שעל המדבקה (למשל <code>001</code> או <code>430</code>). לא להזין אפסים מיותרים.</p>
+        <div class="info-box dark" style="background: #1e293b; border-color: #334155;">
+          <div style="color: #34d399; font-weight: 900; font-size: 0.95rem; margin-bottom: 0.25rem;">4. מספר מכשיר: 3 עד 4 ספרות בלבד</div>
+          <p style="font-size: 0.8rem; color: #cbd5e1;">מכניסים רק את המספר הסידורי שעל המדבקה (למשל <code>001</code> או <code>430</code>). לא להזין אפסים מיותרים.</p>
         </div>
       </div>
 
-      <div class="bg-emerald-950/60 border border-emerald-500/40 p-4 rounded-2xl text-center space-y-1">
-        <div class="font-black text-emerald-400 text-sm">💡 יש בעיה או שאלה?</div>
-        <p class="text-xs text-slate-300">אפיון, פיתוח וניהול המערכת: <strong class="text-white">יבגני קבישר</strong>. פונים בכל שאלה או צורך לעדכון נתונים בזמן אמת.</p>
+      <div style="background: #064e3b; border: 1px solid #059669; border-radius: 14px; padding: 0.85rem; text-align: center; margin-top: 1rem;">
+        <div style="font-weight: 900; color: #34d399; font-size: 0.85rem;">💡 יש בעיה או שאלה?</div>
+        <p style="font-size: 0.75rem; color: #e2e8f0; margin-top: 0.2rem;">אפיון, פיתוח וניהול המערכת: <strong style="color: #ffffff;">יבגני קבישר</strong>. פונים בכל שאלה או צורך לעדכון נתונים בזמן אמת.</p>
       </div>
     </section>
 
     <!-- SLIDE 10: Management Dashboard, EDI, Follow-up Queue & Excel Export -->
-    <section class="slide-card bg-white rounded-3xl p-6 sm:p-10 shadow-xl border-2 border-emerald-500 space-y-6 page-break">
-      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+    <section class="slide-card border-featured page-break" id="slide-10">
+      <div class="slide-header">
         <div>
-          <span class="text-xs font-black text-emerald-600 uppercase">שקף 10 מתוך 10 • פאנל מנהלים ובקרה</span>
-          <h2 class="text-2xl sm:text-3xl font-black text-slate-900">לוח בקרה ניהולי, EDI וייצוא דוחות 📊</h2>
+          <span class="slide-badge-category">שקף 10 מתוך 10 • פאנל מנהלים ובקרה</span>
+          <h2 class="slide-title">לוח בקרה ניהולי, EDI וייצוא דוחות 📊</h2>
         </div>
-        <div class="text-3xl">👔</div>
+        <div class="slide-icon">👔</div>
       </div>
 
-      <p class="text-slate-700 text-sm sm:text-base leading-relaxed">
+      <p style="color: var(--text-muted); font-size: 0.95rem; margin-bottom: 1.25rem;">
         עבור מנהלי המערכת והפיקוח — שליטה מלאה בנתוני הביצוע, חשבונות והיסטוריית הטיפולים:
       </p>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs sm:text-sm text-slate-700 font-medium">
-        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-          <div class="flex items-center gap-2">
-            <span class="text-lg">📊</span>
-            <strong class="text-slate-900 text-sm">לוח בקרה חי לפי מפעילים:</strong>
+      <div class="grid-2">
+        <div class="info-box">
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+            <span>📊</span>
+            <strong style="color: #0f172a;">לוח בקרה חי לפי מפעילים:</strong>
           </div>
-          <p class="text-xs text-slate-600">
+          <p style="font-size: 0.8rem; color: #475569;">
             מעקב ביצוע בזמן אמת: <strong>דן בדרום (614 אוטובוסים)</strong> ו-<strong>דן באר שבע (305 אוטובוסים)</strong> עם אחוזי התקדמות ופסי התקדמות חיים.
           </p>
         </div>
 
-        <div class="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 space-y-1.5">
-          <div class="flex items-center gap-2">
-            <span class="text-lg">✅</span>
-            <strong class="text-emerald-900 text-sm">ניהול סגירה באדי (EDI):</strong>
+        <div class="info-box primary">
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+            <span>✅</span>
+            <strong>ניהול סגירה באדי (EDI):</strong>
           </div>
-          <p class="text-xs text-emerald-800">
-            מעקב מדויק אחר דוחות שסגורים מול פתוחים באדי בלחיצת כפתור אחת, עם סינון מהיר והתאמה להתחשבנות.
+          <p style="font-size: 0.8rem; color: #065f46;">
+            מעקב מדויק אחר דוחות שסגורים מול פתוחים באדי בלחיצת כפתור אחת, עם סינון מהיר והתאמה מלאה להתחשבנות.
           </p>
         </div>
 
-        <div class="p-4 bg-rose-50 rounded-2xl border border-rose-200 space-y-1.5">
-          <div class="flex items-center gap-2">
-            <span class="text-lg">🔧</span>
-            <strong class="text-rose-900 text-sm">תור המשך טיפול ותיעוד תיקוני לקוח:</strong>
+        <div class="info-box rose">
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+            <span>🔧</span>
+            <strong>תור המשך טיפול ותיעוד תיקוני לקוח:</strong>
           </div>
-          <p class="text-xs text-rose-800">
+          <p style="font-size: 0.8rem; color: #9f1239;">
             מעקב אחר תקלות מוסך. סגירת טיפול בלחיצה אחת עם הדבקה מהירה מהלוח (WhatsApp) ועדכון אוטומטי של תאריך הטיפול הבא (+6 חודשים).
           </p>
         </div>
 
-        <div class="p-4 bg-blue-50 rounded-2xl border border-blue-200 space-y-1.5">
-          <div class="flex items-center gap-2">
-            <span class="text-lg">📥</span>
-            <strong class="text-blue-900 text-sm">ייצוא Excel מעוצב (RTL):</strong>
+        <div class="info-box blue">
+          <div style="display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.25rem;">
+            <span>📥</span>
+            <strong>ייצוא Excel מעוצב (RTL):</strong>
           </div>
-          <p class="text-xs text-blue-800">
+          <p style="font-size: 0.8rem; color: #1e40af;">
             הפקת דוחות אקסל מוכנים להדפסה והגשה לפי מפעיל (דן בדרום / דן באר שבע / מאוחד) הכוללים את כל פירוטי התיקונים ומצב המכשירים.
           </p>
         </div>
       </div>
 
-      <div class="p-4 bg-slate-900 text-white rounded-2xl flex items-center justify-between flex-wrap gap-3">
-        <div class="space-y-0.5">
-          <div class="font-black text-emerald-400 text-xs">🛡️ גיבוי ענן אוטומטי וסנכרון משרד התחבורה</div>
-          <div class="text-[11px] text-slate-300">כל הנתונים מגובים אוטומטית לענן ומשוכפלים מדי לילה ל-Google Drive.</div>
+      <div class="info-box dark" style="margin-top: 1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+        <div>
+          <div style="font-weight: 800; color: #34d399; font-size: 0.85rem;">🛡️ גיבוי ענן אוטומטי וסנכרון משרד התחבורה</div>
+          <div style="font-size: 0.75rem; color: #94a3b8;">כל הנתונים מגובים אוטומטית לענן ומשוכפלים מדי לילה.</div>
         </div>
-        <div class="text-xs font-bold text-slate-400">
-          אפיון ופיתוח: <strong class="text-emerald-300">יבגני קבישר</strong>
+        <div style="font-size: 0.75rem; color: #94a3b8;">
+          אפיון ופיתוח: <strong style="color: #34d399;">יבגני קבישר</strong>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- Floating Footer / Slide Controller (Visible only in web mode) -->
-  <footer class="no-print fixed bottom-4 right-4 left-4 z-40 max-w-xl mx-auto bg-slate-900/90 backdrop-blur-md text-white px-5 py-3 rounded-2xl shadow-2xl border border-slate-700 flex items-center justify-between">
-    <div class="text-xs font-bold text-slate-300">
-      טיפולון © 2026 • אפיון ופיתוח: <span class="text-emerald-400">יבגני קבישר</span>
+  <!-- Floating Footer / Slide Controller -->
+  <footer class="guide-controller no-print">
+    <div class="controller-author">
+      טיפולון © 2026 • אפיון ופיתוח: <strong>יבגני קבישר</strong>
     </div>
-    <div class="flex items-center gap-2">
-      <button onclick="scrollToSlide('prev')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs font-bold">
+    <div class="controller-nav">
+      <button onclick="scrollToSlide('prev')" class="btn btn-dark" style="padding: 0.4rem 0.75rem; font-size: 0.75rem;">
         ➔ הקודם
       </button>
-      <button onclick="scrollToSlide('next')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-bold">
+      <button onclick="scrollToSlide('next')" class="btn btn-primary" style="padding: 0.4rem 0.75rem; font-size: 0.75rem;">
         הבא ⬅
       </button>
     </div>
@@ -708,12 +1219,14 @@
     function toggleViewMode() {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
-        document.getElementById('viewModeBtn').innerHTML = '✕ <span>צא ממסך מלא</span>';
+        const btn = document.getElementById('viewModeBtn');
+        if (btn) btn.innerHTML = '✕ <span>צא ממסך מלא</span>';
       } else {
         if (document.exitFullscreen) {
           document.exitFullscreen();
         }
-        document.getElementById('viewModeBtn').innerHTML = '🖥️ <span>מצב מצגת מלאה</span>';
+        const btn = document.getElementById('viewModeBtn');
+        if (btn) btn.innerHTML = '🖥️ <span>מצב מצגת מלאה</span>';
       }
     }
   </script>
