@@ -95,10 +95,13 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
     treatmentsToday: 0,
     treatmentNeeded: 0,
     followUpQueue: 0,
-    overdue: 0
+    overdue: 0,
+    uniqueUrgent: 0
   };
 
-  const totalUrgent = (metrics.treatmentNeeded || 0) + (metrics.overdue || 0) + (metrics.followUpQueue || 0);
+  const totalUrgent = metrics.uniqueUrgent !== undefined 
+    ? metrics.uniqueUrgent 
+    : ((metrics.treatmentNeeded || 0) + (metrics.overdue || 0));
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -133,7 +136,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
           </div>
           {onNavigateToFleet && (
             <button
-              onClick={() => onNavigateToFleet()}
+              onClick={() => onNavigateToFleet('')}
               className="text-xs font-bold text-slate-700 hover:text-slate-900 inline-flex items-center gap-1 transition-colors"
             >
               <span>לצי הרכבים המלא</span>
@@ -147,7 +150,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
           
           {/* Card A: Treatment Needed */}
           <div 
-            onClick={() => onNavigateToFleet ? onNavigateToFleet() : onNavigateToReports()}
+            onClick={() => onNavigateToFleet ? onNavigateToFleet('pending') : onNavigateToReports()}
             className="bg-amber-50/90 border-2 border-amber-400/80 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-amber-500 cursor-pointer transition-all group relative overflow-hidden"
           >
             <div className="flex items-center justify-between mb-2">
@@ -166,7 +169,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
 
           {/* Card B: Overdue */}
           <div 
-            onClick={() => onNavigateToFleet ? onNavigateToFleet() : onNavigateToReports()}
+            onClick={() => onNavigateToFleet ? onNavigateToFleet('overdue') : onNavigateToReports()}
             className="bg-rose-50/90 border-2 border-rose-400/80 rounded-2xl p-5 shadow-xs hover:shadow-md hover:border-rose-500 cursor-pointer transition-all group relative overflow-hidden"
           >
             <div className="flex items-center justify-between mb-2">
@@ -219,7 +222,7 @@ export default function DashboardView({ onNavigateToReports, onNavigateToFollowU
             </div>
           </div>
           <button
-            onClick={() => onNavigateToFleet ? onNavigateToFleet() : onNavigateToReports()}
+            onClick={() => onNavigateToFleet ? onNavigateToFleet('pending') : onNavigateToReports()}
             className="py-2 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs rounded-xl shadow-sm inline-flex items-center gap-2 transition-all min-h-[40px]"
           >
             <span>צפה באוטובוסים הדורשים טיפול</span>

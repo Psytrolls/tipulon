@@ -27,6 +27,11 @@ function isWeakOrTemplateSecret(secret) {
   return blockedPrefixes.some(prefix => lower.startsWith(prefix));
 }
 
+export function isBackupEncryptionConfigured() {
+  const secret = process.env.BACKUP_ENCRYPTION_KEY;
+  return Boolean(secret && Buffer.byteLength(secret, 'utf8') >= 32 && !isWeakOrTemplateSecret(secret));
+}
+
 // Derive a deterministic 32-byte AES-256 key strictly from BACKUP_ENCRYPTION_KEY environment variable
 function getBackupKey() {
   const secret = process.env.BACKUP_ENCRYPTION_KEY;

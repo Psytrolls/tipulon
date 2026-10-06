@@ -95,6 +95,17 @@ router.get('/dashboard', requireAdmin, (req, res) => {
     `);
     const overdue = overdueStmt.get().count;
 
+    // 10. Unique Urgent Buses (deduplicated: treatment needed, overdue, follow-up, or never treated)
+    const urgentUniqueStmt = db.prepare(`
+      SELECT COUNT(DISTINCT bus_number) as count
+      FROM buses
+      WHERE status = 'נדרש טיפול'
+         OR status = 'הועבר להמשך טיפול'
+         OR (next_treatment_date IS NOT NULL AND datetime(next_treatment_date) < datetime('now'))
+         OR bus_number NOT IN (SELECT DISTINCT bus_number FROM reports WHERE status = 'הטיפול הושלם')
+    `);
+    const uniqueUrgent = urgentUniqueStmt.get().count;
+
     // Recent 5 reports
     const recentReportsStmt = db.prepare(`
       SELECT id, bus_number, operator, technician_name, result, status, is_edi_closed, created_at
@@ -118,7 +129,8 @@ router.get('/dashboard', requireAdmin, (req, res) => {
         ediOpen,
         treatmentNeeded,
         followUpQueue,
-        overdue
+        overdue,
+        uniqueUrgent
       },
       recentReports
     });
@@ -226,15 +238,19 @@ router.get('/audit-logs', requireAdmin, (req, res) => {
 // ==========================================
 // Database Backup Endpoints
 // ==========================================
-import { createBackup, listBackups, getLatestBackupPath } from '../backupService.js';
+import { createBackup, listBackups, getLatestBackupPath, isBackupEncryptionConfigured } from '../backupService.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
 // GET /api/admin/backups - List backups (Super Admin only)
 router.get('/backups', requireSuperAdmin, (req, res) => {
   try {
+    const isEncryptionConfigured = isBackupEncryptionConfigured();
     const backups = listBackups();
-    res.json(backups);
+    res.json({
+      isEncryptionConfigured,
+      backups
+    });
   } catch (err) {
     safeError('List backups error:', err);
     res.status(500).json({ error: 'שגיאה בטעינת רשימת הגיבויים' });

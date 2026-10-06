@@ -21,6 +21,8 @@ export default function App() {
   const [activeReportId, setActiveReportId] = useState(null);
   const [preselectedBusNumber, setPreselectedBusNumber] = useState('');
 
+  const [fleetInitialFilter, setFleetInitialFilter] = useState('');
+
   // Set default view on user change
   useEffect(() => {
     if (user) {
@@ -59,11 +61,16 @@ export default function App() {
     setCurrentView('reports');
   };
 
+  const handleNavigateToFleet = (filter = '') => {
+    setFleetInitialFilter(filter);
+    setCurrentView('fleet');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <InstallPwaBanner />
       {user?.mustChangePin && <MustChangePasswordModal />}
-      <Navbar currentView={viewToRender} setCurrentView={(v) => { setActiveReportId(null); setCurrentView(v); }} />
+      <Navbar currentView={viewToRender} setCurrentView={(v) => { setActiveReportId(null); setFleetInitialFilter(''); setCurrentView(v); }} />
 
       <main className="flex-1 pb-12">
         {viewToRender === 'new-treatment' && (
@@ -91,12 +98,15 @@ export default function App() {
           <DashboardView 
             onNavigateToReports={() => setCurrentView('reports')}
             onNavigateToFollowUp={() => setCurrentView('follow-up')}
-            onNavigateToFleet={() => setCurrentView('fleet')}
+            onNavigateToFleet={handleNavigateToFleet}
           />
         )}
 
         {viewToRender === 'fleet' && isAdmin && (
-          <FleetView onSelectBusReports={(busNum) => setCurrentView('reports')} />
+          <FleetView 
+            initialStatus={fleetInitialFilter}
+            onSelectBusReports={(busNum) => setCurrentView('reports')} 
+          />
         )}
 
         {viewToRender === 'follow-up' && isAdmin && (

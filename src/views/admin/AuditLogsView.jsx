@@ -22,6 +22,7 @@ export default function AuditLogsView() {
   const [showBackupModal, setShowBackupModal] = useState(false);
   const [showConfirmCreate, setShowConfirmCreate] = useState(false);
   const [backups, setBackups] = useState([]);
+  const [isEncryptionConfigured, setIsEncryptionConfigured] = useState(false);
   const [loadingBackups, setLoadingBackups] = useState(false);
   const [creatingBackup, setCreatingBackup] = useState(false);
   const [backupNotice, setBackupNotice] = useState('');
@@ -47,7 +48,13 @@ export default function AuditLogsView() {
       const res = await fetch('/api/admin/backups');
       if (res.ok) {
         const json = await res.json();
-        setBackups(json);
+        if (Array.isArray(json)) {
+          setBackups(json);
+          setIsEncryptionConfigured(json.some(b => b.isEncrypted));
+        } else {
+          setBackups(json.backups || []);
+          setIsEncryptionConfigured(Boolean(json.isEncryptionConfigured));
+        }
       }
     } catch (e) {
       console.error('Failed to load backups:', e);
@@ -201,20 +208,28 @@ export default function AuditLogsView() {
             </div>
 
             {/* Notification / status banner */}
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-2 text-xs text-emerald-900">
+            <div className={`p-4 rounded-2xl border space-y-2 text-xs ${
+              isEncryptionConfigured 
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900' 
+                : 'bg-slate-50 border-slate-200 text-slate-800'
+            }`}>
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-black text-emerald-800">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>מערכת גיבוי אוטומטית פעילה (הצפנת AES-256-GCM)</span>
+                <div className="flex items-center gap-2 font-black">
+                  <CheckCircle2 className={`w-4 h-4 ${isEncryptionConfigured ? 'text-emerald-600' : 'text-slate-500'}`} />
+                  <span>
+                    {isEncryptionConfigured 
+                      ? 'מערכת גיבוי אוטומטית פעילה (הצפנת AES-256-GCM מוגדרת)' 
+                      : 'מערכת גיבוי אוטומטית פעילה (דחיסת GZIP)'}
+                  </span>
                 </div>
                 {user?.isSuperAdmin && (
-                  <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 text-[10px] font-black rounded-full">
+                  <span className="px-2 py-0.5 bg-slate-200 text-slate-900 text-[10px] font-black rounded-full">
                     הרשאת מנהל-על
                   </span>
                 )}
               </div>
-              <p className="text-emerald-800 leading-relaxed font-medium">
-                השרת מייצר גיבוי מוצפן ודחוס מדי לילה ב-<strong>02:00</strong> ושומר את 30 הגיבויים האחרונים. כל קבצי הגיבוי מוצפנים בהצפנה צבאית.
+              <p className="leading-relaxed font-medium">
+                השרת מייצר גיבוי דחוס של מסד הנתונים מדי לילה ב-<strong>02:00</strong> ושומר את 30 הגיבויים האחרונים.
               </p>
             </div>
 
@@ -231,7 +246,7 @@ export default function AuditLogsView() {
                   <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-3 animate-fadeIn">
                     <div className="flex items-start gap-2 text-amber-900 text-xs font-black">
                       <AlertTriangle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
-                      <span>האם ליצור כעת גיבוי מוצפן מלא של מסד הנתונים?</span>
+                      <span>האם ליצור כעת גיבוי מלא של מסד הנתונים?</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -307,9 +322,13 @@ export default function AuditLogsView() {
                         <div className="space-y-0.5">
                           <div className="font-mono font-bold text-slate-800 flex items-center gap-1.5" dir="ltr">
                             <span>{b.filename}</span>
-                            {b.isEncrypted && (
+                            {b.isEncrypted ? (
                               <span className="px-1.5 py-0.2 text-[9px] font-bold bg-emerald-100 text-emerald-800 rounded">
-                                AES Encrypted
+                                AES-256
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold bg-slate-100 text-slate-600 rounded">
+                                GZIP
                               </span>
                             )}
                           </div>
@@ -332,14 +351,6 @@ export default function AuditLogsView() {
                 )}
               </div>
             )}
-
-            {/* Cloud Sync Hint for TrueNAS / Google Drive */}
-            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 space-y-1">
-              <span className="font-black text-slate-800 block">💡 סנכרון ישיר ל-Google Drive דרך TrueNAS:</span>
-              <p className="leading-relaxed">
-                בממשק TrueNAS תחת <em>Data Protection ➔ Cloud Sync Tasks</em> ניתן לחבר את התיקייה <code>/root/tipulon/data/backups</code> ישירות ל-Google Drive האישי שלך לסנכרון אוטומטי מלא.
-              </p>
-            </div>
 
           </div>
         </div>

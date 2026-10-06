@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import StatusBadge from '../../components/StatusBadge';
 
-export default function FleetView({ onSelectBusReports }) {
+export default function FleetView({ onSelectBusReports, initialStatus = '' }) {
   const [loading, setLoading] = useState(true);
   const [buses, setBuses] = useState([]);
   const [summary, setSummary] = useState({
@@ -31,11 +31,18 @@ export default function FleetView({ onSelectBusReports }) {
   // Filters & Pagination
   const [search, setSearch] = useState('');
   const [operator, setOperator] = useState(''); // '' = all, 'דן באר שבע', 'דן בדרום'
-  const [status, setStatus] = useState(''); // '' = all, 'valid', 'pending'
+  const [status, setStatus] = useState(initialStatus || ''); // '' = all, 'valid', 'pending', 'overdue'
   const [selectedHubId, setSelectedHubId] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [filteredCount, setFilteredCount] = useState(0);
+
+  useEffect(() => {
+    if (initialStatus !== undefined) {
+      setStatus(initialStatus);
+      setPage(1);
+    }
+  }, [initialStatus]);
 
   // Sync state
   const [syncingFleet, setSyncingFleet] = useState(false);
@@ -207,8 +214,9 @@ export default function FleetView({ onSelectBusReports }) {
               className="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[44px]"
             >
               <option value="">כל הסטטוסים</option>
+              <option value="pending">⏳ נדרש טיפול מונע</option>
+              <option value="overdue">🔴 באיחור (מעל 6 חודשים)</option>
               <option value="valid">🟢 טופלו ובתוקף</option>
-              <option value="pending">⏳ נותרו לביצוע</option>
             </select>
           </div>
 

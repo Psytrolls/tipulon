@@ -526,7 +526,7 @@ export default function ReportsView({ initialReportId = null }) {
         </form>
       </div>
 
-      {/* Reports Table */}
+      {/* Reports Display: Mobile Cards (< 768px) and Desktop Table (>= 768px) */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-16 flex justify-center">
@@ -537,104 +537,233 @@ export default function ReportsView({ initialReportId = null }) {
             לא נמצאו דוחות טיפול התואמים לחיפוש
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
-                <tr>
-                  <th className="p-3.5">מפעיל</th>
-                  <th className="p-3.5">מספר אוטובוס</th>
-                  <th className="p-3.5">מיקום / סניף</th>
-                  <th className="p-3.5">טכנאי מבצע</th>
-                  <th className="p-3.5">תאריך טיפול</th>
-                  <th className="p-3.5">תוצאת טיפול</th>
-                  <th className="p-3.5 text-center">סגור באדי</th>
-                  <th className="p-3.5">מועד טיפול הבא</th>
-                  <th className="p-3.5 text-center">פעולות</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {reports.map((report) => (
-                  <tr key={report.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-3.5 font-bold text-slate-700">
-                      <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                        report.operator === 'דן בדרום' ? 'bg-blue-50 text-blue-800' : 'bg-emerald-50 text-emerald-800'
-                      }`}>
-                        {report.operator || 'דן באר שבע'}
+          <>
+            {/* Mobile Vertical Cards (visible on screens < 768px) */}
+            <div className="md:hidden divide-y divide-slate-100">
+              {reports.map((report) => (
+                <div key={`mob-${report.id}`} className="p-4 space-y-3 bg-white">
+                  {/* Top Bar: Bus Number (LTR, large font, copy button) + Operator Badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 bg-slate-100/90 border border-slate-200/80 px-2.5 py-1 rounded-xl">
+                      <Bus className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span dir="ltr" className="text-base font-black text-slate-900 tracking-wide font-mono">
+                        {report.bus_number}
                       </span>
-                    </td>
-                    <td className="p-3.5 font-black text-slate-900">
-                      <div className="flex items-center gap-1.5">
-                        <span>{report.bus_number}</span>
-                        <button
-                          type="button"
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await copyTextToClipboard(report.bus_number);
-                            setCopiedBusId(report.id);
-                            setTimeout(() => setCopiedBusId(null), 2000);
-                          }}
-                          title="העתק מספר אוטובוס ללוח"
-                          className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors inline-flex items-center gap-1 active:scale-90"
-                        >
-                          {copiedBusId === report.id ? (
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                          ) : (
-                            <Copy className="w-3.5 h-3.5" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="p-3.5 text-slate-600 font-medium">
-                      {report.location || report.cluster || 'מרכז תפעול'}
-                    </td>
-                    <td className="p-3.5 text-slate-700">{report.technician_name}</td>
-                    <td className="p-3.5 text-slate-500 font-medium">
-                      {new Date(report.created_at).toLocaleDateString('he-IL')}
-                    </td>
-                    <td className="p-3.5">
-                      <StatusBadge status={report.status} />
-                    </td>
-                    <td className="p-3.5 text-center">
                       <button
                         type="button"
-                        disabled={updatingEdiId === report.id || ediModalLoading}
-                        onClick={() => requestToggleEdi(report.id, report.is_edi_closed, report.bus_number)}
-                        title="לחץ לשינוי סטטוס סגור באדי"
-                        className={`py-1 px-2.5 rounded-lg text-xs font-black border inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
-                          report.is_edi_closed
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                            : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
-                        } ${updatingEdiId === report.id ? 'opacity-50 cursor-wait' : ''}`}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await copyTextToClipboard(report.bus_number);
+                          setCopiedBusId(report.id);
+                          setTimeout(() => setCopiedBusId(null), 2000);
+                        }}
+                        title="העתק מספר אוטובוס ללוח"
+                        aria-label="העתק מספר אוטובוס ללוח"
+                        className="p-1 min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors active:scale-90"
                       >
-                        {updatingEdiId === report.id ? (
-                          <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
-                        ) : report.is_edi_closed ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        {copiedBusId === report.id ? (
+                          <Check className="w-4 h-4 text-emerald-600" />
                         ) : (
-                          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                          <Copy className="w-4 h-4" />
                         )}
-                        <span>{report.is_edi_closed ? 'סגור באדי' : 'פתוח באדי'}</span>
                       </button>
-                    </td>
-                    <td className="p-3.5 text-slate-600">
-                      {report.next_treatment_date 
-                        ? new Date(report.next_treatment_date).toLocaleDateString('he-IL') 
-                        : <span className="text-slate-400">לא נקבע</span>}
-                    </td>
-                    <td className="p-3.5 text-center">
-                      <button
-                        onClick={() => handleViewDetails(report.id)}
-                        className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl inline-flex items-center gap-1.5 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>צפה</span>
-                      </button>
-                    </td>
+                    </div>
+
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-black whitespace-nowrap shrink-0 border ${
+                      report.operator === 'דן בדרום' 
+                        ? 'bg-blue-50 text-blue-800 border-blue-200' 
+                        : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    }`}>
+                      {report.operator || 'דן באר שבע'}
+                    </span>
+                  </div>
+
+                  {/* Data Grid: 2 columns, RTL, clear labels & values */}
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50/90 p-3 rounded-2xl border border-slate-200/80">
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[11px] mb-0.5">תאריך ביצוע:</span>
+                      <span className="font-extrabold text-slate-800">
+                        {new Date(report.created_at).toLocaleDateString('he-IL')}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[11px] mb-0.5">מיקום / סניף:</span>
+                      <span className="font-extrabold text-slate-800 truncate block" title={report.location || report.cluster || 'מרכז תפעול'}>
+                        {report.location || report.cluster || 'מרכז תפעול'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[11px] mb-0.5">תוצאת הטיפול:</span>
+                      <div className="mt-0.5">
+                        <StatusBadge status={report.status} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 font-bold block text-[11px] mb-0.5">מועד טיפול הבא:</span>
+                      <span className="font-extrabold text-slate-800 block mt-0.5">
+                        {report.next_treatment_date 
+                          ? new Date(report.next_treatment_date).toLocaleDateString('he-IL') 
+                          : <span className="text-slate-400">לא נקבע</span>}
+                      </span>
+                    </div>
+
+                    <div className="col-span-2 pt-1.5 border-t border-slate-200/60 flex items-center justify-between">
+                      <span className="text-slate-400 font-bold text-[11px]">סטטוס במערכת אדי (EDI):</span>
+                      <span className={`text-[11px] font-black px-2 py-0.5 rounded-md border ${
+                        report.is_edi_closed
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : 'bg-amber-100 text-amber-800 border-amber-300'
+                      }`}>
+                        {report.is_edi_closed ? '✓ סגור באדי' : 'פתוח באדי (טרם נסגר)'}
+                      </span>
+                    </div>
+
+                    {isAdmin && (
+                      <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between">
+                        <span className="text-slate-400 font-bold text-[11px]">טכנאי מבצע:</span>
+                        <span className="font-black text-slate-700">{report.technician_name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons: View Details + Prominent EDI Button */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => handleViewDetails(report.id)}
+                      className="min-h-[44px] py-2 px-4 bg-slate-100 hover:bg-slate-200 active:scale-[0.98] text-slate-800 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+                    >
+                      <Eye className="w-4 h-4 text-slate-600" />
+                      <span>צפה בדוח</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={updatingEdiId === report.id || ediModalLoading}
+                      onClick={() => requestToggleEdi(report.id, report.is_edi_closed, report.bus_number)}
+                      className={`flex-1 min-h-[44px] py-2 px-3 rounded-xl text-xs font-black border flex items-center justify-center gap-1.5 transition-all shadow-xs active:scale-[0.98] ${
+                        report.is_edi_closed
+                          ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+                          : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-600 shadow-amber-500/20'
+                      } ${updatingEdiId === report.id ? 'opacity-50 cursor-wait' : ''}`}
+                    >
+                      {updatingEdiId === report.id ? (
+                        <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                      ) : report.is_edi_closed ? (
+                        <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-slate-950 animate-pulse"></span>
+                      )}
+                      <span>{report.is_edi_closed ? 'פתח מחדש באדי' : 'סמן כסגור באדי'}</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table (visible on screens >= 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-bold border-b border-slate-200">
+                  <tr>
+                    <th className="p-3.5">מפעיל</th>
+                    <th className="p-3.5">מספר אוטובוס</th>
+                    <th className="p-3.5">מיקום / סניף</th>
+                    <th className="p-3.5">טכנאי מבצע</th>
+                    <th className="p-3.5">תאריך טיפול</th>
+                    <th className="p-3.5">תוצאת טיפול</th>
+                    <th className="p-3.5 text-center">סגור באדי</th>
+                    <th className="p-3.5">מועד טיפול הבא</th>
+                    <th className="p-3.5 text-center">פעולות</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {reports.map((report) => (
+                    <tr key={report.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3.5 font-bold text-slate-700">
+                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                          report.operator === 'דן בדרום' ? 'bg-blue-50 text-blue-800' : 'bg-emerald-50 text-emerald-800'
+                        }`}>
+                          {report.operator || 'דן באר שבע'}
+                        </span>
+                      </td>
+                      <td className="p-3.5 font-black text-slate-900">
+                        <div className="flex items-center gap-1.5">
+                          <span dir="ltr" className="font-mono">{report.bus_number}</span>
+                          <button
+                            type="button"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await copyTextToClipboard(report.bus_number);
+                              setCopiedBusId(report.id);
+                              setTimeout(() => setCopiedBusId(null), 2000);
+                            }}
+                            title="העתק מספר אוטובוס ללוח"
+                            className="p-1 text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition-colors inline-flex items-center gap-1 active:scale-90"
+                          >
+                            {copiedBusId === report.id ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3.5 text-slate-600 font-medium">
+                        {report.location || report.cluster || 'מרכז תפעול'}
+                      </td>
+                      <td className="p-3.5 text-slate-700">{report.technician_name}</td>
+                      <td className="p-3.5 text-slate-500 font-medium">
+                        {new Date(report.created_at).toLocaleDateString('he-IL')}
+                      </td>
+                      <td className="p-3.5">
+                        <StatusBadge status={report.status} />
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <button
+                          type="button"
+                          disabled={updatingEdiId === report.id || ediModalLoading}
+                          onClick={() => requestToggleEdi(report.id, report.is_edi_closed, report.bus_number)}
+                          title="לחץ לשינוי סטטוס סגור באדי"
+                          className={`py-1 px-2.5 rounded-lg text-xs font-black border inline-flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                            report.is_edi_closed
+                              ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                              : 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100'
+                          } ${updatingEdiId === report.id ? 'opacity-50 cursor-wait' : ''}`}
+                        >
+                          {updatingEdiId === report.id ? (
+                            <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                          ) : report.is_edi_closed ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                          )}
+                          <span>{report.is_edi_closed ? 'סגור באדי' : 'פתוח באדי'}</span>
+                        </button>
+                      </td>
+                      <td className="p-3.5 text-slate-600">
+                        {report.next_treatment_date 
+                          ? new Date(report.next_treatment_date).toLocaleDateString('he-IL') 
+                          : <span className="text-slate-400">לא נקבע</span>}
+                      </td>
+                      <td className="p-3.5 text-center">
+                        <button
+                          onClick={() => handleViewDetails(report.id)}
+                          className="py-1.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl inline-flex items-center gap-1.5 transition-colors min-h-[36px]"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>צפה</span>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

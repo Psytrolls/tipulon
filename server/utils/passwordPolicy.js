@@ -35,7 +35,15 @@ export function validatePasswordStrength(password, context = {}) {
     };
   }
 
-  const lower = clean.toLowerCase();
+  // Require at least one letter and at least one digit
+  const hasLetter = /[a-zA-Z]/.test(clean);
+  const hasDigit = /[0-9]/.test(clean);
+  if (!hasLetter || !hasDigit) {
+    return {
+      valid: false,
+      error: 'הסיסמה חייבת לכלול שילוב של אותיות באנגלית ומספרים'
+    };
+  }
 
   // Check common weak passwords
   if (COMMON_WEAK_PASSWORDS.has(lower)) {
